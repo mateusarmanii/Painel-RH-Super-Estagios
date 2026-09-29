@@ -1,0 +1,33 @@
+{
+  "name": "solucaosuperestagios",
+  "version": "1.0.0",
+  "description": "Solução criada com o intuito de auxiliar o time de RH da empresa no trabalho de fechamento de vaga",
+  "main": "server.js",
+  "scripts": {
+    "dev": "node --watch server.js",
+    "start": "node server.js",
+    "db:generate": "prisma generate",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mateusarmanii/solucaoSuperEstagios.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/mateusarmanii/solucaoSuperEstagios/issues"
+  },
+  "homepage": "https://github.com/mateusarmanii/solucaoSuperEstagios#readme",
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.10.0",
+    "@prisma/client": "^7.10.0",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.4",
+    "express": "^5.2.1",
+    "pg": "^8.23.0",
+    "prisma": "^7.10.0"
+  }
+}
