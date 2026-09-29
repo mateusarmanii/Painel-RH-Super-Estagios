@@ -150,22 +150,23 @@ app.post("/auth/login", async (req, res) => {
   }
 });
 
-app.patch("/auth/senha", authenticate, async (req, res) => {
-  const { senha_atual, nova_senha } = req.body;
-  if (typeof senha_atual !== "string" || typeof nova_senha !== "string" || nova_senha.length < 12) {
-    return res.status(400).json({ erro: "Informe a senha atual e uma nova senha com ao menos 12 caracteres." });
+async function changeFranchisePassword(req, res) {
+  const senhaAtual = req.body.senhaAtual ?? req.body.senha_atual;
+  const novaSenha = req.body.novaSenha ?? req.body.nova_senha;
+  if (typeof senhaAtual !== "string" || typeof novaSenha !== "string" || novaSenha.length < 6) {
+    return res.status(400).json({ erro: "Informe a senha atual e uma nova senha com ao menos 6 caracteres." });
   }
 
   try {
     const franquia = await prisma.franquia.findUnique({ where: { id: req.franchiseId } });
-    if (!franquia || !(await bcrypt.compare(senha_atual, franquia.senha_hash))) {
+    if (!franquia || !(await bcrypt.compare(senhaAtual, franquia.senha_hash))) {
       return res.status(401).json({ erro: "A senha atual está incorreta." });
     }
-    if (await bcrypt.compare(nova_senha, franquia.senha_hash)) {
+    if (await bcrypt.compare(novaSenha, franquia.senha_hash)) {
       return res.status(400).json({ erro: "A nova senha deve ser diferente da senha atual." });
     }
 
-    const senha_hash = await bcrypt.hash(nova_senha, 12);
+    const senha_hash = await bcrypt.hash(novaSenha, 12);
     await prisma.franquia.update({
       where: { id: req.franchiseId },
       data: { senha_hash },
@@ -174,15 +175,18 @@ app.patch("/auth/senha", authenticate, async (req, res) => {
   } catch (error) {
     res.status(500).json({ erro: "Não foi possível alterar a senha." });
   }
-});
+}
+
+app.put("/franquias/senha", authenticate, changeFranchisePassword);
+app.patch("/auth/senha", authenticate, changeFranchisePassword);
 
 app.post("/franquias", async (req, res) => {
   const { nome, cidade, senha } = req.body;
   const login = typeof req.body.login === "string" ? req.body.login.trim().toLowerCase() : "";
 
   if (![nome, cidade, login].every((value) => typeof value === "string" && value.trim()) ||
-      typeof senha !== "string" || senha.length < 12) {
-    return res.status(400).json({ erro: "Nome, cidade, login e senha com ao menos 12 caracteres são obrigatórios." });
+      typeof senha !== "string" || senha.length < 6) {
+    return res.status(400).json({ erro: "Nome, cidade, login e senha com ao menos 6 caracteres são obrigatórios." });
   }
 
   try {
@@ -214,12 +218,47 @@ app.get("/empresas", authenticate, async (req, res) => {
   try {
     const empresas = await prisma.empresa.findMany({
       where: { franquia_id: req.franchiseId },
-      select: { id: true, nome: true, email: true },
+      select: { id: true, nome: true, contato: true, email: true },
       orderBy: { nome: "asc" },
     });
-    res.json(empresas);
+    res.json(empresas.map((empresa) => ({
+      ...empresa,
+      nome_razao_social: empresa.nome,
+      contato_principal: empresa.contato,
+      email_contato: empresa.email,
+    })));
   } catch (error) {
     res.status(500).json({ erro: "Não foi possível listar as empresas." });
+  }
+});
+
+app.post("/empresas", authenticate, async (req, res) => {
+  const nome = typeof req.body.nome_razao_social === "string" ? req.body.nome_razao_social.trim() : "";
+  const contato = typeof req.body.contato_principal === "string" ? req.body.contato_principal.trim() : "";
+  const email = typeof req.body.email_contato === "string" ? req.body.email_contato.trim() : "";
+
+  if (!nome || !contato) {
+    return res.status(400).json({ erro: "Nome/Razão social e contato principal são obrigatórios." });
+  }
+
+  try {
+    const empresa = await prisma.empresa.create({
+      data: {
+        franquia_id: req.franchiseId,
+        nome,
+        contato,
+        email: email || null,
+      },
+      select: { id: true, nome: true, contato: true, email: true },
+    });
+    res.status(201).json({
+      ...empresa,
+      nome_razao_social: empresa.nome,
+      contato_principal: empresa.contato,
+      email_contato: empresa.email,
+    });
+  } catch (error) {
+    res.status(500).json({ erro: "Não foi possível cadastrar a empresa." });
   }
 });
 

@@ -13,6 +13,7 @@ import Card from "./components/Card.jsx";
 import DashboardMetrics from "./components/DashboardMetrics.jsx";
 import Layout from "./components/Layout.jsx";
 import LoginPage from "./components/LoginPage.jsx";
+import Empresas from "./pages/Empresas.jsx";
 import Vagas from "./pages/Vagas.jsx";
 
 const navigationItems = [
@@ -132,7 +133,7 @@ function AuthenticatedApp({ onLogout, onSessionExpired }) {
       <Routes>
         <Route path="/" element={<DashboardPage onSessionExpired={onSessionExpired} />} />
         <Route path="/vagas" element={<Vagas />} />
-        <Route path="/empresas" element={<EmptyPage title="Empresas" />} />
+        <Route path="/empresas" element={<Empresas />} />
         <Route path="/banco-curriculos" element={<EmptyPage title="Banco de Talentos" />} />
         <Route path="/calendario" element={<EmptyPage title="Calendário" />} />
         <Route path="*" element={<Navigate replace to="/" />} />

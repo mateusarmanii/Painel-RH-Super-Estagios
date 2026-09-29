@@ -23,9 +23,9 @@ function Topbar({ activeItem, onLogout, onMenuClick }) {
 
     setPasswordSaving(true);
     try {
-      const { data } = await api.patch("/auth/senha", {
-        senha_atual: currentPassword,
-        nova_senha: newPassword,
+      const { data } = await api.put("/franquias/senha", {
+        senhaAtual: currentPassword,
+        novaSenha: newPassword,
       });
       setPasswordSuccess(data.mensagem);
       setCurrentPassword("");
@@ -134,7 +134,7 @@ function Topbar({ activeItem, onLogout, onMenuClick }) {
                   autoComplete="new-password"
                   className="mt-1.5 h-11 w-full rounded-lg border border-slate-300 px-3 text-slate-900 outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-blue-100"
                   id="new-password"
-                  minLength={12}
+                  minLength={6}
                   onChange={(event) => setNewPassword(event.target.value)}
                   required
                   type="password"
@@ -147,7 +147,7 @@ function Topbar({ activeItem, onLogout, onMenuClick }) {
                   autoComplete="new-password"
                   className="mt-1.5 h-11 w-full rounded-lg border border-slate-300 px-3 text-slate-900 outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-blue-100"
                   id="confirm-password"
-                  minLength={12}
+                  minLength={6}
                   onChange={(event) => setConfirmPassword(event.target.value)}
                   required
                   type="password"

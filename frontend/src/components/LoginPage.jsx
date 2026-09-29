@@ -95,9 +95,9 @@ function LoginPage({ onAuthenticated }) {
                 autoComplete={mode === "register" ? "new-password" : "current-password"}
                 className="mt-1.5 h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-brand-blue focus:ring-2 focus:ring-blue-100"
                 id="senha"
-                minLength={mode === "register" ? 12 : undefined}
+                minLength={mode === "register" ? 6 : undefined}
                 onChange={(event) => setSenha(event.target.value)}
-                placeholder={mode === "register" ? "Mínimo de 12 caracteres" : "Sua senha"}
+                placeholder={mode === "register" ? "Mínimo de 6 caracteres" : "Sua senha"}
                 required
                 type="password"
                 value={senha}
