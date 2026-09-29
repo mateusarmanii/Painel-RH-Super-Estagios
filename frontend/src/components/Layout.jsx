@@ -2,13 +2,8 @@ import { useState } from "react";
 import Sidebar from "./Sidebar.jsx";
 import Topbar from "./Topbar.jsx";
 
-function Layout({ activeItem, children, onLogout, onNavigate }) {
+function Layout({ activeItem, children, onLogout }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  function navigateTo(item) {
-    onNavigate(item);
-    setSidebarOpen(false);
-  }
 
   return (
     <div className="min-h-screen bg-brand-light text-brand-dark">
@@ -16,7 +11,6 @@ function Layout({ activeItem, children, onLogout, onNavigate }) {
         activeItem={activeItem}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
-        onNavigate={navigateTo}
       />
       <div className="min-h-screen lg:pl-64">
         <Topbar activeItem={activeItem} onLogout={onLogout} onMenuClick={() => setSidebarOpen(true)} />

@@ -8,7 +8,7 @@ import {
   LoaderCircle,
   UsersRound,
 } from "lucide-react";
-import { api } from "../lib/api.js";
+import { api } from "../api.js";
 import Card from "./Card.jsx";
 
 function growthLabel(value) {

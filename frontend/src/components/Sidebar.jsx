@@ -8,16 +8,17 @@ import {
   UsersRound,
   X,
 } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const navigationItems = [
-  { label: "Dashboard", icon: LayoutDashboard },
-  { label: "Vagas", icon: BriefcaseBusiness },
-  { label: "Empresas", icon: Building2 },
-  { label: "Banco de Talentos", icon: UsersRound },
-  { label: "Calendário", icon: CalendarDays },
+  { label: "Dashboard", to: "/", icon: LayoutDashboard },
+  { label: "Vagas", to: "/vagas", icon: BriefcaseBusiness },
+  { label: "Empresas", to: "/empresas", icon: Building2 },
+  { label: "Banco de Talentos", to: "/banco-curriculos", icon: UsersRound },
+  { label: "Calendário", to: "/calendario", icon: CalendarDays },
 ];
 
-function Sidebar({ activeItem, isOpen, onClose, onNavigate }) {
+function Sidebar({ activeItem, isOpen, onClose }) {
   return (
     <>
       {isOpen && (
@@ -76,10 +77,10 @@ function Sidebar({ activeItem, isOpen, onClose, onNavigate }) {
         <nav aria-label="Navegação principal" className="flex-1 px-4 py-6">
           <p className="mb-3 px-3 text-[10px] font-bold text-gray-400">MENU</p>
           <div className="space-y-1.5">
-            {navigationItems.map(({ label, icon: Icon }) => {
+            {navigationItems.map(({ label, to, icon: Icon }) => {
               const isActive = activeItem === label;
               return (
-                <button
+                <Link
                   aria-current={isActive ? "page" : undefined}
                   className={`group flex min-h-11 w-full items-center gap-3 border-l-4 px-3 text-left text-[13px] font-medium transition ${
                     isActive
@@ -87,8 +88,8 @@ function Sidebar({ activeItem, isOpen, onClose, onNavigate }) {
                       : "border-transparent text-gray-300 hover:bg-blue-400/10 hover:text-blue-100"
                   }`}
                   key={label}
-                  onClick={() => onNavigate(label)}
-                  type="button"
+                  onClick={onClose}
+                  to={to}
                 >
                   <Icon
                     aria-hidden="true"
@@ -97,7 +98,7 @@ function Sidebar({ activeItem, isOpen, onClose, onNavigate }) {
                     strokeWidth={1.9}
                   />
                   <span>{label}</span>
-                </button>
+                </Link>
               );
             })}
           </div>

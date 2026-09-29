@@ -150,6 +150,32 @@ app.post("/auth/login", async (req, res) => {
   }
 });
 
+app.patch("/auth/senha", authenticate, async (req, res) => {
+  const { senha_atual, nova_senha } = req.body;
+  if (typeof senha_atual !== "string" || typeof nova_senha !== "string" || nova_senha.length < 12) {
+    return res.status(400).json({ erro: "Informe a senha atual e uma nova senha com ao menos 12 caracteres." });
+  }
+
+  try {
+    const franquia = await prisma.franquia.findUnique({ where: { id: req.franchiseId } });
+    if (!franquia || !(await bcrypt.compare(senha_atual, franquia.senha_hash))) {
+      return res.status(401).json({ erro: "A senha atual está incorreta." });
+    }
+    if (await bcrypt.compare(nova_senha, franquia.senha_hash)) {
+      return res.status(400).json({ erro: "A nova senha deve ser diferente da senha atual." });
+    }
+
+    const senha_hash = await bcrypt.hash(nova_senha, 12);
+    await prisma.franquia.update({
+      where: { id: req.franchiseId },
+      data: { senha_hash },
+    });
+    res.json({ mensagem: "Senha alterada com sucesso." });
+  } catch (error) {
+    res.status(500).json({ erro: "Não foi possível alterar a senha." });
+  }
+});
+
 app.post("/franquias", async (req, res) => {
   const { nome, cidade, senha } = req.body;
   const login = typeof req.body.login === "string" ? req.body.login.trim().toLowerCase() : "";
@@ -181,6 +207,66 @@ app.get("/franquias", authenticate, async (req, res) => {
     res.json(franquia ? [franquia] : []);
   } catch (error) {
     res.status(500).json({ erro: "Não foi possível consultar a franquia." });
+  }
+});
+
+app.get("/empresas", authenticate, async (req, res) => {
+  try {
+    const empresas = await prisma.empresa.findMany({
+      where: { franquia_id: req.franchiseId },
+      select: { id: true, nome: true, email: true },
+      orderBy: { nome: "asc" },
+    });
+    res.json(empresas);
+  } catch (error) {
+    res.status(500).json({ erro: "Não foi possível listar as empresas." });
+  }
+});
+
+app.get("/vagas", authenticate, async (req, res) => {
+  try {
+    const vagas = await prisma.vaga.findMany({
+      where: { aberta: true, empresa: { franquia_id: req.franchiseId } },
+      include: { empresa: { select: { id: true, nome: true } } },
+      orderBy: { criado_em: "desc" },
+    });
+    res.json(vagas);
+  } catch (error) {
+    res.status(500).json({ erro: "Não foi possível listar as vagas." });
+  }
+});
+
+app.post("/vagas", authenticate, async (req, res) => {
+  const titulo = typeof req.body.titulo === "string" ? req.body.titulo.trim() : "";
+  const codigo = typeof req.body.codigo === "string" ? req.body.codigo.trim() : "";
+  const link = typeof req.body.link === "string" ? req.body.link.trim() : "";
+  const empresaId = Number(req.body.empresa_id);
+
+  if (!titulo || !/^\d{6}$/.test(codigo) || !Number.isInteger(empresaId) || !link) {
+    return res.status(400).json({ erro: "Título, código de 6 dígitos, link e empresa são obrigatórios." });
+  }
+
+  try {
+    const parsedLink = new URL(link);
+    if (!["http:", "https:"].includes(parsedLink.protocol)) {
+      return res.status(400).json({ erro: "O link deve usar HTTP ou HTTPS." });
+    }
+
+    const empresa = await prisma.empresa.findFirst({
+      where: { id: empresaId, franquia_id: req.franchiseId },
+      select: { id: true },
+    });
+    if (!empresa) return res.status(404).json({ erro: "Empresa não encontrada." });
+
+    const vaga = await prisma.vaga.create({
+      data: { nome: titulo, codigo, link, empresa_id: empresaId },
+      include: { empresa: { select: { id: true, nome: true } } },
+    });
+    res.status(201).json(vaga);
+  } catch (error) {
+    if (error.code === "P2002") return res.status(409).json({ erro: "Este código de vaga já está cadastrado." });
+    if (error instanceof TypeError) return res.status(400).json({ erro: "Informe um link válido." });
+    res.status(500).json({ erro: "Não foi possível criar a vaga." });
   }
 });
 
