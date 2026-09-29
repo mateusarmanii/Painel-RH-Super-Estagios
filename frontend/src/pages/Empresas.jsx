@@ -70,7 +70,7 @@ function Empresas() {
           <h1 className="font-display text-3xl font-semibold text-brand-dark">Empresas</h1>
         </div>
         <button
-          className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-brand-blue px-4 text-sm font-semibold text-white transition hover:bg-blue-700"
+          className="inline-flex min-h-11 items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-200"
           onClick={() => {
             setError("");
             setFormOpen((open) => !open);

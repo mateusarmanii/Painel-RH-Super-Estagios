@@ -44,7 +44,7 @@ function Topbar({ activeItem, onLogout, onMenuClick }) {
         <div className="flex items-center gap-3">
           <button
             aria-label="Abrir navegação"
-            className="inline-flex size-10 items-center justify-center rounded-lg text-slate-600 transition hover:bg-slate-100 lg:hidden"
+            className="inline-flex size-10 items-center justify-center rounded-lg text-slate-600 transition hover:bg-slate-100"
             onClick={onMenuClick}
             title="Abrir navegação"
             type="button"

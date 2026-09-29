@@ -24,13 +24,13 @@ function Sidebar({ activeItem, isOpen, onClose }) {
       {isOpen && (
         <button
           aria-label="Fechar navegação"
-          className="fixed inset-0 z-30 bg-brand-dark/50 backdrop-blur-[2px] lg:hidden"
+          className="fixed inset-0 z-30 bg-brand-dark/50 backdrop-blur-[2px]"
           onClick={onClose}
           type="button"
         />
       )}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col bg-slate-900 text-white transition-transform duration-200 lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col bg-slate-900 text-white transition-transform duration-200 ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -47,7 +47,7 @@ function Sidebar({ activeItem, isOpen, onClose }) {
             </div>
           <button
             aria-label="Fechar navegação"
-              className="inline-flex size-9 items-center justify-center rounded-lg text-gray-300 transition hover:bg-blue-400/15 hover:text-blue-200 lg:hidden"
+              className="inline-flex size-9 items-center justify-center rounded-lg text-gray-300 transition hover:bg-blue-400/15 hover:text-blue-200"
             onClick={onClose}
             title="Fechar navegação"
             type="button"
