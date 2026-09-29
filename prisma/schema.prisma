@@ -12,6 +12,8 @@ model Franquia {
   cidade     String
   login      String      @unique
   senha_hash String
+  token_recuperacao String?
+  expiracao_token   DateTime?
   criado_em  DateTime    @default(now())
   empresas   Empresa[]
   candidatos Candidato[]

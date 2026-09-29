@@ -150,6 +150,52 @@ app.post("/auth/login", async (req, res) => {
   }
 });
 
+app.post("/franquias/esqueci-senha", async (req, res) => {
+  const login = typeof req.body.login === "string" ? req.body.login.trim().toLowerCase() : "";
+  if (!login) return res.status(400).json({ erro: "Informe o login da franquia." });
+
+  try {
+    const franquia = await prisma.franquia.findUnique({ where: { login } });
+    if (franquia) {
+      const codigo = crypto.randomInt(0, 1_000_000).toString().padStart(6, "0");
+      const expiracao_token = new Date(Date.now() + 60 * 60 * 1000);
+      await prisma.franquia.update({
+        where: { id: franquia.id },
+        data: { token_recuperacao: codigo, expiracao_token },
+      });
+      console.log(`[e-mail simulado] Recuperação de senha para ${login}: código ${codigo}`);
+    }
+    res.json({ mensagem: "Se o login estiver cadastrado, o código será enviado." });
+  } catch (error) {
+    res.status(500).json({ erro: "Não foi possível solicitar a recuperação de senha." });
+  }
+});
+
+app.post("/franquias/resetar-senha", async (req, res) => {
+  const login = typeof req.body.login === "string" ? req.body.login.trim().toLowerCase() : "";
+  const codigo = typeof req.body.codigo === "string" ? req.body.codigo.trim() : "";
+  const novaSenha = req.body.novaSenha;
+  if (!login || !/^\d{6}$/.test(codigo) || typeof novaSenha !== "string" || novaSenha.length < 6) {
+    return res.status(400).json({ erro: "Login, código de 6 dígitos e nova senha com ao menos 6 caracteres são obrigatórios." });
+  }
+
+  try {
+    const franquia = await prisma.franquia.findUnique({ where: { login } });
+    if (!franquia || franquia.token_recuperacao !== codigo || !franquia.expiracao_token || franquia.expiracao_token <= new Date()) {
+      return res.status(400).json({ erro: "Código inválido ou expirado." });
+    }
+
+    const senha_hash = await bcrypt.hash(novaSenha, 12);
+    await prisma.franquia.update({
+      where: { id: franquia.id },
+      data: { senha_hash, token_recuperacao: null, expiracao_token: null },
+    });
+    res.json({ mensagem: "Senha redefinida com sucesso." });
+  } catch (error) {
+    res.status(500).json({ erro: "Não foi possível redefinir a senha." });
+  }
+});
+
 async function changeFranchisePassword(req, res) {
   const senhaAtual = req.body.senhaAtual ?? req.body.senha_atual;
   const novaSenha = req.body.novaSenha ?? req.body.nova_senha;

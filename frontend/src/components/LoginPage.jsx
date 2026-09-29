@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowRight, GraduationCap, LoaderCircle } from "lucide-react";
+import { ArrowRight, GraduationCap, LoaderCircle, X } from "lucide-react";
 import { api } from "../api.js";
 import Card from "./Card.jsx";
 
@@ -11,11 +11,20 @@ function LoginPage({ onAuthenticated }) {
   const [senha, setSenha] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [loginSuccess, setLoginSuccess] = useState("");
+  const [recoveryOpen, setRecoveryOpen] = useState(false);
+  const [recoveryStep, setRecoveryStep] = useState(1);
+  const [recoveryLogin, setRecoveryLogin] = useState("");
+  const [recoveryCode, setRecoveryCode] = useState("");
+  const [recoveryPassword, setRecoveryPassword] = useState("");
+  const [recoveryLoading, setRecoveryLoading] = useState(false);
+  const [recoveryError, setRecoveryError] = useState("");
 
   async function handleSubmit(event) {
     event.preventDefault();
     setLoading(true);
     setError("");
+    setLoginSuccess("");
     try {
       if (mode === "register") {
         await api.post("/franquias", { nome, cidade, login, senha });
@@ -27,6 +36,52 @@ function LoginPage({ onAuthenticated }) {
       setError(requestError.response?.data?.erro || "Não foi possível entrar. Verifique suas credenciais.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  function openRecovery() {
+    setRecoveryLogin(login);
+    setRecoveryCode("");
+    setRecoveryPassword("");
+    setRecoveryError("");
+    setRecoveryStep(1);
+    setRecoveryOpen(true);
+  }
+
+  async function requestRecoveryCode(event) {
+    event.preventDefault();
+    setRecoveryLoading(true);
+    setRecoveryError("");
+    try {
+      await api.post("/franquias/esqueci-senha", { login: recoveryLogin });
+      setRecoveryStep(2);
+    } catch (requestError) {
+      setRecoveryError(requestError.response?.data?.erro || "Não foi possível solicitar o código.");
+    } finally {
+      setRecoveryLoading(false);
+    }
+  }
+
+  async function resetPassword(event) {
+    event.preventDefault();
+    setRecoveryLoading(true);
+    setRecoveryError("");
+    try {
+      const { data } = await api.post("/franquias/resetar-senha", {
+        login: recoveryLogin,
+        codigo: recoveryCode,
+        novaSenha: recoveryPassword,
+      });
+      setLogin(recoveryLogin);
+      setSenha("");
+      setLoginSuccess(data.mensagem || "Senha redefinida. Entre com sua nova senha.");
+      setRecoveryOpen(false);
+      setRecoveryCode("");
+      setRecoveryPassword("");
+    } catch (requestError) {
+      setRecoveryError(requestError.response?.data?.erro || "Não foi possível redefinir a senha.");
+    } finally {
+      setRecoveryLoading(false);
     }
   }
 
@@ -103,7 +158,19 @@ function LoginPage({ onAuthenticated }) {
                 value={senha}
               />
             </label>
+            {mode === "login" && (
+              <div className="-mt-2 flex justify-end">
+                <button
+                  className="text-sm font-semibold text-brand-blue transition hover:text-blue-800 hover:underline"
+                  onClick={openRecovery}
+                  type="button"
+                >
+                  Esqueci minha senha?
+                </button>
+              </div>
+            )}
             {error && <p aria-live="polite" className="text-sm text-rose-700">{error}</p>}
+            {loginSuccess && <p aria-live="polite" className="text-sm text-emerald-700">{loginSuccess}</p>}
             <button
               className="login-primary-button mt-2 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg border border-blue-800 px-4 text-sm font-bold shadow-sm transition disabled:cursor-wait disabled:opacity-60"
               disabled={loading}
@@ -128,6 +195,101 @@ function LoginPage({ onAuthenticated }) {
         </Card>
         <p className="mt-5 text-center text-xs text-slate-500">Acesso exclusivo para franquias Super Estágios</p>
       </div>
+
+      {recoveryOpen && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-brand-dark/60 p-4">
+          <section
+            aria-labelledby="recovery-title"
+            aria-modal="true"
+            className="w-full max-w-md rounded-lg border-t-4 border-brand-blue bg-white shadow-xl"
+            role="dialog"
+          >
+            <header className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+              <div>
+                <p className="text-xs font-semibold text-brand-blue">ETAPA {recoveryStep} DE 2</p>
+                <h2 className="mt-1 font-display text-lg font-bold text-brand-dark" id="recovery-title">
+                  {recoveryStep === 1 ? "Recuperar senha" : "Redefinir senha"}
+                </h2>
+              </div>
+              <button
+                aria-label="Fechar recuperação de senha"
+                className="inline-flex size-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-brand-blue-light hover:text-brand-blue"
+                onClick={() => setRecoveryOpen(false)}
+                type="button"
+              >
+                <X aria-hidden="true" size={18} />
+              </button>
+            </header>
+
+            {recoveryStep === 1 ? (
+              <form className="space-y-4 p-5" onSubmit={requestRecoveryCode}>
+                <p className="text-sm text-slate-600">Informe o login da franquia para receber um código de recuperação.</p>
+                <label className="block text-sm font-medium text-slate-700" htmlFor="recovery-login">
+                  Login
+                  <input
+                    autoComplete="username"
+                    className="mt-1.5 h-11 w-full rounded-lg border border-slate-300 px-3 text-slate-900 outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-blue-100"
+                    id="recovery-login"
+                    onChange={(event) => setRecoveryLogin(event.target.value)}
+                    required
+                    value={recoveryLogin}
+                  />
+                </label>
+                {recoveryError && <p aria-live="polite" className="text-sm text-rose-700">{recoveryError}</p>}
+                <button
+                  className="login-primary-button inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold shadow-sm transition disabled:cursor-wait disabled:opacity-60"
+                  disabled={recoveryLoading}
+                  type="submit"
+                >
+                  {recoveryLoading && <LoaderCircle aria-hidden="true" className="animate-spin" size={17} />}
+                  Enviar Código
+                </button>
+              </form>
+            ) : (
+              <form className="space-y-4 p-5" onSubmit={resetPassword}>
+                <p className="text-sm text-slate-600">Digite o código recebido e escolha uma nova senha.</p>
+                <label className="block text-sm font-medium text-slate-700" htmlFor="recovery-code">
+                  Código recebido
+                  <input
+                    autoComplete="one-time-code"
+                    className="mt-1.5 h-11 w-full rounded-lg border border-slate-300 px-3 font-mono tracking-[0.2em] text-slate-900 outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-blue-100"
+                    id="recovery-code"
+                    inputMode="numeric"
+                    maxLength={6}
+                    onChange={(event) => setRecoveryCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
+                    pattern="[0-9]{6}"
+                    placeholder="000000"
+                    required
+                    value={recoveryCode}
+                  />
+                </label>
+                <label className="block text-sm font-medium text-slate-700" htmlFor="recovery-new-password">
+                  Nova senha
+                  <input
+                    autoComplete="new-password"
+                    className="mt-1.5 h-11 w-full rounded-lg border border-slate-300 px-3 text-slate-900 outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-blue-100"
+                    id="recovery-new-password"
+                    minLength={6}
+                    onChange={(event) => setRecoveryPassword(event.target.value)}
+                    required
+                    type="password"
+                    value={recoveryPassword}
+                  />
+                </label>
+                {recoveryError && <p aria-live="polite" className="text-sm text-rose-700">{recoveryError}</p>}
+                <button
+                  className="login-primary-button inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold shadow-sm transition disabled:cursor-wait disabled:opacity-60"
+                  disabled={recoveryLoading || recoveryCode.length !== 6}
+                  type="submit"
+                >
+                  {recoveryLoading && <LoaderCircle aria-hidden="true" className="animate-spin" size={17} />}
+                  Redefinir senha
+                </button>
+              </form>
+            )}
+          </section>
+        </div>
+      )}
     </main>
   );
 }
