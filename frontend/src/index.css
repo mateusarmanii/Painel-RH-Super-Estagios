@@ -43,3 +43,17 @@ button:focus-visible {
   color: #18362f;
   background: #dff09e;
 }
+
+.login-primary-button {
+  background-color: #2563eb;
+  color: #fff;
+}
+
+.login-primary-button:hover {
+  background-color: #1d4ed8;
+}
+
+.login-primary-button:focus-visible {
+  outline: 3px solid #93c5fd;
+  outline-offset: 2px;
+}

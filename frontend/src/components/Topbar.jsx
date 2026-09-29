@@ -22,7 +22,7 @@ function Topbar({ activeItem, onLogout, onMenuClick }) {
       <div className="flex items-center gap-1 sm:gap-2">
         <button
           aria-label="Registrar ponto"
-          className="inline-flex size-10 items-center justify-center rounded-lg text-slate-600 transition hover:bg-amber-50 hover:text-amber-700"
+          className="inline-flex size-10 items-center justify-center rounded-lg text-slate-600 transition hover:bg-brand-blue-light hover:text-brand-blue"
           title="Registrar ponto"
           type="button"
         >
@@ -30,12 +30,12 @@ function Topbar({ activeItem, onLogout, onMenuClick }) {
         </button>
         <button
           aria-label="Notificações"
-          className="relative inline-flex size-10 items-center justify-center rounded-lg text-slate-600 transition hover:bg-amber-50 hover:text-amber-700"
+          className="relative inline-flex size-10 items-center justify-center rounded-lg text-slate-600 transition hover:bg-brand-blue-light hover:text-brand-blue"
           title="Notificações"
           type="button"
         >
           <Bell aria-hidden="true" size={19} />
-          <span className="absolute right-2 top-2 size-1.5 rounded-full bg-brand-gold" />
+          <span className="absolute right-2 top-2 size-1.5 rounded-full bg-brand-blue" />
         </button>
         <div className="mx-2 hidden h-8 w-px bg-slate-200 sm:block" />
         <button

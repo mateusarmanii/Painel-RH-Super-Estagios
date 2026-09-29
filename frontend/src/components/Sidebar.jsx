@@ -23,7 +23,7 @@ function Sidebar({ activeItem, isOpen, onClose, onNavigate }) {
       {isOpen && (
         <button
           aria-label="Fechar navegação"
-          className="fixed inset-0 z-30 bg-[#10251f]/50 backdrop-blur-[2px] lg:hidden"
+          className="fixed inset-0 z-30 bg-brand-dark/50 backdrop-blur-[2px] lg:hidden"
           onClick={onClose}
           type="button"
         />
@@ -36,14 +36,14 @@ function Sidebar({ activeItem, isOpen, onClose, onNavigate }) {
         <div className="border-b border-white/10 px-5 pb-5 pt-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="flex size-9 items-center justify-center rounded-lg bg-white/10 text-brand-gold">
+              <div className="flex size-9 items-center justify-center rounded-lg bg-blue-400/15 text-blue-300">
                 <GraduationCap aria-hidden="true" size={20} strokeWidth={2.1} />
               </div>
               <p className="font-display text-sm font-bold text-white">Super Estágios</p>
             </div>
           <button
             aria-label="Fechar navegação"
-              className="inline-flex size-9 items-center justify-center rounded-lg text-gray-300 transition hover:bg-white/10 hover:text-white lg:hidden"
+              className="inline-flex size-9 items-center justify-center rounded-lg text-gray-300 transition hover:bg-blue-400/15 hover:text-blue-200 lg:hidden"
             onClick={onClose}
             title="Fechar navegação"
             type="button"
@@ -81,7 +81,7 @@ function Sidebar({ activeItem, isOpen, onClose, onNavigate }) {
                   className={`group flex min-h-11 w-full items-center gap-3 border-l-4 px-3 text-left text-[13px] font-medium transition ${
                     isActive
                       ? "border-brand-gold bg-white/[0.06] text-brand-gold"
-                      : "border-transparent text-gray-300 hover:bg-white/[0.06] hover:text-white"
+                      : "border-transparent text-gray-300 hover:bg-blue-400/10 hover:text-blue-100"
                   }`}
                   key={label}
                   onClick={() => onNavigate(label)}
@@ -89,7 +89,7 @@ function Sidebar({ activeItem, isOpen, onClose, onNavigate }) {
                 >
                   <Icon
                     aria-hidden="true"
-                    className={isActive ? "text-brand-gold" : "text-gray-300 group-hover:text-white"}
+                    className={isActive ? "text-brand-gold" : "text-gray-300 group-hover:text-blue-200"}
                     size={18}
                     strokeWidth={1.9}
                   />

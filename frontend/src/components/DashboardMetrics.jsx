@@ -21,7 +21,7 @@ function Metric({ detail, icon: Icon, label, value }) {
   return (
     <div className="min-w-0 border-b border-r border-slate-100 px-4 py-4 sm:px-5">
       <div className="mb-3 flex items-center gap-2 text-slate-500">
-        <Icon aria-hidden="true" className="text-amber-600" size={16} />
+        <Icon aria-hidden="true" className="text-brand-blue" size={16} />
         <p className="text-xs font-medium">{label}</p>
       </div>
       <p className="font-display text-2xl font-bold tabular-nums text-brand-dark">{value}</p>
@@ -70,7 +70,7 @@ function DashboardMetrics({ onSessionExpired }) {
       >
         {loading ? (
           <div className="flex min-h-36 items-center justify-center gap-2 text-sm text-slate-500">
-            <LoaderCircle aria-hidden="true" className="animate-spin text-amber-600" size={18} />
+            <LoaderCircle aria-hidden="true" className="animate-spin text-brand-blue" size={18} />
             Carregando indicadores
           </div>
         ) : error ? (
@@ -118,7 +118,7 @@ function DashboardMetrics({ onSessionExpired }) {
 
             <section className="mt-5 border-t border-slate-200 pt-5">
               <div className="mb-4 flex items-center gap-2">
-                <UsersRound aria-hidden="true" className="text-amber-600" size={17} />
+                <UsersRound aria-hidden="true" className="text-brand-blue" size={17} />
                 <h3 className="text-sm font-semibold text-slate-800">
                   Empresas com vagas abertas há {dashboard.vagas_antigas.limite_dias} dias ou mais
                 </h3>
@@ -135,7 +135,7 @@ function DashboardMetrics({ onSessionExpired }) {
                         {empresa.vagas.map((vaga) => (
                           <li className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600" key={vaga.id}>
                             <span>{vaga.codigo} · {vaga.nome}</span>
-                            <span className="font-medium text-amber-700">Há {vaga.dias_aberta} dias</span>
+                            <span className="font-medium text-brand-blue">Há {vaga.dias_aberta} dias</span>
                           </li>
                         ))}
                       </ul>

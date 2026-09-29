@@ -7,6 +7,8 @@ export default {
         "brand-dark": "#0f172a",
         "brand-gold": "#f59e0b",
         "brand-light": "#f8fafc",
+        "brand-blue": "#2563eb",
+        "brand-blue-light": "#eff6ff",
         ink: "#18362f",
         forest: "#20483e",
         leaf: "#cce77a",

@@ -45,13 +45,13 @@ function App() {
         <>
           <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
             <div>
-              <p className="mb-2 text-xs font-semibold text-gray-500">PAINEL DA FRANQUIA</p>
+              <p className="mb-2 text-xs font-semibold text-brand-blue">PAINEL DA FRANQUIA</p>
               <h1 className="font-display text-3xl font-semibold leading-tight text-brand-dark sm:text-4xl">
                 Bem-vindo ao Super Estágios
               </h1>
             </div>
             <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-600">
-              <CalendarDays aria-hidden="true" className="text-brand-gold" size={17} />
+              <CalendarDays aria-hidden="true" className="text-brand-blue" size={17} />
               <span className="capitalize">{dateLabel}</span>
             </div>
           </div>
@@ -66,14 +66,14 @@ function App() {
                     onClick={() => setActiveItem(label)}
                     type="button"
                   >
-                    <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-brand-dark transition group-hover:bg-amber-100 group-hover:text-amber-700">
+                    <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-brand-blue-light text-brand-blue transition group-hover:bg-blue-100">
                       <Icon aria-hidden="true" size={19} />
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="block text-sm font-semibold text-slate-800">{label}</span>
                       <span className="mt-0.5 block text-xs text-slate-500">{detail}</span>
                     </span>
-                    <ChevronRight aria-hidden="true" className="text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-amber-600" size={18} />
+                    <ChevronRight aria-hidden="true" className="text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-brand-blue" size={18} />
                   </button>
                 ))}
               </div>
@@ -94,7 +94,7 @@ function App() {
               )}
             >
               <div className="flex min-h-[230px] flex-col items-center justify-center py-7 text-center">
-                <div className="mb-4 flex size-12 items-center justify-center rounded-lg bg-amber-50 text-amber-700">
+                  <div className="mb-4 flex size-12 items-center justify-center rounded-lg bg-brand-blue-light text-brand-blue">
                   <CalendarDays aria-hidden="true" size={22} />
                 </div>
                 <p className="text-sm font-semibold text-slate-800">Sua agenda está pronta</p>
@@ -102,7 +102,7 @@ function App() {
                   As entrevistas agendadas aparecerão nesta área.
                 </p>
                 <button
-                  className="mt-5 inline-flex items-center gap-1 text-sm font-semibold text-amber-700 transition hover:text-amber-800"
+                  className="mt-5 inline-flex items-center gap-1 text-sm font-semibold text-brand-blue transition hover:text-blue-800"
                   onClick={() => setActiveItem("Calendário")}
                   type="button"
                 >
