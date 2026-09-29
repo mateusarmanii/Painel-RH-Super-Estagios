@@ -35,11 +35,14 @@ function Sidebar({ activeItem, isOpen, onClose, onNavigate }) {
       >
         <div className="border-b border-white/10 px-5 pb-5 pt-6">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
+            <div aria-label="SUPER ESTÁGIOS - RECRUTAMENTO E SELEÇÃO" className="flex min-w-0 items-center gap-2.5">
               <div className="flex size-9 items-center justify-center rounded-lg bg-blue-400/15 text-blue-300">
                 <GraduationCap aria-hidden="true" size={20} strokeWidth={2.1} />
               </div>
-              <p className="font-display text-sm font-bold text-white">Super Estágios</p>
+              <div className="min-w-0">
+                <p className="font-display text-[10px] font-extrabold leading-4 text-white">SUPER ESTÁGIOS -</p>
+                <p className="text-[9px] font-bold leading-3 text-blue-300">RECRUTAMENTO E SELEÇÃO</p>
+              </div>
             </div>
           <button
             aria-label="Fechar navegação"

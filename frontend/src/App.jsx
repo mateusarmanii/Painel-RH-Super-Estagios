@@ -47,7 +47,7 @@ function App() {
             <div>
               <p className="mb-2 text-xs font-semibold text-brand-blue">PAINEL DA FRANQUIA</p>
               <h1 className="font-display text-3xl font-semibold leading-tight text-brand-dark sm:text-4xl">
-                Bem-vindo ao Super Estágios
+                Bem-vindo ao Super Estágios - Recrutamento e Seleção
               </h1>
             </div>
             <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-600">
