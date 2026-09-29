@@ -60,6 +60,11 @@ const applicationInclude = {
   },
 };
 
+function growthPercentage(current, previous) {
+  if (previous === 0) return current === 0 ? 0 : null;
+  return Number((((current - previous) / previous) * 100).toFixed(1));
+}
+
 const pdfStorage = multer.diskStorage({
   destination: (req, file, callback) => {
     const folder = file.fieldname === "curriculo" ? "curriculos" : "relatorios";
@@ -176,6 +181,136 @@ app.get("/franquias", authenticate, async (req, res) => {
     res.json(franquia ? [franquia] : []);
   } catch (error) {
     res.status(500).json({ erro: "Não foi possível consultar a franquia." });
+  }
+});
+
+app.get("/dashboard", authenticate, async (req, res) => {
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const previousMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const yearStart = new Date(now.getFullYear(), 0, 1);
+  const oldVacancyCutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  const applicationScope = {
+    candidato: { franquia_id: req.franchiseId },
+    vaga: { empresa: { franquia_id: req.franchiseId } },
+  };
+
+  try {
+    const [
+      hiresThisMonth,
+      hiresPreviousMonth,
+      hiresThisYear,
+      vacanciesThisMonth,
+      vacanciesPreviousMonth,
+      pendingHires,
+      interviewCandidates,
+      oldVacancies,
+    ] = await Promise.all([
+      prisma.aplicacao.count({
+        where: {
+          ...applicationScope,
+          status_funil: "Contratada",
+          contratada_em: { gte: monthStart, lt: nextMonthStart },
+        },
+      }),
+      prisma.aplicacao.count({
+        where: {
+          ...applicationScope,
+          status_funil: "Contratada",
+          contratada_em: { gte: previousMonthStart, lt: monthStart },
+        },
+      }),
+      prisma.aplicacao.count({
+        where: {
+          ...applicationScope,
+          status_funil: "Contratada",
+          contratada_em: { gte: yearStart, lt: nextMonthStart },
+        },
+      }),
+      prisma.vaga.count({
+        where: {
+          empresa: { franquia_id: req.franchiseId },
+          criado_em: { gte: monthStart, lt: nextMonthStart },
+        },
+      }),
+      prisma.vaga.count({
+        where: {
+          empresa: { franquia_id: req.franchiseId },
+          criado_em: { gte: previousMonthStart, lt: monthStart },
+        },
+      }),
+      prisma.aplicacao.count({
+        where: {
+          ...applicationScope,
+          removida_em: null,
+          status_funil: { in: ["Enviado para a Empresa", "Em seleção"] },
+        },
+      }),
+      prisma.aplicacao.findMany({
+        where: {
+          ...applicationScope,
+          removida_em: null,
+          entrevistas: {
+            some: { status: "Agendada", data_hora_fim: { gte: now } },
+          },
+        },
+        select: { candidato_id: true },
+        distinct: ["candidato_id"],
+      }),
+      prisma.vaga.findMany({
+        where: {
+          aberta: true,
+          criado_em: { lte: oldVacancyCutoff },
+          empresa: { franquia_id: req.franchiseId },
+        },
+        select: {
+          id: true,
+          codigo: true,
+          nome: true,
+          criado_em: true,
+          empresa: { select: { id: true, nome: true } },
+        },
+        orderBy: { criado_em: "asc" },
+      }),
+    ]);
+
+    const companiesWithOldVacancies = new Map();
+    for (const vaga of oldVacancies) {
+      if (!companiesWithOldVacancies.has(vaga.empresa.id)) {
+        companiesWithOldVacancies.set(vaga.empresa.id, {
+          id: vaga.empresa.id,
+          nome: vaga.empresa.nome,
+          vagas: [],
+        });
+      }
+      companiesWithOldVacancies.get(vaga.empresa.id).vagas.push({
+        id: vaga.id,
+        codigo: vaga.codigo,
+        nome: vaga.nome,
+        dias_aberta: Math.floor((now.getTime() - vaga.criado_em.getTime()) / (24 * 60 * 60 * 1000)),
+      });
+    }
+
+    res.json({
+      contratacoes: {
+        mes: hiresThisMonth,
+        ano: hiresThisYear,
+        crescimento_mensal: growthPercentage(hiresThisMonth, hiresPreviousMonth),
+      },
+      vagas: {
+        criadas_no_mes: vacanciesThisMonth,
+        crescimento_mensal: growthPercentage(vacanciesThisMonth, vacanciesPreviousMonth),
+      },
+      contratacoes_pendentes: pendingHires,
+      candidatos_em_entrevista: interviewCandidates.length,
+      vagas_antigas: {
+        limite_dias: 30,
+        empresas: [...companiesWithOldVacancies.values()],
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ erro: "Não foi possível carregar os indicadores do dashboard." });
   }
 });
 
@@ -321,7 +456,10 @@ app.patch("/aplicacoes/:id/status", authenticate, async (req, res) => {
     const aplicacao = await prisma.$transaction(async (transaction) => {
       const updated = await transaction.aplicacao.update({
         where: { id: existing.id },
-        data: { status_funil },
+        data: {
+          status_funil,
+          contratada_em: status_funil === "Contratada" ? new Date() : null,
+        },
       });
 
       if (status_funil === "Contratada") {

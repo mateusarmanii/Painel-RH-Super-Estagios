@@ -37,6 +37,7 @@ model Vaga {
   codigo      String      @unique @db.VarChar(6)
   link        String
   nome        String
+  aberta      Boolean     @default(true)
   criado_em   DateTime    @default(now())
   empresa     Empresa     @relation(fields: [empresa_id], references: [id])
   aplicacoes  Aplicacao[]
@@ -70,6 +71,7 @@ model Aplicacao {
   candidato_id   String       @db.Uuid
   status_funil   String       @default("Enviado para a Empresa")
   data_aplicacao DateTime     @default(now())
+  contratada_em  DateTime?
   removida_em    DateTime?
   vaga           Vaga         @relation(fields: [vaga_id], references: [id])
   candidato      Candidato    @relation(fields: [candidato_id], references: [id])
