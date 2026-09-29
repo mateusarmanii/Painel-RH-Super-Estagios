@@ -30,17 +30,12 @@ function Metric({ detail, icon: Icon, label, value }) {
   );
 }
 
-function DashboardMetrics({ accessToken, onAuthenticated }) {
+function DashboardMetrics({ onSessionExpired }) {
   const [dashboard, setDashboard] = useState(null);
-  const [loading, setLoading] = useState(Boolean(accessToken));
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [login, setLogin] = useState("");
-  const [senha, setSenha] = useState("");
-  const [loginLoading, setLoginLoading] = useState(false);
 
   useEffect(() => {
-    if (!accessToken) return undefined;
-
     let active = true;
     api.get("/dashboard")
       .then(({ data }) => {
@@ -50,8 +45,7 @@ function DashboardMetrics({ accessToken, onAuthenticated }) {
         if (!active) return;
         if (requestError.response?.status === 401) {
           window.localStorage.removeItem("accessToken");
-          onAuthenticated(null);
-          setError("Sua sessão expirou. Entre novamente para atualizar os indicadores.");
+          onSessionExpired(null);
           return;
         }
         setError("Não foi possível carregar os indicadores agora.");
@@ -63,25 +57,7 @@ function DashboardMetrics({ accessToken, onAuthenticated }) {
     return () => {
       active = false;
     };
-  }, [accessToken, onAuthenticated]);
-
-  async function handleLogin(event) {
-    event.preventDefault();
-    setLoginLoading(true);
-    setLoading(true);
-    setDashboard(null);
-    setError("");
-    try {
-      const { data } = await api.post("/auth/login", { login, senha });
-      window.localStorage.setItem("accessToken", data.token);
-      onAuthenticated(data.token);
-      setSenha("");
-    } catch (requestError) {
-      setError(requestError.response?.data?.erro || "Não foi possível entrar. Verifique suas credenciais.");
-    } finally {
-      setLoginLoading(false);
-    }
-  }
+  }, [onSessionExpired]);
 
   const hiresGrowth = dashboard ? growthLabel(dashboard.contratacoes.crescimento_mensal) : growthLabel(0);
   const vacanciesGrowth = dashboard ? growthLabel(dashboard.vagas.crescimento_mensal) : growthLabel(0);
@@ -90,45 +66,9 @@ function DashboardMetrics({ accessToken, onAuthenticated }) {
     <div className="mt-6">
       <Card
         title="Dashboard"
-        headerAction={accessToken && <span className="text-xs font-medium text-slate-800">Comparativo mensal</span>}
+        headerAction={<span className="text-xs font-medium text-slate-800">Comparativo mensal</span>}
       >
-        {!accessToken ? (
-          <form className="mx-auto max-w-md py-2" onSubmit={handleLogin}>
-            <p className="mb-5 text-sm text-slate-600">Entre com a conta da franquia para carregar os indicadores.</p>
-            <label className="mb-4 block text-sm font-medium text-slate-700" htmlFor="dashboard-login">
-              Login
-              <input
-                autoComplete="username"
-                className="mt-1.5 h-11 w-full rounded-lg border border-slate-300 px-3 text-slate-900 outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-100"
-                id="dashboard-login"
-                onChange={(event) => setLogin(event.target.value)}
-                required
-                value={login}
-              />
-            </label>
-            <label className="mb-4 block text-sm font-medium text-slate-700" htmlFor="dashboard-password">
-              Senha
-              <input
-                autoComplete="current-password"
-                className="mt-1.5 h-11 w-full rounded-lg border border-slate-300 px-3 text-slate-900 outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-100"
-                id="dashboard-password"
-                onChange={(event) => setSenha(event.target.value)}
-                required
-                type="password"
-                value={senha}
-              />
-            </label>
-            {error && <p aria-live="polite" className="mb-4 text-sm text-rose-700">{error}</p>}
-            <button
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-brand-dark px-5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-wait disabled:opacity-60"
-              disabled={loginLoading}
-              type="submit"
-            >
-              {loginLoading && <LoaderCircle aria-hidden="true" className="animate-spin" size={17} />}
-              Entrar
-            </button>
-          </form>
-        ) : loading ? (
+        {loading ? (
           <div className="flex min-h-36 items-center justify-center gap-2 text-sm text-slate-500">
             <LoaderCircle aria-hidden="true" className="animate-spin text-amber-600" size={18} />
             Carregando indicadores

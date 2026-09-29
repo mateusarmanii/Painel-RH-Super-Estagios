@@ -11,6 +11,7 @@ import {
 import Card from "./components/Card.jsx";
 import DashboardMetrics from "./components/DashboardMetrics.jsx";
 import Layout from "./components/Layout.jsx";
+import LoginPage from "./components/LoginPage.jsx";
 
 const navigationItems = [
   { label: "Vagas", detail: "Acompanhe oportunidades", icon: BriefcaseBusiness },
@@ -32,6 +33,10 @@ function App() {
   function logout() {
     window.localStorage.removeItem("accessToken");
     setAccessToken(null);
+  }
+
+  if (!accessToken) {
+    return <LoginPage onAuthenticated={setAccessToken} />;
   }
 
   return (
@@ -106,11 +111,7 @@ function App() {
               </div>
             </Card>
           </div>
-          <DashboardMetrics
-            accessToken={accessToken}
-            key={accessToken || "anonymous"}
-            onAuthenticated={setAccessToken}
-          />
+          <DashboardMetrics onSessionExpired={setAccessToken} />
         </>
       ) : (
         <>
