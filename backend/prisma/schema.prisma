@@ -1,0 +1,73 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum HorarioEstudo {
+  MANHA
+  TARDE
+  NOITE
+}
+
+enum StatusVaga {
+  ABERTA
+  FECHADA
+  SUSPENSA
+}
+
+enum StatusKanban {
+  ENVIADO_EMPRESA
+  ENTREVISTA_AGENDADA
+  AGUARDANDO_RETORNO
+  APROVADO
+  RECUSADO
+}
+
+model Empresa {
+  id               String  @id @default(uuid()) @db.Uuid
+  nome             String
+  nome_contato     String
+  telefone_contato String
+  email_contato    String?
+  vagas            Vaga[]
+}
+
+model Estudante {
+  id                 String        @id @default(uuid()) @db.Uuid
+  nome_completo      String
+  telefone           String
+  email              String?
+  curso              String
+  instituicao_ensino String
+  link_curriculo     String?
+  endereco           String?
+  horario_estudo     HorarioEstudo
+  aplicacoes         Aplicacao[]
+}
+
+model Vaga {
+  id          String       @id @default(uuid()) @db.Uuid
+  codigo_vaga String       @unique @db.VarChar(6)
+  titulo      String
+  descricao   String
+  valor       Float
+  status      StatusVaga   @default(ABERTA)
+  empresa_id  String       @db.Uuid
+  empresa     Empresa      @relation(fields: [empresa_id], references: [id])
+  aplicacoes  Aplicacao[]
+}
+
+model Aplicacao {
+  id                   String       @id @default(uuid()) @db.Uuid
+  vaga_id              String       @db.Uuid
+  estudante_id         String       @db.Uuid
+  status_kanban        StatusKanban @default(ENVIADO_EMPRESA)
+  data_hora_entrevista DateTime?
+  motivo_recusa        String?
+  vaga                 Vaga         @relation(fields: [vaga_id], references: [id])
+  estudante            Estudante    @relation(fields: [estudante_id], references: [id])
+}
