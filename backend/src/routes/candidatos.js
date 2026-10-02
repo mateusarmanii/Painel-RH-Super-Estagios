@@ -85,11 +85,12 @@ router.post("/", async (req, res) => {
     link_curriculo,
     endereco,
     horario_estudo,
+    vaga_id,
   } = req.body ?? {};
 
-  if (!nome_completo || !telefone || !curso || !instituicao_ensino) {
+  if (!nome_completo || !telefone || !curso || !instituicao_ensino || !vaga_id) {
     return res.status(400).json({
-      erro: "Informe nome completo, telefone, curso e instituição de ensino.",
+      erro: "Informe nome, telefone, curso, instituição de ensino e vaga.",
     });
   }
 
@@ -97,22 +98,51 @@ router.post("/", async (req, res) => {
     return res.status(400).json({ erro: "Horário de estudo inválido." });
   }
 
+  if (!uuidValido.test(vaga_id)) {
+    return res.status(400).json({ erro: "ID de vaga inválido." });
+  }
+
   try {
-    const candidato = await prisma.estudante.create({
-      data: {
-        nome_completo,
-        telefone,
-        email,
-        curso,
-        instituicao_ensino,
-        link_curriculo,
-        endereco,
-        horario_estudo,
-      },
+    const candidato = await prisma.$transaction(async (transaction) => {
+      const vaga = await transaction.vaga.findUnique({
+        where: { id: vaga_id },
+        select: { id: true, status: true },
+      });
+
+      if (!vaga) {
+        const error = new Error("Vaga não encontrada.");
+        error.status = 404;
+        throw error;
+      }
+
+      if (vaga.status !== "ABERTA") {
+        const error = new Error("A vaga selecionada não está aberta.");
+        error.status = 409;
+        throw error;
+      }
+
+      return transaction.estudante.create({
+        data: {
+          nome_completo,
+          telefone,
+          email,
+          curso,
+          instituicao_ensino,
+          link_curriculo,
+          endereco,
+          horario_estudo,
+          aplicacoes: { create: { vaga: { connect: { id: vaga_id } } } },
+        },
+        include: { aplicacoes: true },
+      });
     });
 
     return res.status(201).json(candidato);
   } catch (error) {
+    if (error.status) {
+      return res.status(error.status).json({ erro: error.message });
+    }
+
     console.error("Erro ao criar candidato:", error);
     return res.status(500).json({ erro: "Não foi possível criar o candidato." });
   }

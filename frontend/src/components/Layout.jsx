@@ -1,9 +1,12 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import CreationForm from "./CreationForm.jsx";
+import Modal from "./Modal.jsx";
 import {
   BriefcaseBusiness,
   Building2,
   GraduationCap,
+  LayoutDashboard,
   Menu,
   Search,
   Users,
@@ -12,6 +15,7 @@ import {
 } from "lucide-react";
 
 const navigationItems = [
+  { label: "Dashboard", path: "/", icon: LayoutDashboard },
   { label: "Vagas", path: "/vagas", icon: BriefcaseBusiness },
   { label: "Empresas", path: "/empresas", icon: Building2 },
   { label: "Empresas sem vaga", path: "/empresas-sem-vaga", icon: Building2 },
@@ -22,11 +26,11 @@ const navigationItems = [
 export default function Layout({
   children,
   onSearch,
-  onCreateEmpresa,
-  onCreateVaga,
-  onCreateEstudante,
 }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isEmpresaModalOpen, setIsEmpresaModalOpen] = useState(false);
+  const [isVagaModalOpen, setIsVagaModalOpen] = useState(false);
+  const [isEstudanteModalOpen, setIsEstudanteModalOpen] = useState(false);
   const [numeroVaga, setNumeroVaga] = useState("");
 
   function handleSearch(event) {
@@ -36,9 +40,9 @@ export default function Layout({
   }
 
   const actions = [
-    { label: "Empresa", icon: Building2, onClick: onCreateEmpresa },
-    { label: "Vaga", icon: BriefcaseBusiness, onClick: onCreateVaga },
-    { label: "Estudante", icon: GraduationCap, onClick: onCreateEstudante },
+    { label: "Empresa", icon: Building2, onClick: () => setIsEmpresaModalOpen(true) },
+    { label: "Vaga", icon: BriefcaseBusiness, onClick: () => setIsVagaModalOpen(true) },
+    { label: "Estudante", icon: GraduationCap, onClick: () => setIsEstudanteModalOpen(true) },
   ];
 
   return (
@@ -132,6 +136,30 @@ export default function Layout({
       </aside>
 
       <main className="min-h-screen pt-16">{children}</main>
+
+      <Modal
+        isOpen={isEmpresaModalOpen}
+        title="Adicionar empresa"
+        onClose={() => setIsEmpresaModalOpen(false)}
+      >
+        <CreationForm type="empresa" onSuccess={() => setIsEmpresaModalOpen(false)} />
+      </Modal>
+
+      <Modal
+        isOpen={isVagaModalOpen}
+        title="Adicionar vaga"
+        onClose={() => setIsVagaModalOpen(false)}
+      >
+        <CreationForm type="vaga" onSuccess={() => setIsVagaModalOpen(false)} />
+      </Modal>
+
+      <Modal
+        isOpen={isEstudanteModalOpen}
+        title="Adicionar estudante"
+        onClose={() => setIsEstudanteModalOpen(false)}
+      >
+        <CreationForm type="estudante" onSuccess={() => setIsEstudanteModalOpen(false)} />
+      </Modal>
     </>
   );
 }
