@@ -114,6 +114,11 @@ Build OK; testes `cd backend && npm run test:etapa2d` (10/10, registros `[TESTE]
 - Funil com os mesmos nomes do Kanban (mapeados no frontend a partir do `status`); rótulos do eixo quebram linha no celular.
 - Rótulos e cores das etapas centralizados em `frontend/src/kanbanStatus.js` (Kanban, funil e histórico).
 
+### 🟡 Exportar CSV — IMPLEMENTADO (05/10/2026); falta validar no navegador/Excel
+- Botão "Exportar CSV" em **Vagas** e **Banco de Talentos** (`EntityList` prop `csvExport`), ao lado da busca; exporta só o que está na tela (respeita o filtro). Desabilitado com a lista vazia. Arquivo `vagas-AAAA-MM-DD.csv` / `banco-de-talentos-AAAA-MM-DD.csv`.
+- `frontend/src/csv.js`: separador `;`, UTF-8 com BOM, CRLF; células com `;`, aspas ou quebra de linha vão entre aspas; valores com 2 casas e vírgula ("1500,50"); datas dd/mm/aaaa. Proteção contra fórmula: conteúdo que começa com `=`, `@`, tab, ou `+`/`-` seguido de não-dígito recebe `'` na frente (telefones "+55…" ficam intactos).
+- Colunas — Vagas: Nº, Título, Empresa, Status, Bolsa-auxílio (R$), Criada em, Descrição. Banco de Talentos: Nome, Curso, Instituição, Telefone, E-mail, Horário, Endereço, Currículo, Candidaturas, Vagas e etapas, Anotações.
+
 ## Regras de trabalho
 
 - **Banco de dados: antes de aplicar QUALQUER alteração no banco (migrations, `migrate deploy`/`dev`/`reset`, `db push`, SQL manual, escrita em `_prisma_migrations`, criação/remoção de bancos, scripts de teste que gravam dados), mostrar o SQL/operações ao usuário e esperar aprovação explícita.**

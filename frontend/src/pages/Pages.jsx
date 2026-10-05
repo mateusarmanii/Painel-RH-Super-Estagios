@@ -2,6 +2,8 @@ import { Link } from "react-router-dom";
 import CandidaturaHistory from "../components/CandidaturaHistory.jsx";
 import EntityList from "../components/EntityList.jsx";
 import { statusLabels, statusStyles } from "../vagaStatus.js";
+import { kanbanStatusLabels } from "../kanbanStatus.js";
+import { csvDate, csvDecimal } from "../csv.js";
 
 function PlaceholderPage({ title }) {
   return (
@@ -18,6 +20,18 @@ const currency = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "
 const vagaConfig = {
   getSearchText: (vaga) => `${vaga.titulo} ${vaga.codigo_vaga}`,
   getName: (vaga) => vaga.titulo,
+  csvExport: {
+    filename: "vagas",
+    columns: [
+      { header: "Nº", value: (vaga) => vaga.codigo_vaga },
+      { header: "Título", value: (vaga) => vaga.titulo },
+      { header: "Empresa", value: (vaga) => vaga.empresa?.nome },
+      { header: "Status", value: (vaga) => statusLabels[vaga.status] },
+      { header: "Bolsa-auxílio (R$)", value: (vaga) => csvDecimal(vaga.valor) },
+      { header: "Criada em", value: (vaga) => csvDate(vaga.created_at) },
+      { header: "Descrição", value: (vaga) => vaga.descricao },
+    ],
+  },
   renderItem: (vaga) => (
     <>
       <div className="mb-5 flex items-start gap-3 pr-20">
@@ -65,6 +79,28 @@ const estudanteConfig = {
   getSearchText: (estudante) => estudante.nome_completo,
   getName: (estudante) => estudante.nome_completo,
   renderEditExtra: (estudante) => <CandidaturaHistory aplicacoes={estudante.aplicacoes} />,
+  csvExport: {
+    filename: "banco-de-talentos",
+    columns: [
+      { header: "Nome", value: (estudante) => estudante.nome_completo },
+      { header: "Curso", value: (estudante) => estudante.curso },
+      { header: "Instituição de ensino", value: (estudante) => estudante.instituicao_ensino },
+      { header: "Telefone", value: (estudante) => estudante.telefone },
+      { header: "E-mail", value: (estudante) => estudante.email },
+      { header: "Horário de estudo", value: (estudante) => horarioLabels[estudante.horario_estudo] },
+      { header: "Endereço", value: (estudante) => estudante.endereco },
+      { header: "Currículo", value: (estudante) => estudante.link_curriculo },
+      { header: "Candidaturas", value: (estudante) => estudante.aplicacoes?.length ?? 0 },
+      {
+        header: "Vagas e etapas",
+        value: (estudante) =>
+          (estudante.aplicacoes ?? [])
+            .map((aplicacao) => `${aplicacao.vaga?.titulo ?? "Vaga"}: ${kanbanStatusLabels[aplicacao.status_kanban]}`)
+            .join(" | "),
+      },
+      { header: "Anotações do recrutador", value: (estudante) => estudante.anotacoes_recrutador },
+    ],
+  },
   renderItem: (estudante) => (
     <>
       <span className="mb-5 self-start rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
