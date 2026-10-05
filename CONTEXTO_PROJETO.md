@@ -1,5 +1,93 @@
 # Contexto do Projeto — Super Estágios (Painel de RH)
 
+## Relatório da sessão (05/10/2026, execução sem acompanhamento)
+
+Regras seguidas: nenhuma migration, nenhuma alteração de schema e nenhuma escrita em dados reais. Os únicos dados gravados foram registros `[TESTE]`, criados e apagados pelos scripts, que confirmaram **0 sobras** em todas as execuções. Todas as etapas passaram no `npm run build` e foram enviadas ao GitHub.
+
+### O que foi concluído
+
+| Etapa | Commit | Resumo |
+|---|---|---|
+| 1 — 2D | `2ecbbdd` | Agenda `/agenda` (por dia, com Reagendar), histórico de candidaturas no modal Editar do estudante, "Próximas entrevistas" via `/entrevistas`, funil com os nomes do Kanban. Teste `npm run test:etapa2d`: 10/10. |
+| 2 — CSV | `d13f5e1` | Botão "Exportar CSV" em Vagas e Banco de Talentos, respeitando a busca (`;`, UTF-8 com BOM, CRLF, proteção contra fórmula). |
+| 3 — Demo | `8ce2a83` | `npm run demo:criar` / `npm run demo:limpar`. **Não executados**, como pedido; lógica validada sem banco. |
+| 4 — README | `240a240` | `README.md` e `backend/.env.example` (sem senha real). |
+| 5 — Revisão | `93a3dc0` | Busca do topo passou a funcionar, cabeçalho padrão nas listas, iniciais do Kanban corrigidas, variáveis sem uso removidas do seed. |
+
+A Etapa 1 incluiu uma mudança **só de código** no backend: o `GET /candidatos` passou a trazer título, número e empresa da vaga, motivo da dispensa e datas de cada candidatura, que o histórico precisa. Não houve mudança de schema.
+
+O que a revisão (Etapa 5) verificou:
+- **Lint (`oxlint`):** frontend sem nenhum import ou variável sem uso.
+- **Console do navegador:** nenhum erro ou aviso do app em 10 rotas; a única mensagem é o convite do React DevTools, que só aparece em desenvolvimento.
+- **Prints em notebook e celular de todas as telas**, com dados `[TESTE]` temporários: nenhuma tela vaza para os lados no celular.
+
+### O que foi pulado ou ficou parcial
+- **Scripts de demonstração:** não foram executados, por instrução. A lógica foi testada sem tocar no banco.
+- **Interações que o navegador headless não consegue fazer:** não testei por clique o modal de histórico, o Reagendar, o download do CSV (nem a abertura no Excel), a busca do topo e o arraste no Kanban. A lógica por trás de cada um foi testada (API, geração do CSV), mas a interação precisa do roteiro abaixo.
+- **Nenhuma etapa precisou ser desfeita.**
+
+### Encontrado e NÃO corrigido (fora do escopo seguro)
+1. ⚠️ **`npm run seed` (`prisma/seed.js`) apaga todos os dados do banco** antes de criar exemplos. Está documentado no README; não alterei. Sugestão: remover o script ou fazê-lo recusar rodar com dados existentes.
+2. **"Empresas sem vaga" e "Contratações" são páginas vazias**, só com o título. É funcionalidade não implementada.
+3. **Endereço da API fixo** (`http://localhost:3333`) em 6 arquivos do frontend. Sugestão: uma variável `VITE_API_URL`, que muda a configuração.
+4. **Kanban:**
+   - reordenar cartões dentro da mesma coluna não é salvo;
+   - no celular, as colunas ocupam a altura toda e é preciso rolar para o lado; no notebook, a 5ª coluna também exige rolagem.
+   - O reagendamento agora está disponível na Agenda.
+5. **Rosca por curso:** as porcentagens arredondadas podem somar 101% (ex.: 12,5% vira 13%).
+6. **O funil não inclui os dispensados** (`RECUSADO`), porque é assim que o backend calcula.
+7. **Lint:** aviso "body em GET" nos scripts de teste é falso positivo, porque o `body` é `undefined`.
+8. **Prisma:** o projeto usa a versão 5.22; a 8 está disponível, mas atualizar é uma mudança grande.
+
+### O que precisa da sua aprovação ou ação
+1. **Trocar a senha do banco.** O `.env` antigo continua no histórico do GitHub.
+2. **Rodar `cd backend && npm run demo:criar`** quando quiser dados de demonstração, e `npm run demo:limpar` para removê-los.
+3. **Confirmar a mudança de código no `GET /candidatos`** (Etapa 1).
+4. **Decidir sobre os itens 1 e 3 da lista acima:** o `seed.js` destrutivo e a `VITE_API_URL`.
+
+### Roteiro único de testes no navegador
+Suba a API e o frontend (`npm run dev` em `backend/` e `frontend/`). Para ter dados, rode antes `npm run demo:criar`.
+
+**Agenda e histórico (2D)**
+1. No menu lateral (☰), clique em **Agenda de Entrevistas**. As entrevistas devem aparecer agrupadas por dia ("Amanhã · …"), com hora, estudante, vaga, empresa e telefone.
+2. Clique em **Reagendar**:
+   - datas passadas devem estar bloqueadas;
+   - escolha outra data e confirme: deve aparecer um toast verde e a entrevista deve mudar de dia ou de hora;
+   - o mesmo cartão no Kanban deve mostrar a nova data.
+3. "Kanban →" na Agenda deve abrir o quadro da vaga.
+4. Em **Banco de Talentos**, clique no lápis de um estudante. Abaixo do formulário deve aparecer o "Histórico de candidaturas" com vaga, etapa colorida, data da entrevista, data da contratação e motivo da dispensa. Clique no nome da vaga: deve abrir o Kanban.
+5. No **Dashboard**:
+   - "Próximas entrevistas" deve mostrar só entrevistas futuras, no máximo 5;
+   - o link "Ver agenda completa" deve funcionar;
+   - o funil deve mostrar "Enviado à empresa / Em análise / Entrevista / Contratado", e no celular os nomes quebram em duas linhas sem se sobrepor.
+
+**Exportar CSV**
+6. Em **Vagas**, digite algo na busca e clique em **Exportar CSV**. O arquivo deve ter só as vagas filtradas. Abra no Excel e confira:
+   - os acentos aparecem certos;
+   - cada coluna fica numa célula separada;
+   - o valor aparece como "1500,50" e a data como dd/mm/aaaa.
+7. Repita no **Banco de Talentos**: as anotações com vírgula, ponto e vírgula ou quebra de linha devem continuar numa célula só.
+8. Com uma busca sem resultado, o botão deve ficar desabilitado.
+
+**Revisão**
+9. Na busca do topo, digite o Nº de uma vaga existente e tecle Enter: deve abrir o Kanban dela. Com um número inexistente, deve aparecer um toast "Nenhuma vaga com o Nº …".
+10. No Kanban, as iniciais dos cartões `[DEMO]` devem mostrar as letras do nome (ex.: "AB"), e não "[D".
+11. Vagas, Empresas, Banco de Talentos e `/kanban` devem ter o cabeçalho "Super Estágios / título".
+
+**Dados de demonstração**
+12. Depois do `demo:criar`, confira:
+    - o Dashboard mostra 2 vagas em alerta (Enfermagem e Engenharia Civil), a rosca tem 6 cursos mais "Outros", e "Direito"/"direito" e "Psicologia"/"PSICOLOGIA" aparecem agrupados;
+    - há 6 entrevistas na Agenda;
+    - o tempo médio de contratação está preenchido.
+13. Rode `npm run demo:limpar`: ele deve informar "Registros [DEMO] restantes: 0", e os seus dados reais devem continuar intactos.
+
+**Regressão (etapas anteriores, ainda não validadas no navegador)**
+14. **Etapa 1:** busca, edição e exclusão (com 409) em Vagas, Empresas e Banco de Talentos.
+15. **2B:** modais de "Entrevista" e "Dispensado" ao arrastar no Kanban, e o cartão volta se você cancelar.
+16. **2C:** estados de carregamento e de "API fora do ar" no Dashboard.
+
+---
+
 Este arquivo resume tudo o que já foi decidido e implementado no projeto, para que qualquer assistente de código (Claude Code, etc.) entenda o histórico antes de mexer no sistema. **Leia este arquivo inteiro antes de qualquer alteração.**
 
 ## O que é o sistema
