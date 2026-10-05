@@ -19,6 +19,47 @@ router.get("/", async (_req, res) => {
   }
 });
 
+router.get("/:vagaId/candidatos", async (req, res) => {
+  const { vagaId } = req.params;
+
+  if (!uuidValido.test(vagaId)) {
+    return res.status(400).json({ erro: "ID de vaga inválido." });
+  }
+
+  try {
+    const vaga = await prisma.vaga.findUnique({
+      where: { id: vagaId },
+      select: { id: true },
+    });
+
+    if (!vaga) {
+      return res.status(404).json({ erro: "Vaga não encontrada." });
+    }
+
+    const aplicacoes = await prisma.aplicacao.findMany({
+      where: { vaga_id: vagaId },
+      include: {
+        estudante: {
+          select: {
+            id: true,
+            nome_completo: true,
+            curso: true,
+            instituicao_ensino: true,
+            telefone: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: { created_at: "asc" },
+    });
+
+    return res.json(aplicacoes);
+  } catch (error) {
+    console.error("Erro ao listar candidatos da vaga:", error);
+    return res.status(500).json({ erro: "Não foi possível listar os candidatos da vaga." });
+  }
+});
+
 router.post("/", async (req, res) => {
   const { codigo_vaga, titulo, descricao, valor, empresa_id, status } = req.body ?? {};
 

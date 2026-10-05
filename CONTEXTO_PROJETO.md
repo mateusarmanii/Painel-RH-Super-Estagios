@@ -67,22 +67,27 @@ Não é o schema. `Kanban.jsx` busca `GET /candidatos` e exibe as aplicações d
 
 ### 1 — Etapa 1: validar no navegador (código pronto)
 
-### 2A — Banco de dados e backend (sem mexer no frontend)
-1. **Ajustar o modelo `Aplicacao` (não criar tabela nova):**
-   - adicionar `data_contratacao` (DateTime?), `createdAt` (`@default(now())`), `updatedAt` (`@updatedAt`)
-   - adicionar `@@unique([vaga_id, estudante_id])` (verificar duplicatas existentes antes)
-   - manter `motivo_recusa` como motivo da dispensa e `data_hora_entrevista` como data da entrevista
-   - adicionar `createdAt` em `Vaga` (necessário para "Vagas em Alerta")
-2. Rota `GET /vagas/:vagaId/candidatos` → só aplicações daquela vaga
-3. Rota de atualização do Kanban aceitando `status_kanban`, `motivo_recusa`, `data_hora_entrevista`; ao mudar para `APROVADO`, gravar `data_contratacao`
-4. Rota `GET /entrevistas` → aplicações com `data_hora_entrevista` futura, ordenadas por data
-5. `GET /dashboard-metrics` passando a calcular (hoje calcula só vagas abertas, candidatos em processo, empresas, entrevistas agendadas, funil e próximas 5 entrevistas — sem filtro de data futura):
-   - **Tempo Médio de Contratação:** média de dias entre `createdAt` da candidatura e `data_contratacao` (não usar `updatedAt`, que muda a cada edição)
-   - **Vagas em Alerta:** vagas `ABERTA` criadas há mais de 10 dias com 0 aplicações em `ENTREVISTA_AGENDADA`
-   - **Distribuição por Curso:** contagem de estudantes agrupados por `curso`
-6. O projeto usa migrations (`backend/prisma/migrations`), não `db push`. Gerar o SQL, **mostrar ao usuário e aplicar só após aprovação** (ver "Observações de ambiente" e "Regras de trabalho"). As colunas novas de data precisam de valor inicial para os registros existentes.
+### ✅ 2A — Banco de dados e backend — CONCLUÍDA (05/10/2026)
+Testes: `cd backend && npm run test:etapa2a` (33/33 passaram; **grava e apaga registros `[TESTE]` — pedir aprovação antes de rodar**).
+1. Migration `20261005173316_add_datas_aplicacao_vaga` (só adições, aprovada pelo usuário):
+   - `Aplicacao`: `created_at` (`@default(now())`), `updated_at` (`@default(now()) @updatedAt`), `data_aprovacao DateTime?` (= data de contratação), `@@unique([vaga_id, estudante_id])` (não havia duplicatas)
+   - `Vaga`: `created_at` (`@default(now())`)
+   - Registros existentes receberam a data/hora da migration (05/10/2026). Nomes em snake_case, por decisão do usuário (não usar `createdAt`/`data_contratacao`).
+2. `GET /vagas/:vagaId/candidatos` → aplicações da vaga com `estudante` (id, nome, curso, instituição, telefone, e-mail), ordenadas por `created_at`; 400 id inválido, 404 vaga inexistente.
+3. `PATCH /candidatos/:id` (Kanban) aceita `status_kanban`, `data_hora_entrevista`, `motivo_recusa`:
+   - `ENTREVISTA_AGENDADA` exige data válida e `RECUSADO` exige motivo não vazio → senão **400**
+   - Entrar em `APROVADO` grava `data_aprovacao`; repetir não altera; sair de `APROVADO` limpa
+   - `motivo_recusa` só é mantido enquanto `RECUSADO` (sair limpa); `data_hora_entrevista` permanece como histórico
+   - ⚠️ O `Kanban.jsx` atual não envia a data: **arrastar para "Entrevista" devolve 400 e o cartão volta** até a 2B ser feita.
+4. `GET /entrevistas` (`src/routes/entrevistas.js`) → só `ENTREVISTA_AGENDADA` com data futura, ordenadas por data, com estudante, vaga e empresa.
+5. `GET /dashboard-metrics` passou a devolver também:
+   - `metrics.tempoMedioContratacaoDias` (média de `data_aprovacao − created_at`, 1 casa decimal; `null` sem contratações) e `metrics.totalContratacoes`
+   - `vagasEmAlerta[]`: `ABERTA` criadas há mais de 10 dias sem aplicação em `ENTREVISTA_AGENDADA` (id, código, título, empresa, `created_at`, `diasAberta`, `totalCandidaturas`)
+   - `distribuicaoPorCurso[]` `{ curso, total }`: agrupa ignorando maiúsculas, acentos e espaços extras; exibe a grafia mais comum (empate: alfabética)
+   - Sem alteração: `recentInterviews` continua sem filtro de data futura.
 
 ### 2B — Kanban isolado e interativo (frontend)
+- **Prioridade:** o Kanban atual quebra ao soltar em "Entrevista" (backend agora exige `data_hora_entrevista`).
 - Rota `/kanban/:vagaId`; `Kanban.jsx` usa `useParams` e busca `/vagas/:vagaId/candidatos`
 - Botão "Abrir Kanban" em Vagas aponta para `/kanban/${vaga.id}`
 - 5ª coluna **Dispensado** = status `RECUSADO` (cor neutra/avermelhada). Hoje o Kanban tem só 4 colunas e aplicações `RECUSADO` ficam ocultas

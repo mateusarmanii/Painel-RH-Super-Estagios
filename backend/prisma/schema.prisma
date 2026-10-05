@@ -59,6 +59,7 @@ model Vaga {
   valor       Float
   status      StatusVaga  @default(ABERTA)
   empresa_id  String      @db.Uuid
+  created_at  DateTime    @default(now())
   empresa     Empresa     @relation(fields: [empresa_id], references: [id])
   aplicacoes  Aplicacao[]
 }
@@ -70,6 +71,11 @@ model Aplicacao {
   status_kanban        StatusKanban @default(ENVIADO_EMPRESA)
   data_hora_entrevista DateTime?
   motivo_recusa        String?
+  data_aprovacao       DateTime?
+  created_at           DateTime     @default(now())
+  updated_at           DateTime     @default(now()) @updatedAt
   vaga                 Vaga         @relation(fields: [vaga_id], references: [id])
   estudante            Estudante    @relation(fields: [estudante_id], references: [id])
+
+  @@unique([vaga_id, estudante_id])
 }

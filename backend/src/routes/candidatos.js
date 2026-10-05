@@ -37,7 +37,7 @@ router.get("/", async (_req, res) => {
 
 router.patch("/:id", async (req, res) => {
   const { id } = req.params;
-  const { aplicacao_id, status_kanban } = req.body ?? {};
+  const { aplicacao_id, status_kanban, data_hora_entrevista, motivo_recusa } = req.body ?? {};
 
   if (!uuidValido.test(id) || !uuidValido.test(aplicacao_id ?? "")) {
     return res.status(400).json({ erro: "ID de candidato ou aplicação inválido." });
@@ -47,24 +47,49 @@ router.patch("/:id", async (req, res) => {
     return res.status(400).json({ erro: "Status de candidatura inválido." });
   }
 
+  const dataEntrevista = data_hora_entrevista ? new Date(data_hora_entrevista) : null;
+  if (status_kanban === "ENTREVISTA_AGENDADA" && (!dataEntrevista || Number.isNaN(dataEntrevista.getTime()))) {
+    return res.status(400).json({ erro: "Informe uma data e hora válidas para a entrevista." });
+  }
+
+  const motivo = typeof motivo_recusa === "string" ? motivo_recusa.trim() : "";
+  if (status_kanban === "RECUSADO" && !motivo) {
+    return res.status(400).json({ erro: "Informe o motivo da dispensa." });
+  }
+
   try {
     const aplicacao = await prisma.aplicacao.findFirst({
       where: { id: aplicacao_id, estudante_id: id },
-      select: { id: true },
+      select: { id: true, status_kanban: true },
     });
 
     if (!aplicacao) {
       return res.status(404).json({ erro: "Aplicação não encontrada para este candidato." });
     }
 
+    // data_aprovacao marca a contratação: grava ao entrar em APROVADO e limpa ao sair.
+    const data = { status_kanban };
+    if (status_kanban === "APROVADO" && aplicacao.status_kanban !== "APROVADO") {
+      data.data_aprovacao = new Date();
+    } else if (status_kanban !== "APROVADO") {
+      data.data_aprovacao = null;
+    }
+
+    // A data da entrevista fica no histórico mesmo após mudar de coluna; o motivo só vale enquanto RECUSADO.
+    if (status_kanban === "ENTREVISTA_AGENDADA") data.data_hora_entrevista = dataEntrevista;
+    data.motivo_recusa = status_kanban === "RECUSADO" ? motivo : null;
+
     const atualizada = await prisma.aplicacao.update({
       where: { id: aplicacao.id },
-      data: { status_kanban },
+      data,
       select: {
         id: true,
         estudante_id: true,
         vaga_id: true,
         status_kanban: true,
+        data_hora_entrevista: true,
+        motivo_recusa: true,
+        data_aprovacao: true,
       },
     });
 
