@@ -60,8 +60,8 @@ Enum `StatusKanban` e rótulos usados nas telas:
 | `APROVADO` | **Contratado** |
 | `RECUSADO` | **Dispensado** |
 
-### Causa real do "Kanban global"
-Não é o schema. `Kanban.jsx` busca `GET /candidatos` e exibe as aplicações de **todas as vagas num único quadro** (rota `/kanban`, sem `:vagaId`). O `PATCH /candidatos/:id` já atualiza só a aplicação informada. A correção é isolar por vaga (backend 2A + frontend 2B).
+### Causa real do "Kanban global" (resolvido na 2B)
+Não era o schema. O `Kanban.jsx` antigo buscava `GET /candidatos` e exibia as aplicações de **todas as vagas num único quadro**. Desde a 2B, cada quadro é de uma vaga (`/kanban/:vagaId`).
 
 ## O que falta implementar
 
@@ -78,7 +78,7 @@ Testes: `cd backend && npm run test:etapa2a` (33/33 passaram; **grava e apaga re
    - `ENTREVISTA_AGENDADA` exige data válida e `RECUSADO` exige motivo não vazio → senão **400**
    - Entrar em `APROVADO` grava `data_aprovacao`; repetir não altera; sair de `APROVADO` limpa
    - `motivo_recusa` só é mantido enquanto `RECUSADO` (sair limpa); `data_hora_entrevista` permanece como histórico
-   - ⚠️ O `Kanban.jsx` atual não envia a data: **arrastar para "Entrevista" devolve 400 e o cartão volta** até a 2B ser feita.
+   - O Kanban (2B) envia a data e o motivo pelos modais.
 4. `GET /entrevistas` (`src/routes/entrevistas.js`) → só `ENTREVISTA_AGENDADA` com data futura, ordenadas por data, com estudante, vaga e empresa.
 5. `GET /dashboard-metrics` passou a devolver também:
    - `metrics.tempoMedioContratacaoDias` (média de `data_aprovacao − created_at`, 1 casa decimal; `null` sem contratações) e `metrics.totalContratacoes`
@@ -86,12 +86,14 @@ Testes: `cd backend && npm run test:etapa2a` (33/33 passaram; **grava e apaga re
    - `distribuicaoPorCurso[]` `{ curso, total }`: agrupa ignorando maiúsculas, acentos e espaços extras; exibe a grafia mais comum (empate: alfabética)
    - Sem alteração: `recentInterviews` continua sem filtro de data futura.
 
-### 2B — Kanban isolado e interativo (frontend)
-- **Prioridade:** o Kanban atual quebra ao soltar em "Entrevista" (backend agora exige `data_hora_entrevista`).
-- Rota `/kanban/:vagaId`; `Kanban.jsx` usa `useParams` e busca `/vagas/:vagaId/candidatos`
-- Botão "Abrir Kanban" em Vagas aponta para `/kanban/${vaga.id}`
-- 5ª coluna **Dispensado** = status `RECUSADO` (cor neutra/avermelhada). Hoje o Kanban tem só 4 colunas e aplicações `RECUSADO` ficam ocultas
-- `onDragEnd`: soltar em "Dispensado" → modal pedindo motivo; soltar em "Entrevista" → modal com `datetime-local`. Só salvar após confirmar; se cancelar, o cartão volta.
+### 🟡 2B — Kanban isolado e interativo — IMPLEMENTADA (05/10/2026); falta validar no navegador
+Só frontend (build OK). Arquivos: `pages/Kanban.jsx`, `App.jsx`, `pages/Pages.jsx`, `vagaStatus.js` (rótulos/cores de status da vaga, compartilhados).
+- Rotas: `/kanban/:vagaId` → quadro da vaga (`GET /vagas/:vagaId/candidatos`; nome/empresa/Nº vêm de `GET /vagas`, pois não há `GET /vagas/:id`). `/kanban` sem ID → lista de vagas para escolher (o menu lateral não tem item "Kanban"; a rota foi mantida para links antigos). Vaga inexistente → mensagem da API + link "Escolher outra vaga". "Abrir Kanban" em Vagas → `/kanban/${vaga.id}`.
+- 5 colunas: Enviado à empresa, Em análise, Entrevista, **Contratado** (`APROVADO`), **Dispensado** (`RECUSADO`, borda rosa e fundo avermelhado claro). Enum inalterado.
+- Ao soltar em Entrevista/Dispensado o cartão vai para a coluna e abre um modal (data e hora com `min` = agora + validação no envio; motivo obrigatório, até 500 caracteres). O PATCH só sai ao confirmar; cancelar, fechar no X ou clicar fora devolve o cartão. Erro da API (inclusive 400) → toast com a mensagem e o cartão volta.
+- Cartões mostram a data da entrevista (coluna Entrevista) e o motivo (coluna Dispensado). Após salvar, o cartão usa os dados devolvidos pelo PATCH.
+- Toasts de sucesso/erro no Kanban; o erro de carregamento do quadro continua inline.
+- Não implementado: reagendar uma entrevista sem tirar o cartão da coluna; reordenar cartões dentro da mesma coluna (a ordem não é salva).
 
 ### 2C — Dashboard analítico (frontend)
 - Card KPI "Tempo Médio de Contratação" (ex.: "14 dias")

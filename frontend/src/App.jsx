@@ -19,6 +19,7 @@ export default function App() {
           <Route path="/" element={<DashboardPage />} />
           <Route path="/vagas" element={<VagasPage />} />
           <Route path="/kanban" element={<KanbanPage />} />
+          <Route path="/kanban/:vagaId" element={<KanbanPage />} />
           <Route path="/empresas" element={<EmpresasPage />} />
           <Route path="/empresas-sem-vaga" element={<EmpresasSemVagaPage />} />
           <Route path="/banco-de-talentos" element={<BancoDeTalentosPage />} />

@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import EntityList from "../components/EntityList.jsx";
+import { statusLabels, statusStyles } from "../vagaStatus.js";
 
 function PlaceholderPage({ title }) {
   return (
@@ -8,18 +9,6 @@ function PlaceholderPage({ title }) {
     </section>
   );
 }
-
-const statusStyles = {
-  ABERTA: "bg-emerald-50 text-emerald-700",
-  SUSPENSA: "bg-amber-50 text-amber-700",
-  FECHADA: "bg-slate-100 text-slate-600",
-};
-
-const statusLabels = {
-  ABERTA: "Aberta",
-  SUSPENSA: "Suspensa",
-  FECHADA: "Fechada",
-};
 
 const horarioLabels = { MANHA: "Manhã", TARDE: "Tarde", NOITE: "Noite" };
 
@@ -42,7 +31,7 @@ const vagaConfig = {
       <p className="mt-2 text-sm text-slate-600">{vaga.empresa?.nome}</p>
       <p className="mt-1 text-sm text-slate-500">{currency.format(vaga.valor)}</p>
       <Link
-        to="/kanban"
+        to={`/kanban/${vaga.id}`}
         className="mt-auto pt-6 text-left text-sm font-semibold text-sky-800 transition-colors hover:text-sky-950"
       >
         Abrir Kanban <span aria-hidden="true">&rarr;</span>

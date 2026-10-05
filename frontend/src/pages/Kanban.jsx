@@ -1,4 +1,7 @@
 import { useEffect, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import toast from "react-hot-toast";
+import { ArrowLeft, CalendarClock, MessageSquareX } from "lucide-react";
 import {
   closestCorners,
   DndContext,
@@ -15,17 +18,22 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import Modal from "../components/Modal.jsx";
+import { statusLabels, statusStyles } from "../vagaStatus.js";
 
+const apiUrl = "http://localhost:3333";
+
+// Os rótulos são só de exibição; o enum StatusKanban do banco não muda.
 const columns = [
   {
     id: "novos",
-    title: "Novos Candidatos",
+    title: "Enviado à empresa",
     status: "ENVIADO_EMPRESA",
     border: "border-t-sky-500",
   },
   {
     id: "analise",
-    title: "Em Análise",
+    title: "Em análise",
     status: "AGUARDANDO_RETORNO",
     border: "border-t-amber-500",
   },
@@ -37,9 +45,16 @@ const columns = [
   },
   {
     id: "contratados",
-    title: "Contratados",
+    title: "Contratado",
     status: "APROVADO",
     border: "border-t-emerald-500",
+  },
+  {
+    id: "dispensados",
+    title: "Dispensado",
+    status: "RECUSADO",
+    border: "border-t-rose-400",
+    background: "bg-rose-50/40",
   },
 ];
 
@@ -55,6 +70,8 @@ const avatarStyles = [
   "bg-emerald-100 text-emerald-700",
 ];
 
+const dateTimeFormat = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" });
+
 function getInitials(name) {
   return name
     .trim()
@@ -63,6 +80,13 @@ function getInitials(name) {
     .map((part) => part[0])
     .join("")
     .toUpperCase();
+}
+
+// Valor mínimo do <input type="datetime-local">, no fuso do navegador.
+function nowForDateTimeInput() {
+  const now = new Date();
+  now.setSeconds(0, 0);
+  return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 }
 
 function StudentCard({ candidate }) {
@@ -84,22 +108,38 @@ function StudentCard({ candidate }) {
       }}
       {...attributes}
       {...listeners}
-      className={`flex cursor-grab touch-none items-center gap-3 rounded-md border border-slate-200 bg-white p-3 shadow-sm active:cursor-grabbing ${
+      className={`cursor-grab touch-none rounded-md border border-slate-200 bg-white p-3 shadow-sm active:cursor-grabbing ${
         isDragging ? "opacity-50" : ""
       }`}
     >
-      <span
-        aria-label={`Iniciais: ${getInitials(candidate.nome)}`}
-        className={`grid size-10 shrink-0 place-items-center rounded-full text-xs font-semibold ${candidate.avatar}`}
-      >
-        {getInitials(candidate.nome)}
-      </span>
-      <div className="min-w-0">
-        <h3 className="truncate text-sm font-semibold text-slate-900">
-          {candidate.nome}
-        </h3>
-        <p className="mt-1 truncate text-xs text-slate-600">{candidate.curso}</p>
+      <div className="flex items-center gap-3">
+        <span
+          aria-label={`Iniciais: ${getInitials(candidate.nome)}`}
+          className={`grid size-10 shrink-0 place-items-center rounded-full text-xs font-semibold ${candidate.avatar}`}
+        >
+          {getInitials(candidate.nome)}
+        </span>
+        <div className="min-w-0">
+          <h3 className="truncate text-sm font-semibold text-slate-900">
+            {candidate.nome}
+          </h3>
+          <p className="mt-1 truncate text-xs text-slate-600">{candidate.curso}</p>
+        </div>
       </div>
+
+      {candidate.coluna === "entrevista" && candidate.dataEntrevista && (
+        <p className="mt-3 flex items-center gap-1.5 rounded bg-violet-50 px-2 py-1 text-xs font-medium text-violet-800">
+          <CalendarClock size={14} className="shrink-0" />
+          {dateTimeFormat.format(new Date(candidate.dataEntrevista))}
+        </p>
+      )}
+
+      {candidate.coluna === "dispensados" && candidate.motivo && (
+        <p className="mt-3 flex items-start gap-1.5 rounded bg-rose-50 px-2 py-1 text-xs text-rose-800">
+          <MessageSquareX size={14} className="mt-px shrink-0" />
+          <span className="line-clamp-3">{candidate.motivo}</span>
+        </p>
+      )}
     </article>
   );
 }
@@ -110,8 +150,8 @@ function KanbanColumn({ column, candidates }) {
   return (
     <section
       ref={setNodeRef}
-      className={`flex h-full w-72 flex-col overflow-hidden rounded-md border border-slate-200 border-t-4 bg-slate-50 transition-colors sm:w-80 ${column.border} ${
-        isOver ? "bg-sky-50" : ""
+      className={`flex h-full w-72 flex-col overflow-hidden rounded-md border border-slate-200 border-t-4 transition-colors sm:w-80 ${column.border} ${
+        isOver ? "bg-sky-50" : column.background ?? "bg-slate-50"
       }`}
     >
       <header className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-200 px-4 py-3">
@@ -135,10 +175,177 @@ function KanbanColumn({ column, candidates }) {
   );
 }
 
-export default function KanbanPage() {
+// Formulário dos modais de "Entrevista" (data e hora) e "Dispensado" (motivo).
+function MoveDetailsForm({ move, onConfirm, onCancel }) {
+  const isInterview = move.destination.status === "ENTREVISTA_AGENDADA";
+  const [value, setValue] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const minDateTime = nowForDateTimeInput();
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+
+    if (isInterview && new Date(value) <= new Date()) {
+      toast.error("Escolha uma data e hora no futuro.");
+      return;
+    }
+    if (!isInterview && !value.trim()) {
+      toast.error("Informe o motivo da dispensa.");
+      return;
+    }
+
+    setIsSaving(true);
+    const saved = await onConfirm(
+      isInterview
+        ? { data_hora_entrevista: new Date(value).toISOString() }
+        : { motivo_recusa: value.trim() },
+    );
+    if (!saved) setIsSaving(false);
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <p className="text-sm text-slate-700">
+        {isInterview ? "Agendar entrevista de " : "Dispensar "}
+        <strong className="font-semibold text-slate-900">{move.candidate.nome}</strong>.
+      </p>
+
+      <label htmlFor="kanban-move-detail" className="block space-y-1.5">
+        <span className="text-sm font-medium text-slate-700">
+          {isInterview ? "Data e hora da entrevista" : "Motivo da dispensa"}
+        </span>
+        {isInterview ? (
+          <input
+            id="kanban-move-detail"
+            type="datetime-local"
+            required
+            min={minDateTime}
+            value={value}
+            onChange={(event) => setValue(event.target.value)}
+            className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none focus:border-sky-700 focus:ring-2 focus:ring-sky-700/15"
+          />
+        ) : (
+          <textarea
+            id="kanban-move-detail"
+            required
+            rows={4}
+            maxLength={500}
+            value={value}
+            onChange={(event) => setValue(event.target.value)}
+            placeholder="Ex.: perfil não aderente à vaga, aceitou outra proposta..."
+            className="w-full resize-y rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-sky-700 focus:ring-2 focus:ring-sky-700/15"
+          />
+        )}
+      </label>
+
+      <div className="flex justify-end gap-2 pt-2">
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={isSaving}
+          className="h-10 rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 disabled:opacity-50"
+        >
+          Cancelar
+        </button>
+        <button
+          type="submit"
+          disabled={isSaving}
+          className={`h-10 rounded-md px-4 text-sm font-medium text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+            isInterview ? "bg-sky-800 hover:bg-sky-900" : "bg-rose-600 hover:bg-rose-700"
+          }`}
+        >
+          {isSaving ? "A guardar..." : isInterview ? "Agendar" : "Dispensar"}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+// /kanban sem ID: escolher de qual vaga abrir o quadro.
+function VagaPicker() {
+  const [vagas, setVagas] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let isCurrent = true;
+
+    fetch(`${apiUrl}/vagas`)
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Não foi possível carregar as vagas.");
+        return response.json();
+      })
+      .then((items) => {
+        if (isCurrent) setVagas(items);
+      })
+      .catch((loadError) => {
+        if (isCurrent) toast.error(loadError.message);
+      })
+      .finally(() => {
+        if (isCurrent) setIsLoading(false);
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, []);
+
+  return (
+    <section className="min-h-[calc(100vh-4rem)] bg-slate-50 px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto w-full max-w-3xl">
+        <h1 className="text-xl font-semibold text-slate-900">Escolha uma vaga para abrir o Kanban</h1>
+
+        {isLoading ? (
+          <p className="mt-6 text-sm text-slate-500">A carregar...</p>
+        ) : vagas.length === 0 ? (
+          <p className="mt-6 text-sm text-slate-500">Nenhuma vaga cadastrada.</p>
+        ) : (
+          <ul className="mt-6 divide-y divide-slate-200 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+            {vagas.map((vaga) => (
+              <li key={vaga.id}>
+                <Link
+                  to={`/kanban/${vaga.id}`}
+                  className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-slate-50"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-slate-900">{vaga.titulo}</p>
+                    <p className="truncate text-xs text-slate-500">
+                      Nº {vaga.codigo_vaga} · {vaga.empresa?.nome}
+                    </p>
+                  </div>
+                  <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${statusStyles[vaga.status]}`}>
+                    {statusLabels[vaga.status]}
+                  </span>
+                  <span aria-hidden="true" className="text-sky-800">&rarr;</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function toCandidate(application, index) {
+  return {
+    id: application.estudante.id,
+    applicationId: application.id,
+    nome: application.estudante.nome_completo,
+    curso: application.estudante.curso,
+    status: application.status_kanban,
+    coluna: columnByStatus[application.status_kanban],
+    dataEntrevista: application.data_hora_entrevista,
+    motivo: application.motivo_recusa,
+    avatar: avatarStyles[index % avatarStyles.length],
+  };
+}
+
+function KanbanBoard({ vagaId }) {
+  const [vaga, setVaga] = useState(null);
   const [candidates, setCandidates] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [pendingMove, setPendingMove] = useState(null);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
@@ -146,33 +353,25 @@ export default function KanbanPage() {
 
   useEffect(() => {
     let isCurrent = true;
+    setIsLoading(true);
+    setError("");
 
-    fetch("http://localhost:3333/candidatos")
-      .then(async (response) => {
-        if (!response.ok) throw new Error("Não foi possível carregar os candidatos.");
-        return response.json();
+    Promise.all([
+      fetch(`${apiUrl}/vagas`),
+      fetch(`${apiUrl}/vagas/${vagaId}/candidatos`),
+    ])
+      .then(async ([vagasResponse, applicationsResponse]) => {
+        if (!applicationsResponse.ok) {
+          const result = await applicationsResponse.json().catch(() => ({}));
+          throw new Error(result.erro ?? "Não foi possível carregar os candidatos.");
+        }
+        if (!vagasResponse.ok) throw new Error("Não foi possível carregar a vaga.");
+        return [await vagasResponse.json(), await applicationsResponse.json()];
       })
-      .then((students) => {
+      .then(([vagas, applications]) => {
         if (!isCurrent) return;
-
-        const applications = students.flatMap((student) =>
-          (student.aplicacoes ?? []).flatMap((application, index) => {
-            const column = columnByStatus[application.status_kanban];
-            if (!column) return [];
-
-            return [{
-              id: student.id,
-              applicationId: application.id,
-              nome: student.nome_completo,
-              curso: student.curso,
-              status: application.status_kanban,
-              coluna: column,
-              avatar: avatarStyles[index % avatarStyles.length],
-            }];
-          }),
-        );
-
-        setCandidates(applications);
+        setVaga(vagas.find((item) => item.id === vagaId) ?? null);
+        setCandidates(applications.map(toCandidate));
       })
       .catch((loadError) => {
         if (isCurrent) setError(loadError.message);
@@ -184,10 +383,50 @@ export default function KanbanPage() {
     return () => {
       isCurrent = false;
     };
-  }, []);
+  }, [vagaId]);
 
-  async function handleDragEnd({ active, over }) {
-    if (!over) return;
+  function placeCandidate(applicationId, changes) {
+    setCandidates((current) =>
+      current.map((candidate) =>
+        candidate.applicationId === applicationId ? { ...candidate, ...changes } : candidate,
+      ),
+    );
+  }
+
+  // Envia o PATCH; em caso de erro, devolve o cartão à coluna de origem. Retorna true se salvou.
+  async function saveMove({ candidate, destination }, details = {}) {
+    try {
+      const response = await fetch(`${apiUrl}/candidatos/${candidate.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          aplicacao_id: candidate.applicationId,
+          status_kanban: destination.status,
+          ...details,
+        }),
+      });
+
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.erro ?? "Não foi possível atualizar a candidatura.");
+
+      placeCandidate(candidate.applicationId, {
+        status: result.status_kanban,
+        coluna: columnByStatus[result.status_kanban],
+        dataEntrevista: result.data_hora_entrevista,
+        motivo: result.motivo_recusa,
+      });
+      toast.success(`Candidatura de ${candidate.nome} movida para "${destination.title}".`);
+      window.dispatchEvent(new Event("dashboard:refresh"));
+      return true;
+    } catch (updateError) {
+      placeCandidate(candidate.applicationId, { status: candidate.status, coluna: candidate.coluna });
+      toast.error(updateError.message);
+      return false;
+    }
+  }
+
+  function handleDragEnd({ active, over }) {
+    if (!over || pendingMove) return;
 
     const draggedCandidate = candidates.find(
       (candidate) => candidate.applicationId === active.id,
@@ -203,78 +442,102 @@ export default function KanbanPage() {
       return;
     }
 
-    const previousStatus = draggedCandidate.status;
-    const previousColumn = draggedCandidate.coluna;
+    // O cartão vai para a coluna de destino já; se a pessoa cancelar o modal, ele volta.
+    placeCandidate(draggedCandidate.applicationId, { status: destination.status, coluna: destination.id });
+    const move = { candidate: draggedCandidate, destination };
 
-    setCandidates((current) =>
-      current.map((candidate) =>
-        candidate.applicationId === draggedCandidate.applicationId
-          ? { ...candidate, status: destination.status, coluna: destination.id }
-          : candidate,
-      ),
-    );
-    setError("");
-
-    try {
-      const response = await fetch(
-        `http://localhost:3333/candidatos/${draggedCandidate.id}`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            aplicacao_id: draggedCandidate.applicationId,
-            status_kanban: destination.status,
-          }),
-        },
-      );
-
-      if (!response.ok) {
-        const result = await response.json().catch(() => ({}));
-        throw new Error(result.erro ?? "Não foi possível atualizar a candidatura.");
-      }
-    } catch (updateError) {
-      setCandidates((current) =>
-        current.map((candidate) =>
-          candidate.applicationId === draggedCandidate.applicationId &&
-          candidate.coluna === destination.id
-            ? { ...candidate, status: previousStatus, coluna: previousColumn }
-            : candidate,
-        ),
-      );
-      setError(updateError.message);
+    if (destination.status === "ENTREVISTA_AGENDADA" || destination.status === "RECUSADO") {
+      setPendingMove(move);
+    } else {
+      saveMove(move);
     }
+  }
+
+  function cancelPendingMove() {
+    const { candidate } = pendingMove;
+    placeCandidate(candidate.applicationId, { status: candidate.status, coluna: candidate.coluna });
+    setPendingMove(null);
+  }
+
+  async function confirmPendingMove(details) {
+    const saved = await saveMove(pendingMove, details);
+    // Com erro, o cartão já voltou; o modal fecha para a pessoa tentar de novo.
+    setPendingMove(null);
+    return saved;
   }
 
   return (
     <section className="flex h-[calc(100vh-4rem)] min-h-[32rem] flex-col bg-slate-100">
-      <header className="flex shrink-0 items-center justify-between px-5 py-5 sm:px-7">
-        <h1 className="text-xl font-semibold text-slate-900">Candidatos</h1>
+      <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 px-5 py-5 sm:px-7">
+        <div className="flex min-w-0 items-center gap-3">
+          <Link
+            to="/vagas"
+            aria-label="Voltar para vagas"
+            title="Voltar para vagas"
+            className="grid size-9 shrink-0 place-items-center rounded-md text-slate-600 transition-colors hover:bg-slate-200 hover:text-slate-900"
+          >
+            <ArrowLeft size={19} />
+          </Link>
+          <div className="min-w-0">
+            <h1 className="truncate text-xl font-semibold text-slate-900">
+              {vaga?.titulo ?? "Candidatos"}
+            </h1>
+            {vaga && (
+              <p className="truncate text-sm text-slate-600">
+                {vaga.empresa?.nome} · Nº {vaga.codigo_vaga}
+              </p>
+            )}
+          </div>
+        </div>
         {isLoading && <span className="text-sm text-slate-500">A carregar...</span>}
       </header>
 
-      {error && (
-        <p role="alert" className="mx-5 mb-3 text-sm text-rose-700 sm:mx-7">
-          {error}
-        </p>
+      {error ? (
+        <div className="mx-5 sm:mx-7">
+          <p role="alert" className="text-sm text-rose-700">{error}</p>
+          <Link to="/kanban" className="mt-3 inline-block text-sm font-semibold text-sky-800 hover:text-sky-950">
+            Escolher outra vaga <span aria-hidden="true">&rarr;</span>
+          </Link>
+        </div>
+      ) : (
+        <div className="min-h-0 flex-1 overflow-x-auto overflow-y-hidden px-4 pb-5 sm:px-7">
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCorners}
+            onDragEnd={handleDragEnd}
+          >
+            <div className="flex h-full min-w-max gap-4">
+              {columns.map((column) => (
+                <KanbanColumn
+                  key={column.id}
+                  column={column}
+                  candidates={candidates.filter((candidate) => candidate.coluna === column.id)}
+                />
+              ))}
+            </div>
+          </DndContext>
+        </div>
       )}
 
-      <div className="min-h-0 flex-1 overflow-x-auto overflow-y-hidden px-4 pb-5 sm:px-7">
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCorners}
-          onDragEnd={handleDragEnd}
-        >
-          <div className="flex h-full min-w-max gap-4">
-            {columns.map((column) => (
-              <KanbanColumn
-                key={column.id}
-                column={column}
-                candidates={candidates.filter((candidate) => candidate.coluna === column.id)}
-              />
-            ))}
-          </div>
-        </DndContext>
-      </div>
+      <Modal
+        isOpen={Boolean(pendingMove)}
+        title={pendingMove?.destination.status === "RECUSADO" ? "Dispensar candidato" : "Agendar entrevista"}
+        onClose={cancelPendingMove}
+      >
+        {pendingMove && (
+          <MoveDetailsForm
+            key={pendingMove.candidate.applicationId}
+            move={pendingMove}
+            onConfirm={confirmPendingMove}
+            onCancel={cancelPendingMove}
+          />
+        )}
+      </Modal>
     </section>
   );
+}
+
+export default function KanbanPage() {
+  const { vagaId } = useParams();
+  return vagaId ? <KanbanBoard key={vagaId} vagaId={vagaId} /> : <VagaPicker />;
 }
