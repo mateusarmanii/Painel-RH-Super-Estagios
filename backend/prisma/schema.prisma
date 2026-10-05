@@ -38,27 +38,28 @@ model Empresa {
 }
 
 model Estudante {
-  id                 String        @id @default(uuid()) @db.Uuid
-  nome_completo      String
-  telefone           String
-  email              String?
-  curso              String
-  instituicao_ensino String
-  link_curriculo     String?
-  endereco           String?
-  horario_estudo     HorarioEstudo
-  aplicacoes         Aplicacao[]
+  id                   String        @id @default(uuid()) @db.Uuid
+  nome_completo        String
+  telefone             String
+  email                String?
+  curso                String
+  instituicao_ensino   String
+  link_curriculo       String?
+  endereco             String?
+  horario_estudo       HorarioEstudo
+  anotacoes_recrutador String?       @db.Text
+  aplicacoes           Aplicacao[]
 }
 
 model Vaga {
-  id          String       @id @default(uuid()) @db.Uuid
-  codigo_vaga String       @unique @db.VarChar(6)
+  id          String      @id @default(uuid()) @db.Uuid
+  codigo_vaga String      @unique @db.VarChar(6)
   titulo      String
   descricao   String
   valor       Float
-  status      StatusVaga   @default(ABERTA)
-  empresa_id  String       @db.Uuid
-  empresa     Empresa      @relation(fields: [empresa_id], references: [id])
+  status      StatusVaga  @default(ABERTA)
+  empresa_id  String      @db.Uuid
+  empresa     Empresa     @relation(fields: [empresa_id], references: [id])
   aplicacoes  Aplicacao[]
 }
 

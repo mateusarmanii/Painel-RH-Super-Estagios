@@ -12,15 +12,26 @@ Painel interno de RH da Super Estágios (agência de estagiários) para organiza
 
 ## Status atual (diagnóstico de 05/10/2026, conferido no código)
 
-### ❌ Etapa 1 — NÃO IMPLEMENTADA (o registro anterior estava errado)
-Nada da Etapa 1 existe no código commitado. Situação real:
-- Rotas: `empresas` só tem `GET`/`POST`; `vagas` e `candidatos` têm `GET`/`POST`/`PATCH /:id`. **Não há nenhum `PUT` nem `DELETE`.**
-- FKs da `Aplicacao` e da `Vaga` usam `ON DELETE RESTRICT` — exclusões precisarão de cascade ou erro amigável.
-- `react-hot-toast` não está instalado.
-- Não existe campo "Anotações do Recrutador" (nem no schema, nem no formulário).
-- Busca em tempo real e botões Editar/Excluir: não verificados como implementados — tratar como pendentes.
+### 🟡 Etapa 1 — BACKEND CONCLUÍDO (05/10/2026); frontend pendente
+Backend implementado e testado (17/17 testes passaram, incluindo exclusões bloqueadas):
+- `PUT` e `DELETE` em `/empresas/:id`, `/vagas/:id`, `/candidatos/:id`
+  - `PUT /vagas/:id` edita só os dados (código, título, descrição, valor, empresa). **Status continua no `PATCH /vagas/:id`**, que também marca as aplicações como `RECUSADO` ao fechar/suspender.
+  - `PUT /candidatos/:id` edita só os dados do estudante; candidaturas continuam no `PATCH /candidatos/:id` (Kanban).
+- **Sem cascade:** FKs mantidas em `ON DELETE RESTRICT`. Antes de excluir, a rota conta os vínculos e devolve **409** com mensagem amigável (ex.: "ela possui 1 vaga vinculada"). Vínculos verificados: empresa→vagas, vaga→aplicações, estudante→aplicações. Erros: 400 (id/campos inválidos), 404 (não encontrado), 204 (excluído).
+- Campo `anotacoes_recrutador String? @db.Text` em `Estudante` (migration `20261005171734_add_estudante_anotacoes_recrutador`), aceito no `POST` e no `PUT` de candidatos.
+- Helpers compartilhados em `backend/src/utils.js` (`uuidValido`, `pluralizar`).
 
-O que JÁ existe: CRUD de criação (POST), Dashboard com KPIs + funil (`/dashboard-metrics`), Kanban com drag and drop (`@dnd-kit`), `recharts` instalado.
+Pendente (frontend): `react-hot-toast`, busca em tempo real, modais Editar/Excluir (exibir a mensagem do 409), textarea "Anotações do Recrutador".
+
+O que JÁ existia: CRUD de criação (POST), Dashboard com KPIs + funil (`/dashboard-metrics`), Kanban com drag and drop (`@dnd-kit`), `recharts` instalado.
+
+### 🧯 Incidente de migrations (05/10/2026)
+A IA da Etapa 2 travada aplicou no banco duas migrations que **nunca foram salvas no disco** (`20261002000000_add_recruiter_notes_and_application_cascade` e `20261002010000_add_hiring_analytics_dates`). Ao gerar a migration da Etapa 1 a partir do banco, o SQL **apagou** `Aplicacao.created_at`, `Aplicacao.data_aprovacao` e `Vaga.created_at` (2 vagas e 2 aplicações afetadas; valores perdidos) e trocou as FKs de CASCADE de volta para RESTRICT. Correção feita com aprovação do usuário: migration reescrita para apenas `ADD COLUMN IF NOT EXISTS "anotacoes_recrutador"`, registros órfãos removidos de `_prisma_migrations` e checksum ajustado. A sequência das 3 migrations foi validada num banco temporário (`No difference detected`). As datas voltam na 2A (`createdAt`, `data_contratacao`).
+
+Observações de ambiente:
+- `backend/node_modules` não vem no repositório: rodar `npm ci` em `backend/` antes de qualquer `npx prisma` (senão o `npx` baixa outra versão do Prisma). Versão fixada: 5.22.0.
+- `prisma migrate dev` falha em terminal não interativo. Alternativa: gerar o SQL com `prisma migrate diff`, **revisar e mostrar ao usuário**, salvar em `prisma/migrations/<timestamp>_<nome>/migration.sql` e aplicar com `prisma migrate deploy` após aprovação.
+- Ler a saída **completa** de `prisma migrate status` (não usar `tail`).
 
 ### ⚠️ Etapa 2 — TRAVOU e NADA foi salvo
 O prompt que tentou alterar 17 arquivos (+1.461 linhas) não deixou alterações no repositório (`git status` limpo, sem stash/branches). Último commit antes deste diagnóstico: `91b24cb ajustes no dashboart`.
@@ -47,10 +58,8 @@ Não é o schema. `Kanban.jsx` busca `GET /candidatos` e exibe as aplicações d
 
 ## O que falta implementar
 
-### 1 — Refazer a Etapa 1 (backend primeiro, depois frontend)
-- `PUT`/`DELETE` para `/empresas/:id`, `/vagas/:id`, `/candidatos/:id`, com tratamento das FKs `RESTRICT`
-- Campo `anotacoes` (String?) em `Estudante`
-- Depois: `react-hot-toast`, busca, modais de Editar/Excluir, textarea de anotações
+### 1 — Etapa 1, frontend (backend já concluído)
+- `react-hot-toast`, busca em tempo real, modais de Editar/Excluir (mostrar a mensagem do 409), textarea `anotacoes_recrutador`
 
 ### 2A — Banco de dados e backend (sem mexer no frontend)
 1. **Ajustar o modelo `Aplicacao` (não criar tabela nova):**
@@ -65,7 +74,7 @@ Não é o schema. `Kanban.jsx` busca `GET /candidatos` e exibe as aplicações d
    - **Tempo Médio de Contratação:** média de dias entre `createdAt` da candidatura e `data_contratacao` (não usar `updatedAt`, que muda a cada edição)
    - **Vagas em Alerta:** vagas `ABERTA` criadas há mais de 10 dias com 0 aplicações em `ENTREVISTA_AGENDADA`
    - **Distribuição por Curso:** contagem de estudantes agrupados por `curso`
-6. O projeto usa migrations (`backend/prisma/migrations`): rodar `npx prisma migrate dev --name <nome>` após alterar o schema (não usar `db push`)
+6. O projeto usa migrations (`backend/prisma/migrations`), não `db push`. Gerar o SQL, **mostrar ao usuário e aplicar só após aprovação** (ver "Observações de ambiente" e "Regras de trabalho"). As colunas novas de data precisam de valor inicial para os registros existentes.
 
 ### 2B — Kanban isolado e interativo (frontend)
 - Rota `/kanban/:vagaId`; `Kanban.jsx` usa `useParams` e busca `/vagas/:vagaId/candidatos`
@@ -85,6 +94,8 @@ Não é o schema. `Kanban.jsx` busca `GET /candidatos` e exibe as aplicações d
 - No perfil/edição do candidato: seção "Histórico de Candidaturas" (vaga, status, data da entrevista, motivo da dispensa)
 
 ## Regras de trabalho
+
+- **Banco de dados: antes de aplicar QUALQUER alteração no banco (migrations, `migrate deploy`/`dev`/`reset`, `db push`, SQL manual, escrita em `_prisma_migrations`, criação/remoção de bancos, scripts de teste que gravam dados), mostrar o SQL/operações ao usuário e esperar aprovação explícita.**
 
 - Fazer **uma subetapa por vez** (2A → 2B → 2C → 2D) e testar entre elas
 - **Commit no Git antes de cada subetapa**, para poder voltar se algo quebrar

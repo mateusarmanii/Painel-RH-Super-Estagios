@@ -1,5 +1,6 @@
 const express = require("express");
 const prisma = require("../prisma");
+const { uuidValido, pluralizar } = require("../utils");
 
 const router = express.Router();
 const horariosValidos = new Set(["MANHA", "TARDE", "NOITE"]);
@@ -10,7 +11,6 @@ const statusKanbanValidos = new Set([
   "APROVADO",
   "RECUSADO",
 ]);
-const uuidValido = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 router.get("/", async (_req, res) => {
   try {
@@ -85,6 +85,7 @@ router.post("/", async (req, res) => {
     link_curriculo,
     endereco,
     horario_estudo,
+    anotacoes_recrutador,
     vaga_id,
   } = req.body ?? {};
 
@@ -131,6 +132,7 @@ router.post("/", async (req, res) => {
           link_curriculo,
           endereco,
           horario_estudo,
+          anotacoes_recrutador,
           aplicacoes: { create: { vaga: { connect: { id: vaga_id } } } },
         },
         include: { aplicacoes: true },
@@ -145,6 +147,101 @@ router.post("/", async (req, res) => {
 
     console.error("Erro ao criar candidato:", error);
     return res.status(500).json({ erro: "Não foi possível criar o candidato." });
+  }
+});
+
+// Edita os dados do estudante; candidaturas são gerenciadas pelo PATCH (Kanban).
+router.put("/:id", async (req, res) => {
+  const { id } = req.params;
+  const {
+    nome_completo,
+    telefone,
+    email,
+    curso,
+    instituicao_ensino,
+    link_curriculo,
+    endereco,
+    horario_estudo,
+    anotacoes_recrutador,
+  } = req.body ?? {};
+
+  if (!uuidValido.test(id)) {
+    return res.status(400).json({ erro: "ID de candidato inválido." });
+  }
+
+  if (!nome_completo || !telefone || !curso || !instituicao_ensino) {
+    return res.status(400).json({
+      erro: "Informe nome, telefone, curso e instituição de ensino.",
+    });
+  }
+
+  if (!horariosValidos.has(horario_estudo)) {
+    return res.status(400).json({ erro: "Horário de estudo inválido." });
+  }
+
+  try {
+    const candidato = await prisma.estudante.update({
+      where: { id },
+      data: {
+        nome_completo,
+        telefone,
+        email,
+        curso,
+        instituicao_ensino,
+        link_curriculo,
+        endereco,
+        horario_estudo,
+        anotacoes_recrutador,
+      },
+    });
+
+    return res.json(candidato);
+  } catch (error) {
+    if (error.code === "P2025") {
+      return res.status(404).json({ erro: "Candidato não encontrado." });
+    }
+
+    console.error("Erro ao atualizar candidato:", error);
+    return res.status(500).json({ erro: "Não foi possível atualizar o candidato." });
+  }
+});
+
+router.delete("/:id", async (req, res) => {
+  const { id } = req.params;
+
+  if (!uuidValido.test(id)) {
+    return res.status(400).json({ erro: "ID de candidato inválido." });
+  }
+
+  try {
+    const candidato = await prisma.estudante.findUnique({
+      where: { id },
+      select: { _count: { select: { aplicacoes: true } } },
+    });
+
+    if (!candidato) {
+      return res.status(404).json({ erro: "Candidato não encontrado." });
+    }
+
+    const totalAplicacoes = candidato._count.aplicacoes;
+    if (totalAplicacoes > 0) {
+      return res.status(409).json({
+        erro: `Não é possível excluir este candidato: ele possui ${pluralizar(totalAplicacoes, "candidatura vinculada", "candidaturas vinculadas")}.`,
+      });
+    }
+
+    await prisma.estudante.delete({ where: { id } });
+    return res.status(204).end();
+  } catch (error) {
+    if (error.code === "P2003") {
+      return res.status(409).json({ erro: "Não é possível excluir este candidato: ele possui candidaturas vinculadas." });
+    }
+    if (error.code === "P2025") {
+      return res.status(404).json({ erro: "Candidato não encontrado." });
+    }
+
+    console.error("Erro ao excluir candidato:", error);
+    return res.status(500).json({ erro: "Não foi possível excluir o candidato." });
   }
 });
 
