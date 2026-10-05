@@ -6,7 +6,8 @@
     "start": "node server.js",
     "dev": "node --watch server.js",
     "prisma:generate": "prisma generate",
-    "seed": "node prisma/seed.js"
+    "seed": "node prisma/seed.js",
+    "test:etapa1": "node scripts/testar-etapa1.js"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
