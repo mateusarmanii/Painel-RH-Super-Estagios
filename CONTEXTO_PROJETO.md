@@ -119,6 +119,11 @@ Build OK; testes `cd backend && npm run test:etapa2d` (10/10, registros `[TESTE]
 - `frontend/src/csv.js`: separador `;`, UTF-8 com BOM, CRLF; células com `;`, aspas ou quebra de linha vão entre aspas; valores com 2 casas e vírgula ("1500,50"); datas dd/mm/aaaa. Proteção contra fórmula: conteúdo que começa com `=`, `@`, tab, ou `+`/`-` seguido de não-dígito recebe `'` na frente (telefones "+55…" ficam intactos).
 - Colunas — Vagas: Nº, Título, Empresa, Status, Bolsa-auxílio (R$), Criada em, Descrição. Banco de Talentos: Nome, Curso, Instituição, Telefone, E-mail, Horário, Endereço, Currículo, Candidaturas, Vagas e etapas, Anotações.
 
+### 🟡 Dados de demonstração — SCRIPTS PRONTOS, NÃO EXECUTADOS (05/10/2026)
+- `cd backend && npm run demo:criar` (`scripts/seed-demo.js`): cria **5 empresas, 10 vagas, 30 estudantes e 40 candidaturas `[DEMO]`** numa única transação (ou cria tudo, ou nada). Recusa rodar se já houver `[DEMO]`. Dados fixos (semente), cobrindo as 5 etapas (12 enviados, 10 em análise, 6 entrevistas futuras, 5 contratados com `data_aprovacao`, 7 dispensados com motivo), vagas de 2 a 40 dias, 1 fechada e 1 suspensa, **2 vagas em alerta** (Enfermagem e Engenharia Civil) e 11 cursos (com grafias variadas de propósito: "direito", "PSICOLOGIA"…). Códigos de vaga a partir de 700001, pulando os que já existem.
+- `cd backend && npm run demo:limpar` (`scripts/limpar-demo.js`): remove empresas, vagas e estudantes `[DEMO]` e as candidaturas deles, numa transação, e confirma que não sobrou nenhum. **Não apaga nada** se algum dado real estiver ligado a um `[DEMO]` (vaga real numa empresa `[DEMO]` ou estudante real inscrito numa vaga `[DEMO]`) — lista o conflito.
+- A lógica do seed foi validada sem tocar no banco (função `montarPlano`, exportada): quantidades, etapas, duplicatas, datas coerentes, vagas em alerta e campos existentes no schema.
+
 ## Regras de trabalho
 
 - **Banco de dados: antes de aplicar QUALQUER alteração no banco (migrations, `migrate deploy`/`dev`/`reset`, `db push`, SQL manual, escrita em `_prisma_migrations`, criação/remoção de bancos, scripts de teste que gravam dados), mostrar o SQL/operações ao usuário e esperar aprovação explícita.**
