@@ -27,7 +27,8 @@ Frontend (build OK):
 - `CreationForm` aceita `initialData` → modo edição com `PUT`. Na edição do estudante, o campo Vaga é ocultado (candidaturas ficam no Kanban). Campos com `optional: true` não são obrigatórios e enviam `null` se vazios.
 - Textarea "Anotações do Recrutador" (`anotacoes_recrutador`) no formulário do estudante; um trecho aparece no card do Banco de Talentos.
 - Listas e Dashboard recarregam pelo evento `window` `dashboard:refresh`, disparado após criar/editar/excluir.
-- Conhecido: o formulário exige e-mail do estudante (o schema permite nulo); "Abrir Kanban" ainda aponta para `/kanban` (muda na 2B).
+- E-mail do estudante é opcional no formulário (como no schema); vazio é enviado como `null`.
+- Conhecido: "Abrir Kanban" ainda aponta para `/kanban` (muda na 2B).
 
 O que JÁ existia: CRUD de criação (POST), Dashboard com KPIs + funil (`/dashboard-metrics`), Kanban com drag and drop (`@dnd-kit`), `recharts` instalado.
 

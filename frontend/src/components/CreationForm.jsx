@@ -27,7 +27,7 @@ const fieldSets = {
   estudante: [
     { name: "nome_completo", label: "Nome", placeholder: "Nome completo" },
     { name: "curso", label: "Curso", placeholder: "Curso do estudante" },
-    { name: "email", label: "E-mail", type: "email", placeholder: "estudante@email.com" },
+    { name: "email", label: "E-mail", type: "email", placeholder: "estudante@email.com", optional: true },
     { name: "telefone", label: "Telefone", type: "tel", placeholder: "(00) 00000-0000" },
     { name: "instituicao_ensino", label: "Instituição de ensino", placeholder: "Nome da instituição" },
     {
