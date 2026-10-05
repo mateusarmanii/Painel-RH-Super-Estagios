@@ -12,6 +12,9 @@ import {
   Users,
   WifiOff,
 } from "lucide-react";
+import { kanbanStatusLabels } from "../kanbanStatus.js";
+
+const apiUrl = "http://localhost:3333";
 
 const FunnelChart = lazy(() => import("../components/FunnelChart.jsx"));
 const CourseDonutChart = lazy(() => import("../components/CourseDonutChart.jsx"));
@@ -214,10 +217,24 @@ export default function DashboardPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch("http://localhost:3333/dashboard-metrics");
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(result.erro ?? "O servidor respondeu com erro. Tente novamente em instantes.");
-      setDashboard(result);
+      const [metricsResponse, interviewsResponse] = await Promise.all([
+        fetch(`${apiUrl}/dashboard-metrics`),
+        fetch(`${apiUrl}/entrevistas`),
+      ]);
+      const [result, interviews] = await Promise.all([
+        metricsResponse.json().catch(() => ({})),
+        interviewsResponse.json().catch(() => ({})),
+      ]);
+      if (!metricsResponse.ok) throw new Error(result.erro ?? "O servidor respondeu com erro. Tente novamente em instantes.");
+      if (!interviewsResponse.ok) throw new Error(interviews.erro ?? "Não foi possível carregar as entrevistas.");
+
+      setDashboard({
+        ...result,
+        // Mesmos nomes de etapa do Kanban.
+        funnel: result.funnel.map((stage) => ({ ...stage, label: kanbanStatusLabels[stage.status] ?? stage.label })),
+        // /entrevistas já traz só as futuras, em ordem de data.
+        upcomingInterviews: interviews.slice(0, 5),
+      });
       setError("");
     } catch (loadError) {
       // fetch lança TypeError quando a API está fora do ar.
@@ -324,7 +341,10 @@ export default function DashboardPage() {
               <section className="min-w-0 overflow-hidden rounded-md border border-slate-200 bg-white shadow-sm">
                 <header className="border-b border-slate-200 px-5 py-5">
                   <h2 className="text-base font-semibold text-slate-900">Próximas entrevistas</h2>
-                  <p className="mt-1 text-sm text-slate-500">Até cinco horários agendados</p>
+                  <p className="mt-1 text-sm text-slate-500">
+                    As cinco mais próximas ·{" "}
+                    <Link to="/agenda" className="font-medium text-sky-800 hover:text-sky-950">Ver agenda completa</Link>
+                  </p>
                 </header>
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[30rem] text-left text-sm">
@@ -336,16 +356,20 @@ export default function DashboardPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {dashboard.recentInterviews.map((interview) => (
+                      {dashboard.upcomingInterviews.map((interview) => (
                         <tr key={interview.id}>
-                          <td className="px-5 py-4 font-medium text-slate-800">{interview.estudante}</td>
-                          <td className="px-5 py-4 text-slate-600">{interview.vaga}</td>
+                          <td className="px-5 py-4 font-medium text-slate-800">{interview.estudante.nome_completo}</td>
+                          <td className="px-5 py-4 text-slate-600">
+                            <Link to={`/kanban/${interview.vaga.id}`} className="hover:text-sky-800 hover:underline">
+                              {interview.vaga.titulo}
+                            </Link>
+                          </td>
                           <td className="whitespace-nowrap px-5 py-4 text-slate-600">
-                            {formatInterviewDate(interview.data_hora)}
+                            {formatInterviewDate(interview.data_hora_entrevista)}
                           </td>
                         </tr>
                       ))}
-                      {dashboard.recentInterviews.length === 0 && (
+                      {dashboard.upcomingInterviews.length === 0 && (
                         <tr>
                           <td colSpan="3" className="px-5 py-10 text-center text-slate-500">
                             Nenhuma entrevista agendada.

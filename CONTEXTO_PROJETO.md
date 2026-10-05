@@ -103,12 +103,16 @@ Só frontend (build OK; conferido por screenshot em 1440px e no layout de celula
 - Funil: rótulo "N · X%" sobre cada barra (X = % da soma das 4 etapas do funil; `RECUSADO` não entra no funil do backend) e tooltip; animação desligada.
 - Layout: 5 cards (1 → 2 → 3 → 5 colunas) e 4 painéis (1 → 2 colunas no `xl`): alertas | cursos, funil | próximas entrevistas.
 - Carregamento: esqueleto (`animate-pulse`) só no primeiro carregamento; atualizações mostram "A atualizar...". API fora → tela "Não conseguimos carregar o dashboard" com "Tentar novamente"; se já havia dados, eles ficam com um aviso de que podem estar desatualizados.
-- Observações: os rótulos do funil ("Novos", "Análise", "Contratados") vêm do backend e diferem das colunas do Kanban; "Próximas entrevistas" continua sem filtro de data futura (backend).
+- (Resolvido na 2D: nomes do funil iguais aos do Kanban e "Próximas entrevistas" só com datas futuras.)
 
-### 2D — Agenda e histórico (frontend)
-- Item "Agenda de Entrevistas" (ícone de calendário) no menu lateral (`Layout.jsx`)
-- `Agenda.jsx` na rota `/agenda`, lendo `GET /entrevistas`
-- No perfil/edição do candidato: seção "Histórico de Candidaturas" (vaga, status, data da entrevista, motivo da dispensa)
+### 🟡 2D — Agenda e histórico — IMPLEMENTADA (05/10/2026); falta validar no navegador
+Build OK; testes `cd backend && npm run test:etapa2d` (10/10, registros `[TESTE]`, 0 sobras).
+- `/agenda` (`pages/Agenda.jsx`, item "Agenda de Entrevistas" no menu lateral): lê `GET /entrevistas`, agrupa por dia ("Hoje", "Amanhã", "terça-feira, 7 de outubro"…), mostra hora, estudante, curso, vaga, empresa, Nº e telefone; botão **Reagendar** abre modal com data e hora (só futuro) e faz `PATCH /candidatos/:id` mantendo `ENTREVISTA_AGENDADA`; link para o Kanban da vaga. Estados de carregamento, erro e vazio.
+- **Histórico de candidaturas** (`components/CandidaturaHistory.jsx`): aparece no modal **Editar** do estudante (Banco de Talentos), abaixo do formulário — vaga (link para o Kanban), empresa, Nº, desde quando, etapa, data da entrevista, data da contratação, motivo da dispensa.
+  - Backend (só código, sem schema): `GET /candidatos` passou a trazer em cada candidatura `motivo_recusa`, `data_aprovacao`, `created_at` e `vaga { codigo_vaga, titulo, empresa.nome }`, da mais recente para a mais antiga.
+- Dashboard: "Próximas entrevistas" agora usa `GET /entrevistas` (só futuras), 5 primeiras, com link "Ver agenda completa"; o `recentInterviews` do `/dashboard-metrics` deixou de ser usado.
+- Funil com os mesmos nomes do Kanban (mapeados no frontend a partir do `status`); rótulos do eixo quebram linha no celular.
+- Rótulos e cores das etapas centralizados em `frontend/src/kanbanStatus.js` (Kanban, funil e histórico).
 
 ## Regras de trabalho
 

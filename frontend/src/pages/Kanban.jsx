@@ -20,38 +20,38 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import Modal from "../components/Modal.jsx";
 import { statusLabels, statusStyles } from "../vagaStatus.js";
+import { dateTimeFormat, kanbanStatusLabels, toDateTimeInputValue } from "../kanbanStatus.js";
 
 const apiUrl = "http://localhost:3333";
 
-// Os rótulos são só de exibição; o enum StatusKanban do banco não muda.
 const columns = [
   {
     id: "novos",
-    title: "Enviado à empresa",
+    title: kanbanStatusLabels.ENVIADO_EMPRESA,
     status: "ENVIADO_EMPRESA",
     border: "border-t-sky-500",
   },
   {
     id: "analise",
-    title: "Em análise",
+    title: kanbanStatusLabels.AGUARDANDO_RETORNO,
     status: "AGUARDANDO_RETORNO",
     border: "border-t-amber-500",
   },
   {
     id: "entrevista",
-    title: "Entrevista",
+    title: kanbanStatusLabels.ENTREVISTA_AGENDADA,
     status: "ENTREVISTA_AGENDADA",
     border: "border-t-violet-500",
   },
   {
     id: "contratados",
-    title: "Contratado",
+    title: kanbanStatusLabels.APROVADO,
     status: "APROVADO",
     border: "border-t-emerald-500",
   },
   {
     id: "dispensados",
-    title: "Dispensado",
+    title: kanbanStatusLabels.RECUSADO,
     status: "RECUSADO",
     border: "border-t-rose-400",
     background: "bg-rose-50/40",
@@ -70,8 +70,6 @@ const avatarStyles = [
   "bg-emerald-100 text-emerald-700",
 ];
 
-const dateTimeFormat = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" });
-
 function getInitials(name) {
   return name
     .trim()
@@ -80,13 +78,6 @@ function getInitials(name) {
     .map((part) => part[0])
     .join("")
     .toUpperCase();
-}
-
-// Valor mínimo do <input type="datetime-local">, no fuso do navegador.
-function nowForDateTimeInput() {
-  const now = new Date();
-  now.setSeconds(0, 0);
-  return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 }
 
 function StudentCard({ candidate }) {
@@ -180,7 +171,7 @@ function MoveDetailsForm({ move, onConfirm, onCancel }) {
   const isInterview = move.destination.status === "ENTREVISTA_AGENDADA";
   const [value, setValue] = useState("");
   const [isSaving, setIsSaving] = useState(false);
-  const minDateTime = nowForDateTimeInput();
+  const minDateTime = toDateTimeInputValue();
 
   async function handleSubmit(event) {
     event.preventDefault();

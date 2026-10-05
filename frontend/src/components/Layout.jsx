@@ -5,6 +5,7 @@ import Modal from "./Modal.jsx";
 import {
   BriefcaseBusiness,
   Building2,
+  CalendarDays,
   GraduationCap,
   LayoutDashboard,
   Menu,
@@ -17,6 +18,7 @@ import {
 const navigationItems = [
   { label: "Dashboard", path: "/", icon: LayoutDashboard },
   { label: "Vagas", path: "/vagas", icon: BriefcaseBusiness },
+  { label: "Agenda de Entrevistas", path: "/agenda", icon: CalendarDays },
   { label: "Empresas", path: "/empresas", icon: Building2 },
   { label: "Empresas sem vaga", path: "/empresas-sem-vaga", icon: Building2 },
   { label: "Banco de Talentos", path: "/banco-de-talentos", icon: Users },

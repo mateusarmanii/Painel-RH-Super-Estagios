@@ -20,6 +20,7 @@ export default function EntityList({
   getName,
   emptyMessage,
   renderItem,
+  renderEditExtra,
 }) {
   const [items, setItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -137,12 +138,15 @@ export default function EntityList({
         onClose={() => setEditingItem(null)}
       >
         {editingItem && (
-          <CreationForm
-            key={editingItem.id}
-            type={type}
-            initialData={editingItem}
-            onSuccess={() => setEditingItem(null)}
-          />
+          <>
+            <CreationForm
+              key={editingItem.id}
+              type={type}
+              initialData={editingItem}
+              onSuccess={() => setEditingItem(null)}
+            />
+            {renderEditExtra?.(editingItem)}
+          </>
         )}
       </Modal>
 

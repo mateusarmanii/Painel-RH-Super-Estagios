@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import CandidaturaHistory from "../components/CandidaturaHistory.jsx";
 import EntityList from "../components/EntityList.jsx";
 import { statusLabels, statusStyles } from "../vagaStatus.js";
 
@@ -63,6 +64,7 @@ const empresaConfig = {
 const estudanteConfig = {
   getSearchText: (estudante) => estudante.nome_completo,
   getName: (estudante) => estudante.nome_completo,
+  renderEditExtra: (estudante) => <CandidaturaHistory aplicacoes={estudante.aplicacoes} />,
   renderItem: (estudante) => (
     <>
       <span className="mb-5 self-start rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">

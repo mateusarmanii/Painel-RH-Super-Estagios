@@ -3,6 +3,7 @@ import { Toaster } from "react-hot-toast";
 import Layout from "./components/Layout.jsx";
 import KanbanPage from "./pages/Kanban.jsx";
 import DashboardPage from "./pages/Dashboard.jsx";
+import AgendaPage from "./pages/Agenda.jsx";
 import {
   BancoDeTalentosPage,
   ContratacoesPage,
@@ -20,6 +21,7 @@ export default function App() {
           <Route path="/vagas" element={<VagasPage />} />
           <Route path="/kanban" element={<KanbanPage />} />
           <Route path="/kanban/:vagaId" element={<KanbanPage />} />
+          <Route path="/agenda" element={<AgendaPage />} />
           <Route path="/empresas" element={<EmpresasPage />} />
           <Route path="/empresas-sem-vaga" element={<EmpresasSemVagaPage />} />
           <Route path="/banco-de-talentos" element={<BancoDeTalentosPage />} />

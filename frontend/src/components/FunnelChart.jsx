@@ -4,12 +4,22 @@ import {
   CartesianGrid,
   LabelList,
   ResponsiveContainer,
+  Text,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
 
 const percentFormat = new Intl.NumberFormat("pt-BR", { style: "percent", maximumFractionDigits: 0 });
+
+// Rótulo do eixo que quebra linha ("Enviado à empresa") para não encostar no vizinho em telas estreitas.
+function StageTick({ x, y, payload }) {
+  return (
+    <Text x={x} y={y + 4} width={72} textAnchor="middle" verticalAnchor="start" fill="#475569" fontSize={12}>
+      {payload.value}
+    </Text>
+  );
+}
 
 function StageTooltip({ active, payload }) {
   if (!active || !payload?.length) return null;
@@ -42,7 +52,9 @@ export default function FunnelChart({ data }) {
           dataKey="label"
           tickLine={false}
           axisLine={false}
-          tick={{ fill: "#475569", fontSize: 12 }}
+          interval={0}
+          height={40}
+          tick={StageTick}
         />
         <YAxis
           allowDecimals={false}
