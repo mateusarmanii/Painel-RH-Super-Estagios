@@ -198,8 +198,12 @@ async function main() {
     }
 
     const vagaIds = [];
-    for (const { empresa, perfil, diasAtras, ...vaga } of plano.vagas) {
-      vagaIds.push((await tx.vaga.create({ data: { ...vaga, empresa_id: empresaIds[empresa] }, select: { id: true } })).id);
+    for (const vaga of plano.vagas) {
+      const { codigo_vaga, titulo, descricao, valor, status, created_at } = vaga;
+      vagaIds.push((await tx.vaga.create({
+        data: { codigo_vaga, titulo, descricao, valor, status, created_at, empresa_id: empresaIds[vaga.empresa] },
+        select: { id: true },
+      })).id);
     }
 
     const estudanteIds = [];

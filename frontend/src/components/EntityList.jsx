@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import { Download, Pencil, Search, Trash2 } from "lucide-react";
 import CreationForm from "./CreationForm.jsx";
 import Modal from "./Modal.jsx";
+import PageHeader from "./PageHeader.jsx";
 import { downloadCsv, toCsv, todayForFilename } from "../csv.js";
 
 const apiUrl = "http://localhost:3333";
@@ -13,6 +14,7 @@ function normalize(text) {
 
 // Lista com busca, edição (PUT) e exclusão (DELETE) para empresas, vagas e estudantes.
 export default function EntityList({
+  title,
   type,
   endpoint,
   entityLabel,
@@ -89,6 +91,7 @@ export default function EntityList({
   return (
     <section className="min-h-[calc(100vh-4rem)] bg-slate-50 px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto w-full max-w-7xl">
+        <PageHeader title={title} />
         <div className="mb-6 flex flex-wrap items-center gap-3">
           <div className="flex min-w-0 max-w-md flex-1 basis-64 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 focus-within:border-sky-700 focus-within:ring-2 focus-within:ring-sky-700/15">
             <Search size={17} className="shrink-0 text-slate-500" />

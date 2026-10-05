@@ -19,6 +19,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import Modal from "../components/Modal.jsx";
+import PageHeader from "../components/PageHeader.jsx";
 import { statusLabels, statusStyles } from "../vagaStatus.js";
 import { dateTimeFormat, kanbanStatusLabels, toDateTimeInputValue } from "../kanbanStatus.js";
 
@@ -70,10 +71,13 @@ const avatarStyles = [
   "bg-emerald-100 text-emerald-700",
 ];
 
+// Ignora etiquetas como "[TESTE]" ou "[DEMO]" no início do nome.
 function getInitials(name) {
   return name
+    .replace(/^\s*\[[^\]]*\]\s*/, "")
     .trim()
     .split(/\s+/)
+    .filter((part) => /\p{L}/u.test(part))
     .slice(0, 2)
     .map((part) => part[0])
     .join("")
@@ -283,14 +287,14 @@ function VagaPicker() {
   return (
     <section className="min-h-[calc(100vh-4rem)] bg-slate-50 px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto w-full max-w-3xl">
-        <h1 className="text-xl font-semibold text-slate-900">Escolha uma vaga para abrir o Kanban</h1>
+        <PageHeader title="Kanban" subtitle="Escolha uma vaga para abrir o quadro de candidatos" />
 
         {isLoading ? (
-          <p className="mt-6 text-sm text-slate-500">A carregar...</p>
+          <p className="text-sm text-slate-500">A carregar...</p>
         ) : vagas.length === 0 ? (
-          <p className="mt-6 text-sm text-slate-500">Nenhuma vaga cadastrada.</p>
+          <p className="text-sm text-slate-500">Nenhuma vaga cadastrada.</p>
         ) : (
-          <ul className="mt-6 divide-y divide-slate-200 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+          <ul className="divide-y divide-slate-200 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
             {vagas.map((vaga) => (
               <li key={vaga.id}>
                 <Link

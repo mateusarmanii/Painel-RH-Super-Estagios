@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import CreationForm from "./CreationForm.jsx";
 import Modal from "./Modal.jsx";
 import {
@@ -25,20 +26,37 @@ const navigationItems = [
   { label: "Contratações Efetivas", path: "/contratacoes", icon: UserRoundCheck },
 ];
 
-export default function Layout({
-  children,
-  onSearch,
-}) {
+export default function Layout({ children }) {
+  const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isEmpresaModalOpen, setIsEmpresaModalOpen] = useState(false);
   const [isVagaModalOpen, setIsVagaModalOpen] = useState(false);
   const [isEstudanteModalOpen, setIsEstudanteModalOpen] = useState(false);
   const [numeroVaga, setNumeroVaga] = useState("");
 
-  function handleSearch(event) {
+  // Busca do topo: abre o Kanban da vaga com o número informado.
+  async function handleSearch(event) {
     event.preventDefault();
     const codigo = numeroVaga.trim();
-    if (codigo) onSearch?.(codigo);
+    if (!codigo) return;
+
+    try {
+      const response = await fetch("http://localhost:3333/vagas");
+      if (!response.ok) throw new Error("Não foi possível buscar as vagas.");
+      const vaga = (await response.json()).find((item) => item.codigo_vaga === codigo);
+      if (!vaga) {
+        toast.error(`Nenhuma vaga com o Nº ${codigo}.`);
+        return;
+      }
+      setNumeroVaga("");
+      navigate(`/kanban/${vaga.id}`);
+    } catch (searchError) {
+      toast.error(
+        searchError instanceof TypeError
+          ? "O servidor não respondeu. Verifique se a API está rodando."
+          : searchError.message,
+      );
+    }
   }
 
   const actions = [

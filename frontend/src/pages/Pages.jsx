@@ -125,6 +125,7 @@ const estudanteConfig = {
 export function VagasPage() {
   return (
     <EntityList
+      title="Vagas"
       type="vaga"
       endpoint="vagas"
       entityLabel={{ singular: "vaga", plural: "vagas", article: "a" }}
@@ -138,6 +139,7 @@ export function VagasPage() {
 export function EmpresasPage() {
   return (
     <EntityList
+      title="Empresas"
       type="empresa"
       endpoint="empresas"
       entityLabel={{ singular: "empresa", plural: "empresas", article: "a" }}
@@ -155,6 +157,7 @@ export function EmpresasSemVagaPage() {
 export function BancoDeTalentosPage() {
   return (
     <EntityList
+      title="Banco de Talentos"
       type="estudante"
       endpoint="candidatos"
       entityLabel={{ singular: "estudante", plural: "estudantes", article: "o" }}
