@@ -95,11 +95,15 @@ Só frontend (build OK). Arquivos: `pages/Kanban.jsx`, `App.jsx`, `pages/Pages.j
 - Toasts de sucesso/erro no Kanban; o erro de carregamento do quadro continua inline.
 - Não implementado: reagendar uma entrevista sem tirar o cartão da coluna; reordenar cartões dentro da mesma coluna (a ordem não é salva).
 
-### 2C — Dashboard analítico (frontend)
-- Card KPI "Tempo Médio de Contratação" (ex.: "14 dias")
-- Painel vermelho/amarelo "Vagas em Alerta"
-- `recharts` PieChart (rosca) com distribuição por curso
-- Grid responsivo com Tailwind
+### 🟡 2C — Dashboard analítico — IMPLEMENTADA (05/10/2026); falta validar no navegador
+Só frontend (build OK; conferido por screenshot em 1440px e no layout de celular). Arquivos: `pages/Dashboard.jsx`, `components/CourseDonutChart.jsx` (novo), `components/FunnelChart.jsx`.
+- Card "Tempo médio de contratação": "14,5 dias" (pt-BR, 1 casa); `< 1` → "Menos de 1 dia"; `null` → "Sem contratações ainda" (nunca 0 nem erro). Selo com a base ("Base: N contratações").
+- Painel "Vagas em alerta" (âmbar, ícone de alerta): título, empresa, Nº, dias em aberto e candidaturas; cada item leva a `/kanban/:vagaId`. Vazio → caixa verde "Nenhuma vaga parada".
+- Rosca "Estudantes por curso" (recharts, carregada sob demanda): 6 maiores cursos + "Outros (N cursos)" em cinza; total no centro; legenda com nome, quantidade e %; tooltip ao passar o mouse. Paleta categórica validada (ordem fixa: azul, laranja, verde-água, amarelo, rosa, verde) — 3 cores têm contraste < 3:1, por isso a legenda com números é obrigatória.
+- Funil: rótulo "N · X%" sobre cada barra (X = % da soma das 4 etapas do funil; `RECUSADO` não entra no funil do backend) e tooltip; animação desligada.
+- Layout: 5 cards (1 → 2 → 3 → 5 colunas) e 4 painéis (1 → 2 colunas no `xl`): alertas | cursos, funil | próximas entrevistas.
+- Carregamento: esqueleto (`animate-pulse`) só no primeiro carregamento; atualizações mostram "A atualizar...". API fora → tela "Não conseguimos carregar o dashboard" com "Tentar novamente"; se já havia dados, eles ficam com um aviso de que podem estar desatualizados.
+- Observações: os rótulos do funil ("Novos", "Análise", "Contratados") vêm do backend e diferem das colunas do Kanban; "Próximas entrevistas" continua sem filtro de data futura (backend).
 
 ### 2D — Agenda e histórico (frontend)
 - Item "Agenda de Entrevistas" (ícone de calendário) no menu lateral (`Layout.jsx`)
