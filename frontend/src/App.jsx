@@ -1,4 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { Toaster } from "react-hot-toast";
 import Layout from "./components/Layout.jsx";
 import KanbanPage from "./pages/Kanban.jsx";
 import DashboardPage from "./pages/Dashboard.jsx";
@@ -25,6 +26,11 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Layout>
+      <Toaster
+        position="top-right"
+        containerStyle={{ top: 76 }}
+        toastOptions={{ className: "text-sm", duration: 4000, error: { duration: 6000 } }}
+      />
     </BrowserRouter>
   );
 }

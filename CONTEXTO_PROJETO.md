@@ -12,8 +12,8 @@ Painel interno de RH da Super Estágios (agência de estagiários) para organiza
 
 ## Status atual (diagnóstico de 05/10/2026, conferido no código)
 
-### 🟡 Etapa 1 — BACKEND CONCLUÍDO (05/10/2026); frontend pendente
-Backend implementado e testado (17/17 testes passaram, incluindo exclusões bloqueadas):
+### 🟡 Etapa 1 — IMPLEMENTADA (05/10/2026); falta validar no navegador
+Backend implementado e testado (17/17 testes passaram, incluindo exclusões bloqueadas). Testes: `cd backend && npm run test:etapa1` (**grava e apaga registros `[TESTE]` no banco — pedir aprovação antes de rodar**).
 - `PUT` e `DELETE` em `/empresas/:id`, `/vagas/:id`, `/candidatos/:id`
   - `PUT /vagas/:id` edita só os dados (código, título, descrição, valor, empresa). **Status continua no `PATCH /vagas/:id`**, que também marca as aplicações como `RECUSADO` ao fechar/suspender.
   - `PUT /candidatos/:id` edita só os dados do estudante; candidaturas continuam no `PATCH /candidatos/:id` (Kanban).
@@ -21,7 +21,13 @@ Backend implementado e testado (17/17 testes passaram, incluindo exclusões bloq
 - Campo `anotacoes_recrutador String? @db.Text` em `Estudante` (migration `20261005171734_add_estudante_anotacoes_recrutador`), aceito no `POST` e no `PUT` de candidatos.
 - Helpers compartilhados em `backend/src/utils.js` (`uuidValido`, `pluralizar`).
 
-Pendente (frontend): `react-hot-toast`, busca em tempo real, modais Editar/Excluir (exibir a mensagem do 409), textarea "Anotações do Recrutador".
+Frontend (build OK):
+- `react-hot-toast` com `<Toaster>` no `App.jsx`. Não havia `alert`/`console.log` no frontend; os erros que o `CreationForm` mostrava como texto viraram toasts. Dashboard e Kanban continuam com erro inline (não foram alterados).
+- As páginas **Vagas** (antes com dados fixos no código), **Empresas** e **Banco de Talentos** (antes só placeholders) agora carregam da API via o componente genérico `frontend/src/components/EntityList.jsx`: busca em tempo real (ignora acentos/maiúsculas; vagas também buscam pelo Nº), botões Editar (lápis) e Excluir (lixeira vermelha), modal "Tem certeza?". Em 409 a mensagem da API aparece num toast de erro e o item fica na lista.
+- `CreationForm` aceita `initialData` → modo edição com `PUT`. Na edição do estudante, o campo Vaga é ocultado (candidaturas ficam no Kanban). Campos com `optional: true` não são obrigatórios e enviam `null` se vazios.
+- Textarea "Anotações do Recrutador" (`anotacoes_recrutador`) no formulário do estudante; um trecho aparece no card do Banco de Talentos.
+- Listas e Dashboard recarregam pelo evento `window` `dashboard:refresh`, disparado após criar/editar/excluir.
+- Conhecido: o formulário exige e-mail do estudante (o schema permite nulo); "Abrir Kanban" ainda aponta para `/kanban` (muda na 2B).
 
 O que JÁ existia: CRUD de criação (POST), Dashboard com KPIs + funil (`/dashboard-metrics`), Kanban com drag and drop (`@dnd-kit`), `recharts` instalado.
 
@@ -58,8 +64,7 @@ Não é o schema. `Kanban.jsx` busca `GET /candidatos` e exibe as aplicações d
 
 ## O que falta implementar
 
-### 1 — Etapa 1, frontend (backend já concluído)
-- `react-hot-toast`, busca em tempo real, modais de Editar/Excluir (mostrar a mensagem do 409), textarea `anotacoes_recrutador`
+### 1 — Etapa 1: validar no navegador (código pronto)
 
 ### 2A — Banco de dados e backend (sem mexer no frontend)
 1. **Ajustar o modelo `Aplicacao` (não criar tabela nova):**

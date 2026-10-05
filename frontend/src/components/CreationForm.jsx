@@ -1,7 +1,13 @@
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 
 const apiUrl = "http://localhost:3333";
 const endpoints = { empresa: "empresas", vaga: "vagas", estudante: "candidatos" };
+const successMessages = {
+  empresa: { create: "Empresa cadastrada com sucesso.", edit: "Empresa atualizada com sucesso." },
+  vaga: { create: "Vaga cadastrada com sucesso.", edit: "Vaga atualizada com sucesso." },
+  estudante: { create: "Estudante cadastrado com sucesso.", edit: "Estudante atualizado com sucesso." },
+};
 
 const fieldSets = {
   empresa: [
@@ -34,17 +40,38 @@ const fieldSets = {
         { id: "NOITE", label: "Noite" },
       ],
     },
-    { name: "vaga_id", label: "Vaga", type: "select", optionsKey: "vagas" },
+    // A vaga só é escolhida no cadastro; depois, as candidaturas são geridas pelo Kanban.
+    { name: "vaga_id", label: "Vaga", type: "select", optionsKey: "vagas", createOnly: true },
+    {
+      name: "anotacoes_recrutador",
+      label: "Anotações do Recrutador",
+      type: "textarea",
+      rows: 5,
+      optional: true,
+      placeholder: "Impressões da entrevista, pontos fortes, disponibilidade...",
+    },
   ],
 };
 
-export default function CreationForm({ type, onSuccess }) {
-  const [form, setForm] = useState({ horario_estudo: "NOITE" });
+function initialFormState(type, initialData) {
+  if (!initialData) return { horario_estudo: "NOITE" };
+
+  return Object.fromEntries(
+    fieldSets[type]
+      .filter((field) => !field.createOnly)
+      .map((field) => [field.name, initialData[field.name] == null ? "" : String(initialData[field.name])]),
+  );
+}
+
+export default function CreationForm({ type, initialData, onSuccess }) {
+  const isEditing = Boolean(initialData);
+  const fields = fieldSets[type].filter((field) => !(isEditing && field.createOnly));
+  const [form, setForm] = useState(() => initialFormState(type, initialData));
   const [options, setOptions] = useState([]);
   const [isLoadingOptions, setIsLoadingOptions] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState("");
-  const optionType = type === "vaga" ? "empresas" : type === "estudante" ? "vagas" : null;
+  const optionKey = fields.find((field) => field.optionsKey)?.optionsKey;
+  const optionType = optionKey ?? null;
 
   useEffect(() => {
     if (!optionType) return undefined;
@@ -64,7 +91,7 @@ export default function CreationForm({ type, onSuccess }) {
         );
       })
       .catch((loadError) => {
-        if (isCurrent) setError(loadError.message);
+        if (isCurrent) toast.error(loadError.message);
       })
       .finally(() => {
         if (isCurrent) setIsLoadingOptions(false);
@@ -83,27 +110,35 @@ export default function CreationForm({ type, onSuccess }) {
   async function handleSubmit(event) {
     event.preventDefault();
     setIsSubmitting(true);
-    setError("");
 
-    const payload =
-      type === "vaga"
-        ? { ...form, valor: Number(form.valor) }
-        : form;
+    const payload = Object.fromEntries(
+      fields.map((field) => {
+        const value = form[field.name] ?? "";
+        if (field.name === "valor") return [field.name, Number(value)];
+        if (field.optional && value.trim() === "") return [field.name, null];
+        return [field.name, value];
+      }),
+    );
 
     try {
-      const response = await fetch(`${apiUrl}/${endpoints[type]}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      const response = await fetch(
+        `${apiUrl}/${endpoints[type]}${isEditing ? `/${initialData.id}` : ""}`,
+        {
+          method: isEditing ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        },
+      );
 
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.erro ?? "Não foi possível salvar o cadastro.");
 
+      toast.success(successMessages[type][isEditing ? "edit" : "create"]);
+      // Avisa o Dashboard e as listas para recarregarem.
       window.dispatchEvent(new Event("dashboard:refresh"));
       onSuccess();
     } catch (submitError) {
-      setError(submitError.message);
+      toast.error(submitError.message);
     } finally {
       setIsSubmitting(false);
     }
@@ -111,23 +146,26 @@ export default function CreationForm({ type, onSuccess }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {fieldSets[type].map((field) => {
+      {fields.map((field) => {
         const commonProps = {
           id: `${type}-${field.name}`,
           name: field.name,
           value: form[field.name] ?? "",
           onChange: updateField,
-          required: true,
+          required: !field.optional,
           className: "h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-sky-700 focus:ring-2 focus:ring-sky-700/15",
         };
 
         return (
           <label key={field.name} htmlFor={commonProps.id} className="block space-y-1.5">
-            <span className="text-sm font-medium text-slate-700">{field.label}</span>
+            <span className="text-sm font-medium text-slate-700">
+              {field.label}
+              {field.optional && <span className="font-normal text-slate-400"> (opcional)</span>}
+            </span>
             {field.type === "textarea" ? (
               <textarea
                 {...commonProps}
-                rows={3}
+                rows={field.rows ?? 3}
                 placeholder={field.placeholder}
                 className={`${commonProps.className} h-auto resize-y py-2`}
               />
@@ -165,8 +203,6 @@ export default function CreationForm({ type, onSuccess }) {
           </label>
         );
       })}
-
-      {error && <p role="alert" className="text-sm text-rose-700">{error}</p>}
 
       <div className="flex justify-end pt-2">
         <button
