@@ -9,6 +9,7 @@ import BancoTalentosPage from "./pages/BancoTalentos.jsx";
 import VagasPage from "./pages/Vagas.jsx";
 import { EmpresasPage, EmpresasSemVagaPage } from "./pages/Empresas.jsx";
 import { EstudantesPage } from "./pages/Pages.jsx";
+import EstudantePerfilPage from "./pages/EstudantePerfil.jsx";
 
 export default function App() {
   return (
@@ -23,6 +24,7 @@ export default function App() {
           <Route path="/empresas" element={<EmpresasPage />} />
           <Route path="/empresas-sem-vaga" element={<EmpresasSemVagaPage />} />
           <Route path="/estudantes" element={<EstudantesPage />} />
+          <Route path="/estudantes/:id" element={<EstudantePerfilPage />} />
           <Route path="/banco-de-talentos" element={<BancoTalentosPage />} />
           <Route path="/contratacoes" element={<ContratacoesPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />

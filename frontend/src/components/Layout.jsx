@@ -40,6 +40,7 @@ const pageTitles = [
   ["/agenda", "Agenda de entrevistas"],
   ["/empresas-sem-vaga", "Empresas sem vaga"],
   ["/empresas", "Empresas"],
+  ["/estudantes/", "Perfil do estudante"],
   ["/estudantes", "Estudantes"],
   ["/banco-de-talentos", "Banco de Talentos"],
   ["/contratacoes", "Contratações efetivas"],

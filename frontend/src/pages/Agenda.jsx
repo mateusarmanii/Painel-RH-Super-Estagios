@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { AlertTriangle, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Percent, X } from "lucide-react";
-import Modal from "../components/Modal.jsx";
-import StudentQuickProfile from "../components/StudentQuickProfile.jsx";
 import CompanyAvatar from "../components/CompanyAvatar.jsx";
 import TimeGrid from "../agenda/TimeGrid.jsx";
 import MonthGrid from "../agenda/MonthGrid.jsx";
@@ -121,7 +120,7 @@ export default function AgendaPage() {
   const [companyFilter, setCompanyFilter] = useState("");
   const [jobFilter, setJobFilter] = useState("");
   const [selected, setSelected] = useState(null);
-  const [profileId, setProfileId] = useState(null);
+  const navigate = useNavigate();
 
   const period = useMemo(() => periodFor(view, anchor), [view, anchor]);
   const startIso = period.start.toISOString();
@@ -350,13 +349,10 @@ export default function AgendaPage() {
           conflicts={conflicts}
           onClose={() => setSelected(null)}
           onUpdated={handleUpdated}
-          onOpenProfile={setProfileId}
+          onOpenProfile={(studentId) => navigate(`/estudantes/${studentId}`)}
         />
       )}
 
-      <Modal isOpen={Boolean(profileId)} title="Perfil do estudante" onClose={() => setProfileId(null)}>
-        {profileId && <StudentQuickProfile studentId={profileId} onClose={() => setProfileId(null)} />}
-      </Modal>
     </section>
   );
 }

@@ -1,10 +1,10 @@
 import { useCallback, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Pencil, Send, Trash2, UserRound } from "lucide-react";
 import CandidaturaHistory from "../components/CandidaturaHistory.jsx";
 import EntityList from "../components/EntityList.jsx";
 import { IndicateDialog } from "../components/IndicateForm.jsx";
 import Modal from "../components/Modal.jsx";
-import StudentQuickProfile from "../components/StudentQuickProfile.jsx";
 import { kanbanStatusLabels } from "../kanbanStatus.js";
 import { formatPhone } from "../text.js";
 import { availabilityText, formatDate, formatMonthYear, studyShiftLabel } from "../estudante.js";
@@ -42,7 +42,7 @@ const estudanteConfig = {
 };
 
 // Card do estudante; o nome abre o perfil.
-function renderEstudante(estudante, onOpenProfile) {
+function renderEstudante(estudante) {
   return (
     <>
       <div className="mb-5 flex flex-wrap gap-1.5 pr-10">
@@ -58,14 +58,13 @@ function renderEstudante(estudante, onOpenProfile) {
         )}
       </div>
       <h2 className="pr-10 text-lg font-semibold leading-6">
-        <button
-          type="button"
-          onClick={onOpenProfile}
+<Link
+          to={`/estudantes/${estudante.id}`}
           title="Ver perfil"
           className="text-left text-marinho-900 underline-offset-2 hover:text-marinho-600 hover:underline"
         >
           {estudante.nome_completo}
-        </button>
+        </Link>
       </h2>
       <p className="mt-2 text-sm text-slate-600">{estudante.curso}</p>
       <p className="text-sm text-slate-500">{estudante.instituicao_ensino}</p>
@@ -90,18 +89,16 @@ function renderEstudante(estudante, onOpenProfile) {
 }
 
 export function EstudantesPage() {
-  const [profileId, setProfileId] = useState(null);
+  const navigate = useNavigate();
   const [indicating, setIndicating] = useState(null);
-
-  const renderItem = useCallback((estudante) => renderEstudante(estudante, () => setProfileId(estudante.id)), []);
   const getMenuItems = useCallback(
     (estudante, { edit, remove }) => [
-      { key: "profile", label: "Ver perfil", icon: UserRound, onClick: () => setProfileId(estudante.id) },
+      { key: "profile", label: "Ver perfil", icon: UserRound, onClick: () => navigate(`/estudantes/${estudante.id}`) },
       { key: "edit", label: "Editar", icon: Pencil, onClick: edit },
       { key: "indicate", label: "Indicar para vaga", icon: Send, onClick: () => setIndicating(estudante) },
       { key: "delete", label: "Excluir", icon: Trash2, danger: true, onClick: remove },
     ],
-    [],
+    [navigate],
   );
 
   return (
@@ -113,12 +110,9 @@ export function EstudantesPage() {
         searchPlaceholder="Buscar estudante por nome"
         emptyMessage="Nenhum estudante cadastrado."
         {...estudanteConfig}
-        renderItem={renderItem}
+        renderItem={renderEstudante}
         getMenuItems={getMenuItems}
       />
-      <Modal isOpen={Boolean(profileId)} title="Perfil do estudante" onClose={() => setProfileId(null)}>
-        {profileId && <StudentQuickProfile studentId={profileId} onClose={() => setProfileId(null)} />}
-      </Modal>
       <Modal isOpen={Boolean(indicating)} title="Indicar para vaga" onClose={() => setIndicating(null)}>
         {indicating && (
           <IndicateDialog studentId={indicating.id} onDone={() => setIndicating(null)} onCancel={() => setIndicating(null)} />

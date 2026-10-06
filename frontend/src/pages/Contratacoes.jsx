@@ -123,7 +123,9 @@ export default function ContratacoesPage() {
                   <li key={hire.id} className="space-y-1 px-4 py-4 text-sm">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="font-medium text-slate-900">{hire.estudante.nome_completo}</p>
+                        <Link to={`/estudantes/${hire.estudante.id}`} className="font-medium text-slate-900 hover:text-marinho-700 hover:underline">
+                          {hire.estudante.nome_completo}
+                        </Link>
                         <p className="text-xs text-slate-500">{hire.estudante.curso}</p>
                       </div>
                       <p className="shrink-0 text-right text-xs font-medium text-emerald-700">
@@ -159,7 +161,9 @@ export default function ContratacoesPage() {
                     return (
                       <tr key={hire.id}>
                         <td className="px-5 py-4">
-                          <p className="font-medium text-slate-900">{hire.estudante.nome_completo}</p>
+                          <Link to={`/estudantes/${hire.estudante.id}`} className="font-medium text-slate-900 hover:text-marinho-700 hover:underline">
+                          {hire.estudante.nome_completo}
+                        </Link>
                           <p className="text-xs text-slate-500">{hire.estudante.curso}</p>
                         </td>
                         <td className="px-5 py-4">

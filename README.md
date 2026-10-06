@@ -96,6 +96,7 @@ npm run test:frente2   # turno, disponibilidade, semestre, formatura, nascimento
 npm run test:logos     # envio, troca e remoção da logo; recusa de SVG, de arquivos grandes e de formatos falsos
 npm run test:agenda    # agendamento com detalhes, conflito de horário, resumo da agenda e ações do painel
 npm run test:status-vaga   # suspender, fechar (motivo, dispensas, entrevistas canceladas) e reabrir vagas
+npm run test:perfil    # perfil do estudante: dados, candidaturas, entrevistas, observações e dispensas
 ```
 
 ## Dados de demonstração
@@ -134,7 +135,7 @@ backend/
   prisma/migrations/      histórico de alterações do banco
   scripts/                testes e dados de demonstração
 frontend/src/
-  pages/                  Dashboard, Kanban, Agenda, Vagas, Empresas, Banco de Talentos
+  pages/                  Dashboard, Kanban, Agenda, Vagas, Empresas, Estudantes, Perfil do estudante, Banco de Talentos, Contratações
   components/             lista com busca/edição/exclusão, formulários, modais e gráficos
 ```
 

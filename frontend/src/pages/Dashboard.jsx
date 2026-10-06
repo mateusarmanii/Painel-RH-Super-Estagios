@@ -327,7 +327,11 @@ export default function DashboardPage() {
                     <tbody className="divide-y divide-slate-100">
                       {dashboard.upcomingInterviews.map((interview) => (
                         <tr key={interview.id} className="hover:bg-slate-50">
-                          <td className="px-5 py-3.5 font-bold text-marinho-900">{interview.estudante.nome_completo}</td>
+                          <td className="px-5 py-3.5 font-bold text-marinho-900">
+                            <Link to={`/estudantes/${interview.estudante.id}`} className="hover:underline">
+                              {interview.estudante.nome_completo}
+                            </Link>
+                          </td>
                           <td className="px-5 py-3.5 text-slate-600">
                             <Link to={`/kanban/${interview.vaga.id}`} className="hover:text-marinho-700 hover:underline">
                               {interview.vaga.titulo}

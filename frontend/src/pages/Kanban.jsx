@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
   ArrowLeft,
@@ -31,7 +31,6 @@ import { CSS } from "@dnd-kit/utilities";
 import ActionMenu from "../components/ActionMenu.jsx";
 import { IndicateDialog } from "../components/IndicateForm.jsx";
 import Modal from "../components/Modal.jsx";
-import StudentQuickProfile from "../components/StudentQuickProfile.jsx";
 import PageHeader from "../components/PageHeader.jsx";
 import PanelCard from "../components/PanelCard.jsx";
 import { statusLabels, statusStyles } from "../vagaStatus.js";
@@ -489,7 +488,7 @@ function KanbanBoard({ vagaId }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [pendingMove, setPendingMove] = useState(null);
-  const [profileId, setProfileId] = useState(null);
+  const navigate = useNavigate();
   const [indicating, setIndicating] = useState(null);
   const [noting, setNoting] = useState(null);
   const sensors = useSensors(
@@ -609,7 +608,7 @@ function KanbanBoard({ vagaId }) {
   }
 
   function handleCardAction(action, candidate, payload) {
-    if (action === "profile") setProfileId(candidate.id);
+    if (action === "profile") navigate(`/estudantes/${candidate.id}`);
     if (action === "indicate") setIndicating(candidate);
     if (action === "note") setNoting(candidate);
     if (action === "move") requestMove(candidate, payload);
@@ -699,9 +698,6 @@ function KanbanBoard({ vagaId }) {
         )}
       </Modal>
 
-      <Modal isOpen={Boolean(profileId)} title="Perfil do estudante" onClose={() => setProfileId(null)}>
-        {profileId && <StudentQuickProfile studentId={profileId} onClose={() => setProfileId(null)} />}
-      </Modal>
 
       <Modal isOpen={Boolean(noting)} title={noting?.observacao ? "Editar observação" : "Adicionar observação"} onClose={() => setNoting(null)}>
         {noting && (

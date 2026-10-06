@@ -46,6 +46,43 @@ router.get("/", async (_req, res) => {
   }
 });
 
+// Perfil do estudante: dados e todas as candidaturas, com entrevistas, observações e motivos de dispensa.
+router.get("/:id", async (req, res) => {
+  const { id } = req.params;
+  if (!uuidValido.test(id)) {
+    return res.status(400).json({ erro: "ID de candidato inválido." });
+  }
+
+  try {
+    const estudante = await prisma.estudante.findUnique({
+      where: { id },
+      include: {
+        aplicacoes: {
+          orderBy: { created_at: "desc" },
+          include: {
+            vaga: {
+              select: {
+                id: true,
+                codigo_vaga: true,
+                titulo: true,
+                status: true,
+                turno: true,
+                valor: true,
+                empresa: { select: { id: true, nome: true, logo_url: true } },
+              },
+            },
+          },
+        },
+      },
+    });
+    if (!estudante) return res.status(404).json({ erro: "Candidato não encontrado." });
+    return res.json(estudante);
+  } catch (error) {
+    console.error("Erro ao carregar candidato:", error);
+    return res.status(500).json({ erro: "Não foi possível carregar o candidato." });
+  }
+});
+
 router.patch("/:id", async (req, res) => {
   const { id } = req.params;
   const { aplicacao_id, status_kanban, data_hora_entrevista, motivo_recusa } = req.body ?? {};
