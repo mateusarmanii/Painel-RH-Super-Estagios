@@ -22,8 +22,7 @@ import Modal from "../components/Modal.jsx";
 import PageHeader from "../components/PageHeader.jsx";
 import { statusLabels, statusStyles } from "../vagaStatus.js";
 import { dateTimeFormat, kanbanStatusLabels, toDateTimeInputValue } from "../kanbanStatus.js";
-
-const apiUrl = "http://localhost:3333";
+import { API_URL as apiUrl } from "../api.js";
 
 const columns = [
   {

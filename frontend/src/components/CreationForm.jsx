@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import { API_URL as apiUrl } from "../api.js";
 
-const apiUrl = "http://localhost:3333";
 const endpoints = { empresa: "empresas", vaga: "vagas", estudante: "candidatos" };
 const successMessages = {
   empresa: { create: "Empresa cadastrada com sucesso.", edit: "Empresa atualizada com sucesso." },

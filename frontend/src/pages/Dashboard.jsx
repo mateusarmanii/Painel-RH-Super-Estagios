@@ -13,8 +13,7 @@ import {
   WifiOff,
 } from "lucide-react";
 import { kanbanStatusLabels } from "../kanbanStatus.js";
-
-const apiUrl = "http://localhost:3333";
+import { API_URL as apiUrl } from "../api.js";
 
 const FunnelChart = lazy(() => import("../components/FunnelChart.jsx"));
 const CourseDonutChart = lazy(() => import("../components/CourseDonutChart.jsx"));

@@ -15,6 +15,7 @@ import {
   UserRoundCheck,
   X,
 } from "lucide-react";
+import { API_URL as apiUrl } from "../api.js";
 
 const navigationItems = [
   { label: "Dashboard", path: "/", icon: LayoutDashboard },
@@ -42,7 +43,7 @@ export default function Layout({ children }) {
     if (!codigo) return;
 
     try {
-      const response = await fetch("http://localhost:3333/vagas");
+      const response = await fetch(`${apiUrl}/vagas`);
       if (!response.ok) throw new Error("Não foi possível buscar as vagas.");
       const vaga = (await response.json()).find((item) => item.codigo_vaga === codigo);
       if (!vaga) {

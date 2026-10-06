@@ -6,8 +6,8 @@ import ListToolbar from "../components/ListToolbar.jsx";
 import Modal from "../components/Modal.jsx";
 import PageHeader from "../components/PageHeader.jsx";
 import { courseOptions, normalize, plural } from "../text.js";
+import { API_URL as apiUrl } from "../api.js";
 
-const apiUrl = "http://localhost:3333";
 const IN_PROCESS = new Set(["ENVIADO_EMPRESA", "AGUARDANDO_RETORNO", "ENTREVISTA_AGENDADA"]);
 const dateFormat = new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium" });
 

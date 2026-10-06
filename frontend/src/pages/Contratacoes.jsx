@@ -6,8 +6,8 @@ import ListToolbar from "../components/ListToolbar.jsx";
 import PageHeader from "../components/PageHeader.jsx";
 import { csvDate, downloadCsv, toCsv, todayForFilename } from "../csv.js";
 import { normalize, plural } from "../text.js";
+import { API_URL as apiUrl } from "../api.js";
 
-const apiUrl = "http://localhost:3333";
 const DIA_MS = 24 * 60 * 60 * 1000;
 const dateFormat = new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium" });
 

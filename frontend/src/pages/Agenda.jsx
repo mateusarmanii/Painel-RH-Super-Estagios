@@ -4,8 +4,7 @@ import toast from "react-hot-toast";
 import { CalendarClock, CalendarX2, Phone, RefreshCw } from "lucide-react";
 import Modal from "../components/Modal.jsx";
 import { toDateTimeInputValue } from "../kanbanStatus.js";
-
-const apiUrl = "http://localhost:3333";
+import { API_URL as apiUrl } from "../api.js";
 
 const timeFormat = new Intl.DateTimeFormat("pt-BR", { timeStyle: "short" });
 const dayFormat = new Intl.DateTimeFormat("pt-BR", { weekday: "long", day: "numeric", month: "long" });
