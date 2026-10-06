@@ -4,9 +4,9 @@ import Layout from "./components/Layout.jsx";
 import KanbanPage from "./pages/Kanban.jsx";
 import DashboardPage from "./pages/Dashboard.jsx";
 import AgendaPage from "./pages/Agenda.jsx";
+import ContratacoesPage from "./pages/Contratacoes.jsx";
 import {
   BancoDeTalentosPage,
-  ContratacoesPage,
   EmpresasPage,
   EmpresasSemVagaPage,
   VagasPage,

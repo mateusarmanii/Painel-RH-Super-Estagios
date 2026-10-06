@@ -167,7 +167,3 @@ export function BancoDeTalentosPage() {
     />
   );
 }
-
-export function ContratacoesPage() {
-  return <PlaceholderPage title="Contratações" />;
-}

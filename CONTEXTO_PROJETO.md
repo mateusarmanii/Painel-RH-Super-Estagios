@@ -214,6 +214,12 @@ Build OK; testes `cd backend && npm run test:etapa2d` (10/10, registros `[TESTE]
 - `cd backend && npm run demo:limpar` (`scripts/limpar-demo.js`): remove empresas, vagas e estudantes `[DEMO]` e as candidaturas deles, numa transação, e confirma que não sobrou nenhum. **Não apaga nada** se algum dado real estiver ligado a um `[DEMO]` (vaga real numa empresa `[DEMO]` ou estudante real inscrito numa vaga `[DEMO]`) — lista o conflito.
 - A lógica do seed foi validada sem tocar no banco (função `montarPlano`, exportada): quantidades, etapas, duplicatas, datas coerentes, vagas em alerta e campos existentes no schema.
 
+### ✅ Contratações efetivas — IMPLEMENTADA (05/10/2026)
+- Causa do "não mostra nada": `/contratacoes` apontava para um `PlaceholderPage` (só o título). Agora é `pages/Contratacoes.jsx`.
+- Lista as candidaturas em `APROVADO` (via `GET /candidatos`, sem mudança no backend) com estudante, curso, vaga (link para o Kanban), Nº, empresa, data de contratação e "N dias após a candidatura", da mais recente para a mais antiga. Busca por estudante/curso/vaga/empresa e "Exportar CSV". Celular: cartões; telas `md+`: tabela.
+- Conferida com os dados `[DEMO]` (5 contratados), criados com aprovação do usuário via `npm run demo:criar`.
+- Componentes compartilhados novos: `components/ListToolbar.jsx` (busca + filtros + CSV, usado também pelo `EntityList`) e `text.js` (`normalize`, `plural`).
+
 ## Regras de trabalho
 
 - **Banco de dados: antes de aplicar QUALQUER alteração no banco (migrations, `migrate deploy`/`dev`/`reset`, `db push`, SQL manual, escrita em `_prisma_migrations`, criação/remoção de bancos, scripts de teste que gravam dados), mostrar o SQL/operações ao usuário e esperar aprovação explícita.**
