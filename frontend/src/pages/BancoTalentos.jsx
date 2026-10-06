@@ -3,118 +3,14 @@ import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import { Mail, MessageSquareX, Phone, Send, Users } from "lucide-react";
 import ListToolbar from "../components/ListToolbar.jsx";
+import { IndicateForm } from "../components/IndicateForm.jsx";
 import Modal from "../components/Modal.jsx";
 import PageHeader from "../components/PageHeader.jsx";
 import { courseOptions, normalize, plural } from "../text.js";
+import { toTalents } from "../regras.js";
 import { API_URL as apiUrl } from "../api.js";
 
-const IN_PROCESS = new Set(["ENVIADO_EMPRESA", "AGUARDANDO_RETORNO", "ENTREVISTA_AGENDADA"]);
 const dateFormat = new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium" });
-
-// Regras do Banco de Talentos:
-// - entra quem tem ao menos uma candidatura RECUSADO;
-// - quem já foi contratado (APROVADO em qualquer vaga) fica de fora;
-// - quem ainda está em processo em outra vaga ganha a etiqueta "Em processo".
-// A data da dispensa é o updated_at da candidatura (enquanto RECUSADO, a última alteração é a dispensa).
-function toTalents(students) {
-  return students
-    .filter((student) => {
-      const statuses = (student.aplicacoes ?? []).map((application) => application.status_kanban);
-      return statuses.includes("RECUSADO") && !statuses.includes("APROVADO");
-    })
-    .map((student) => {
-      const applications = student.aplicacoes ?? [];
-      const lastDismissal = applications
-        .filter((application) => application.status_kanban === "RECUSADO")
-        .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))[0];
-      return {
-        ...student,
-        lastDismissal,
-        inProcess: applications.filter((application) => IN_PROCESS.has(application.status_kanban)),
-      };
-    })
-    .sort((a, b) => new Date(b.lastDismissal.updated_at) - new Date(a.lastDismissal.updated_at));
-}
-
-function IndicateForm({ talent, openJobs, onDone, onCancel }) {
-  const appliedJobIds = new Set((talent.aplicacoes ?? []).map((application) => application.vaga_id));
-  const availableJobs = openJobs.filter((job) => !appliedJobIds.has(job.id));
-  const [jobId, setJobId] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
-
-  async function handleSubmit(event) {
-    event.preventDefault();
-    setIsSaving(true);
-
-    try {
-      const response = await fetch(`${apiUrl}/candidatos/${talent.id}/candidaturas`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ vaga_id: jobId }),
-      });
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(result.erro ?? "Não foi possível indicar o candidato.");
-
-      toast.success(`${talent.nome_completo} foi indicado para "${result.vaga?.titulo}".`);
-      window.dispatchEvent(new Event("dashboard:refresh"));
-      onDone();
-    } catch (saveError) {
-      toast.error(saveError.message);
-      setIsSaving(false);
-    }
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <p className="text-sm text-slate-700">
-        Indicar <strong className="font-semibold text-slate-900">{talent.nome_completo}</strong> para uma vaga aberta.
-        A candidatura começa em "Enviado à empresa".
-      </p>
-
-      {availableJobs.length === 0 ? (
-        <p className="rounded-md bg-slate-50 px-3 py-3 text-sm text-slate-600">
-          Não há vagas abertas em que este candidato ainda não esteja inscrito.
-        </p>
-      ) : (
-        <label htmlFor="indicar-vaga" className="block space-y-1.5">
-          <span className="text-sm font-medium text-slate-700">Vaga</span>
-          <select
-            id="indicar-vaga"
-            required
-            value={jobId}
-            onChange={(event) => setJobId(event.target.value)}
-            className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none focus:border-sky-700 focus:ring-2 focus:ring-sky-700/15"
-          >
-            <option value="">Selecione uma vaga aberta</option>
-            {availableJobs.map((job) => (
-              <option key={job.id} value={job.id}>
-                {job.codigo_vaga} - {job.titulo} ({job.empresa?.nome})
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
-
-      <div className="flex justify-end gap-2 pt-2">
-        <button
-          type="button"
-          onClick={onCancel}
-          disabled={isSaving}
-          className="h-10 rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 disabled:opacity-50"
-        >
-          Cancelar
-        </button>
-        <button
-          type="submit"
-          disabled={isSaving || availableJobs.length === 0}
-          className="h-10 rounded-md bg-sky-800 px-4 text-sm font-medium text-white transition-colors hover:bg-sky-900 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {isSaving ? "A guardar..." : "Indicar"}
-        </button>
-      </div>
-    </form>
-  );
-}
 
 export default function BancoTalentosPage() {
   const [students, setStudents] = useState([]);
@@ -161,10 +57,9 @@ export default function BancoTalentosPage() {
   const hasFilters = Boolean(search.trim() || course);
 
   return (
-    <section className="min-h-[calc(100vh-4rem)] bg-slate-50 px-4 py-8 sm:px-6 lg:px-8">
+    <section className="min-h-[calc(100vh-4rem)] px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto w-full max-w-7xl">
         <PageHeader
-          title="Banco de Talentos"
           subtitle="Candidatos dispensados em alguma vaga e ainda não contratados, prontos para novas indicações"
         />
         <ListToolbar id="talentos" search={search} onSearchChange={setSearch} placeholder="Buscar por nome">
@@ -173,7 +68,7 @@ export default function BancoTalentosPage() {
             id="filtro-curso"
             value={course}
             onChange={(event) => setCourse(event.target.value)}
-            className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none focus:border-sky-700 focus:ring-2 focus:ring-sky-700/15 sm:w-60"
+            className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none focus:border-marinho-600 focus:ring-2 focus:ring-ambar-400/40 sm:w-60"
           >
             <option value="">Todos os cursos</option>
             {courses.map((option) => (
@@ -198,10 +93,10 @@ export default function BancoTalentosPage() {
           </div>
         ) : filteredTalents.length === 0 ? (
           <div className="grid place-items-center rounded-md border border-slate-200 bg-white px-6 py-14 text-center shadow-sm">
-            <span className="grid size-12 place-items-center rounded-full bg-slate-100 text-slate-500">
+            <span className="grid size-12 place-items-center rounded-full bg-marinho-50 text-marinho-700">
               <Users size={22} />
             </span>
-            <p className="mt-4 text-base font-semibold text-slate-900">
+            <p className="mt-4 text-base font-semibold text-marinho-900">
               {hasFilters ? "Nenhum talento com esses filtros" : "O Banco de Talentos está vazio"}
             </p>
             {!hasFilters && (
@@ -219,7 +114,7 @@ export default function BancoTalentosPage() {
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <h2 className="text-lg font-semibold leading-6 text-slate-900">{talent.nome_completo}</h2>
+                    <h2 className="text-lg font-semibold leading-6 text-marinho-900">{talent.nome_completo}</h2>
                     <p className="mt-1 text-sm text-slate-600">{talent.curso}</p>
                   </div>
                   {talent.inProcess.length > 0 && (
@@ -236,7 +131,7 @@ export default function BancoTalentosPage() {
                   <p className="text-xs font-medium uppercase tracking-wide text-rose-700">Última dispensa</p>
                   <Link
                     to={`/kanban/${talent.lastDismissal.vaga_id}`}
-                    className="mt-1 block font-medium text-slate-900 hover:text-sky-800 hover:underline"
+                    className="mt-1 block font-medium text-slate-900 hover:text-marinho-700 hover:underline"
                   >
                     {talent.lastDismissal.vaga?.titulo}
                   </Link>
@@ -261,7 +156,7 @@ export default function BancoTalentosPage() {
                 <button
                   type="button"
                   onClick={() => setIndicating(talent)}
-                  className="mt-5 inline-flex h-10 items-center justify-center gap-2 rounded-md bg-sky-800 px-4 text-sm font-medium text-white transition-colors hover:bg-sky-900"
+                  className="mt-5 inline-flex h-10 items-center justify-center gap-2 rounded-md bg-ambar-400 px-4 text-sm font-bold text-marinho-900 transition-colors hover:bg-ambar-500"
                 >
                   <Send size={16} /> Indicar para vaga
                 </button>

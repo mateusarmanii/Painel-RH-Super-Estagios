@@ -8,6 +8,9 @@ export const kanbanStatusLabels = {
   RECUSADO: "Dispensado",
 };
 
+// Ordem das etapas no Kanban e no funil do Dashboard.
+export const kanbanStatusOrder = ["ENVIADO_EMPRESA", "ENTREVISTA_AGENDADA", "AGUARDANDO_RETORNO", "APROVADO", "RECUSADO"];
+
 export const kanbanStatusStyles = {
   ENVIADO_EMPRESA: "bg-sky-50 text-sky-700",
   AGUARDANDO_RETORNO: "bg-amber-50 text-amber-800",

@@ -153,7 +153,7 @@ export default function CreationForm({ type, initialData, onSuccess }) {
           value: form[field.name] ?? "",
           onChange: updateField,
           required: !field.optional,
-          className: "h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-sky-700 focus:ring-2 focus:ring-sky-700/15",
+          className: "h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-marinho-600 focus:ring-2 focus:ring-ambar-400/40",
         };
 
         return (
@@ -208,7 +208,7 @@ export default function CreationForm({ type, initialData, onSuccess }) {
         <button
           type="submit"
           disabled={isSubmitting || (optionType !== null && isLoadingOptions) || (optionType !== null && options.length === 0)}
-          className="h-10 rounded-md bg-sky-800 px-4 text-sm font-medium text-white transition-colors hover:bg-sky-900 disabled:cursor-not-allowed disabled:opacity-50"
+          className="h-10 rounded-md bg-ambar-400 px-4 text-sm font-bold text-marinho-900 transition-colors hover:bg-ambar-500 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isSubmitting ? "A guardar..." : "Guardar"}
         </button>

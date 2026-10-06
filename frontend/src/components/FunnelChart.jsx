@@ -66,7 +66,7 @@ export default function FunnelChart({ data }) {
         <Bar
           dataKey="total"
           name="Candidaturas"
-          fill="#0369a1"
+          fill="#2b3d69"
           radius={[4, 4, 0, 0]}
           maxBarSize={54}
           isAnimationActive={false}

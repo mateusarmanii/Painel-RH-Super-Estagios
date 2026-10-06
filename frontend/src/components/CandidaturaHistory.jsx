@@ -7,7 +7,7 @@ const dateFormat = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" });
 export default function CandidaturaHistory({ aplicacoes = [] }) {
   return (
     <section className="mt-6 border-t border-slate-200 pt-5" aria-labelledby="historico-candidaturas">
-      <h3 id="historico-candidaturas" className="text-sm font-semibold text-slate-900">
+      <h3 id="historico-candidaturas" className="text-sm font-semibold text-marinho-900">
         Histórico de candidaturas
       </h3>
 
@@ -21,7 +21,7 @@ export default function CandidaturaHistory({ aplicacoes = [] }) {
                 <div className="min-w-0">
                   <Link
                     to={`/kanban/${aplicacao.vaga_id}`}
-                    className="font-medium text-slate-900 underline-offset-2 hover:text-sky-800 hover:underline"
+                    className="font-medium text-slate-900 underline-offset-2 hover:text-marinho-700 hover:underline"
                   >
                     {aplicacao.vaga?.titulo ?? "Vaga"}
                   </Link>

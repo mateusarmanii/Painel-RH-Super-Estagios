@@ -5,7 +5,7 @@ export default function Modal({ isOpen, title, onClose, children }) {
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-slate-950/50 p-4 backdrop-blur-[2px]"
+      className="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-marinho-950/50 p-4 backdrop-blur-[2px]"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
@@ -14,10 +14,10 @@ export default function Modal({ isOpen, title, onClose, children }) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
-        className="my-auto max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-md border border-slate-200 bg-white p-5 shadow-xl sm:p-6"
+        className="my-auto flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-lg bg-white shadow-xl"
       >
-        <header className="mb-5 flex items-center justify-between gap-4">
-          <h2 id="modal-title" className="text-lg font-semibold text-slate-900">
+        <header className="flex shrink-0 items-center justify-between gap-4 bg-ambar-400 px-5 py-3 text-marinho-900">
+          <h2 id="modal-title" className="text-sm font-extrabold uppercase tracking-wide">
             {title}
           </h2>
           <button
@@ -25,12 +25,12 @@ export default function Modal({ isOpen, title, onClose, children }) {
             aria-label="Fechar janela"
             title="Fechar janela"
             onClick={onClose}
-            className="grid size-9 shrink-0 place-items-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
+            className="grid size-8 shrink-0 place-items-center rounded-md text-marinho-900 transition-colors hover:bg-ambar-500"
           >
             <X size={19} />
           </button>
         </header>
-        {children}
+        <div className="overflow-y-auto p-5 sm:p-6">{children}</div>
       </section>
     </div>
   );

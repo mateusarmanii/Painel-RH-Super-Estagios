@@ -1,8 +1,41 @@
 @import "tailwindcss";
 
+/* Identidade do painel interno da Super Estágios. */
+@theme {
+  --font-sans: "Nunito", ui-rounded, "Segoe UI", system-ui, -apple-system, sans-serif;
+
+  /* Azul-marinho: menu lateral, títulos e texto sobre o âmbar. */
+  --color-marinho-50: #eef1f7;
+  --color-marinho-100: #d9dfec;
+  --color-marinho-200: #b3bfd8;
+  --color-marinho-500: #3d5285;
+  --color-marinho-600: #2b3d69;
+  --color-marinho-700: #223358;
+  --color-marinho-800: #1b2a4b;
+  --color-marinho-900: #13213f;
+  --color-marinho-950: #0c1529;
+
+  /* Âmbar: botões principais, faixas dos cards e item ativo do menu. */
+  --color-ambar-50: #fef8e7;
+  --color-ambar-100: #fdedc2;
+  --color-ambar-300: #f9c95a;
+  --color-ambar-400: #f7b31b;
+  --color-ambar-500: #e19d06;
+  --color-ambar-600: #b97f04;
+
+  /* Vermelho dos números de destaque. */
+  --color-destaque: #c0392b;
+}
+
 html,
 body,
 #root {
   min-height: 100%;
   margin: 0;
+}
+
+body {
+  background-color: #f3f5f9;
+  color: var(--color-slate-800);
+  font-family: var(--font-sans);
 }

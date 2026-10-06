@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
-import { CalendarClock, CalendarX2, Phone, RefreshCw } from "lucide-react";
+import { CalendarClock, CalendarDays, CalendarX2, Phone, RefreshCw } from "lucide-react";
 import Modal from "../components/Modal.jsx";
+import PageHeader from "../components/PageHeader.jsx";
+import PanelCard from "../components/PanelCard.jsx";
 import { toDateTimeInputValue } from "../kanbanStatus.js";
 import { API_URL as apiUrl } from "../api.js";
 
@@ -73,7 +75,7 @@ function RescheduleForm({ interview, onDone, onCancel }) {
     <form onSubmit={handleSubmit} className="space-y-4">
       <p className="text-sm text-slate-700">
         Nova data da entrevista de{" "}
-        <strong className="font-semibold text-slate-900">{interview.estudante.nome_completo}</strong> para{" "}
+        <strong className="font-semibold text-marinho-900">{interview.estudante.nome_completo}</strong> para{" "}
         {interview.vaga.titulo}.
       </p>
       <label htmlFor="agenda-nova-data" className="block space-y-1.5">
@@ -85,7 +87,7 @@ function RescheduleForm({ interview, onDone, onCancel }) {
           min={toDateTimeInputValue()}
           value={value}
           onChange={(event) => setValue(event.target.value)}
-          className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none focus:border-sky-700 focus:ring-2 focus:ring-sky-700/15"
+          className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none focus:border-marinho-600 focus:ring-2 focus:ring-ambar-400/40"
         />
       </label>
       <div className="flex justify-end gap-2 pt-2">
@@ -93,14 +95,14 @@ function RescheduleForm({ interview, onDone, onCancel }) {
           type="button"
           onClick={onCancel}
           disabled={isSaving}
-          className="h-10 rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 disabled:opacity-50"
+          className="h-10 rounded-md border border-slate-300 bg-white px-4 text-sm font-semibold text-marinho-800 transition-colors hover:bg-marinho-50 disabled:opacity-50"
         >
           Cancelar
         </button>
         <button
           type="submit"
           disabled={isSaving}
-          className="h-10 rounded-md bg-sky-800 px-4 text-sm font-medium text-white transition-colors hover:bg-sky-900 disabled:cursor-not-allowed disabled:opacity-50"
+          className="h-10 rounded-md bg-ambar-400 px-4 text-sm font-bold text-marinho-900 transition-colors hover:bg-ambar-500 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isSaving ? "A guardar..." : "Reagendar"}
         </button>
@@ -142,13 +144,9 @@ export default function AgendaPage() {
   const groups = groupByDay(interviews);
 
   return (
-    <section className="min-h-[calc(100vh-4rem)] bg-slate-50 px-4 py-8 sm:px-6 lg:px-8">
+    <section className="min-h-[calc(100vh-4rem)] px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto w-full max-w-4xl">
-        <header className="mb-7">
-          <p className="text-sm font-medium text-sky-800">Super Estágios</p>
-          <h1 className="mt-1 text-2xl font-semibold text-slate-900">Agenda de entrevistas</h1>
-          <p className="mt-1 text-sm text-slate-500">Próximas entrevistas, da mais próxima para a mais distante</p>
-        </header>
+        <PageHeader subtitle="Próximas entrevistas, da mais próxima para a mais distante" />
 
         {isLoading ? (
           <div className="space-y-3" aria-busy="true" aria-label="A carregar a agenda">
@@ -162,40 +160,37 @@ export default function AgendaPage() {
             <button
               type="button"
               onClick={loadInterviews}
-              className="mt-4 inline-flex h-10 items-center gap-2 rounded-md bg-sky-800 px-4 text-sm font-medium text-white transition-colors hover:bg-sky-900"
+              className="mt-4 inline-flex h-10 items-center gap-2 rounded-md bg-ambar-400 px-4 text-sm font-bold text-marinho-900 transition-colors hover:bg-ambar-500"
             >
               <RefreshCw size={16} /> Tentar novamente
             </button>
           </div>
         ) : groups.length === 0 ? (
           <div className="grid place-items-center rounded-md border border-slate-200 bg-white px-6 py-14 text-center shadow-sm">
-            <span className="grid size-12 place-items-center rounded-full bg-slate-100 text-slate-500">
+            <span className="grid size-12 place-items-center rounded-full bg-marinho-50 text-marinho-700">
               <CalendarX2 size={22} />
             </span>
-            <p className="mt-4 text-base font-semibold text-slate-900">Nenhuma entrevista agendada</p>
+            <p className="mt-4 text-base font-semibold text-marinho-900">Nenhuma entrevista agendada</p>
             <p className="mt-1 text-sm text-slate-600">
               Para agendar, arraste um candidato para a coluna "Entrevista" no Kanban da vaga.
             </p>
           </div>
         ) : (
-          <div className="space-y-8">
+          <div className="space-y-6">
             {groups.map((group) => (
-              <section key={group.key} aria-labelledby={`dia-${group.key}`}>
-                <h2 id={`dia-${group.key}`} className="mb-3 text-sm font-semibold text-slate-700">
-                  {group.title}
-                </h2>
-                <ul className="space-y-3">
+              <PanelCard key={group.key} title={group.title} icon={CalendarDays} bodyClassName="p-0">
+                <ul className="divide-y divide-slate-100">
                   {group.items.map((interview) => (
                     <li
                       key={interview.id}
-                      className="flex flex-wrap items-center gap-x-5 gap-y-3 rounded-md border border-slate-200 bg-white p-4 shadow-sm"
+                      className="flex flex-wrap items-center gap-x-5 gap-y-3 px-5 py-4"
                     >
-                      <span className="flex w-20 shrink-0 items-center gap-1.5 text-base font-semibold tabular-nums text-violet-800">
+                      <span className="flex w-20 shrink-0 items-center gap-1.5 text-base font-extrabold tabular-nums text-destaque">
                         <CalendarClock size={17} className="shrink-0" />
                         {timeFormat.format(new Date(interview.data_hora_entrevista))}
                       </span>
                       <div className="min-w-0 flex-1 basis-56">
-                        <p className="truncate text-sm font-semibold text-slate-900">{interview.estudante.nome_completo}</p>
+                        <p className="truncate text-sm font-semibold text-marinho-900">{interview.estudante.nome_completo}</p>
                         <p className="truncate text-xs text-slate-500">{interview.estudante.curso}</p>
                         <p className="mt-1 truncate text-sm text-slate-600">
                           {interview.vaga.titulo}
@@ -209,13 +204,13 @@ export default function AgendaPage() {
                         <button
                           type="button"
                           onClick={() => setRescheduling(interview)}
-                          className="h-9 rounded-md border border-slate-300 bg-white px-3 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100"
+                          className="h-9 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-marinho-800 transition-colors hover:bg-marinho-50"
                         >
                           Reagendar
                         </button>
                         <Link
                           to={`/kanban/${interview.vaga.id}`}
-                          className="px-1 text-sm font-semibold text-sky-800 transition-colors hover:text-sky-950"
+                          className="px-1 text-sm font-semibold text-marinho-700 transition-colors hover:text-marinho-900"
                         >
                           Kanban <span aria-hidden="true">&rarr;</span>
                         </Link>
@@ -223,7 +218,7 @@ export default function AgendaPage() {
                     </li>
                   ))}
                 </ul>
-              </section>
+              </PanelCard>
             ))}
           </div>
         )}

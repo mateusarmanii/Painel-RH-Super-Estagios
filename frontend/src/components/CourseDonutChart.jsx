@@ -33,7 +33,7 @@ function SliceTooltip({ active, payload, total }) {
 
   return (
     <div className="rounded-md border border-slate-200 bg-white px-3 py-2 text-xs shadow-md">
-      <p className="font-semibold text-slate-900">{slice.name}</p>
+      <p className="font-semibold text-marinho-900">{slice.name}</p>
       <p className="mt-0.5 text-slate-600">
         {slice.total} {slice.total === 1 ? "estudante" : "estudantes"} · {percentFormat.format(slice.total / total)}
       </p>
@@ -71,7 +71,7 @@ export default function CourseDonutChart({ distribution }) {
           </PieChart>
         </ResponsiveContainer>
         <div className="pointer-events-none absolute inset-0 grid place-content-center text-center">
-          <span className="text-3xl font-semibold tabular-nums text-slate-900">{total}</span>
+          <span className="text-3xl font-semibold tabular-nums text-marinho-900">{total}</span>
           <span className="text-xs text-slate-500">{total === 1 ? "estudante" : "estudantes"}</span>
         </div>
       </div>

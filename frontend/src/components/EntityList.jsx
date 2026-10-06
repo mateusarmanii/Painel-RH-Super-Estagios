@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
-import { Pencil, Trash2 } from "lucide-react";
+import { Inbox, Pencil, SearchX, Trash2 } from "lucide-react";
 import CreationForm from "./CreationForm.jsx";
+import EmptyState from "./EmptyState.jsx";
 import ListToolbar from "./ListToolbar.jsx";
 import Modal from "./Modal.jsx";
 import PageHeader from "./PageHeader.jsx";
@@ -11,7 +12,6 @@ import { API_URL as apiUrl } from "../api.js";
 
 // Lista com busca, edição (PUT) e exclusão (DELETE) para empresas, vagas e estudantes.
 export default function EntityList({
-  title,
   type,
   endpoint,
   entityLabel,
@@ -89,9 +89,9 @@ export default function EntityList({
   }
 
   return (
-    <section className="min-h-[calc(100vh-4rem)] bg-slate-50 px-4 py-8 sm:px-6 lg:px-8">
+    <section className="min-h-[calc(100vh-4rem)] px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto w-full max-w-7xl">
-        <PageHeader title={title} subtitle={subtitle} />
+        <PageHeader subtitle={subtitle} />
         <ListToolbar
           id={type}
           search={search}
@@ -102,11 +102,17 @@ export default function EntityList({
         />
 
         {isLoading ? (
-          <p className="text-sm text-slate-500">A carregar...</p>
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3" aria-busy="true" aria-label="A carregar">
+            {Array.from({ length: 3 }, (_, index) => (
+              <div key={index} className="h-56 animate-pulse rounded-lg border border-slate-200 bg-white" />
+            ))}
+          </div>
         ) : filteredItems.length === 0 ? (
-          <p className="text-sm text-slate-500">
-            {search.trim() ? `Nenhum resultado para "${search.trim()}".` : emptyMessage}
-          </p>
+          <EmptyState
+            icon={search.trim() ? SearchX : Inbox}
+            title={search.trim() ? `Nenhum resultado para "${search.trim()}"` : emptyMessage}
+            description={search.trim() ? "Confira a grafia ou busque por outro termo." : undefined}
+          />
         ) : (
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {filteredItems.map((item) => (
@@ -120,7 +126,7 @@ export default function EntityList({
                     aria-label={`Editar ${getName(item)}`}
                     title="Editar"
                     onClick={() => setEditingItem(item)}
-                    className="grid size-8 place-items-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-sky-800"
+                    className="grid size-8 place-items-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-marinho-700"
                   >
                     <Pencil size={16} />
                   </button>
@@ -168,7 +174,7 @@ export default function EntityList({
           <div className="space-y-5">
             <p className="text-sm text-slate-700">
               Deseja excluir {entityLabel.article} {entityLabel.singular}{" "}
-              <strong className="font-semibold text-slate-900">{getName(deletingItem)}</strong>?
+              <strong className="font-semibold text-marinho-900">{getName(deletingItem)}</strong>?
               Esta ação não pode ser desfeita.
             </p>
             <div className="flex justify-end gap-2">
@@ -176,7 +182,7 @@ export default function EntityList({
                 type="button"
                 onClick={() => setDeletingItem(null)}
                 disabled={isDeleting}
-                className="h-10 rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 disabled:opacity-50"
+                className="h-10 rounded-md border border-slate-300 bg-white px-4 text-sm font-semibold text-marinho-800 transition-colors hover:bg-marinho-50 disabled:opacity-50"
               >
                 Cancelar
               </button>

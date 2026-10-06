@@ -1,10 +1,11 @@
-// Cabeçalho padrão das páginas (mesmo estilo do Dashboard e da Agenda).
-export default function PageHeader({ title, subtitle }) {
+// O título da tela fica na barra superior (Layout); aqui vai só a descrição da página, quando houver.
+export default function PageHeader({ subtitle, children }) {
+  if (!subtitle && !children) return null;
+
   return (
-    <header className="mb-7">
-      <p className="text-sm font-medium text-sky-800">Super Estágios</p>
-      <h1 className="mt-1 text-2xl font-semibold text-slate-900">{title}</h1>
-      {subtitle && <p className="mt-1 text-sm text-slate-500">{subtitle}</p>}
-    </header>
+    <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+      {subtitle && <p className="text-sm text-slate-600">{subtitle}</p>}
+      {children}
+    </div>
   );
 }

@@ -1,7 +1,18 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
-import { ArrowLeft, CalendarClock, MessageSquareX } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRightLeft,
+  BriefcaseBusiness,
+  CalendarClock,
+  ChevronDown,
+  MessageSquarePlus,
+  MessageSquareX,
+  MoreHorizontal,
+  Send,
+  UserRound,
+} from "lucide-react";
 import {
   closestCorners,
   DndContext,
@@ -18,8 +29,11 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { IndicateDialog } from "../components/IndicateForm.jsx";
 import Modal from "../components/Modal.jsx";
+import StudentQuickProfile from "../components/StudentQuickProfile.jsx";
 import PageHeader from "../components/PageHeader.jsx";
+import PanelCard from "../components/PanelCard.jsx";
 import { statusLabels, statusStyles } from "../vagaStatus.js";
 import { dateTimeFormat, kanbanStatusLabels, toDateTimeInputValue } from "../kanbanStatus.js";
 import { API_URL as apiUrl } from "../api.js";
@@ -32,16 +46,16 @@ const columns = [
     border: "border-t-sky-500",
   },
   {
-    id: "analise",
-    title: kanbanStatusLabels.AGUARDANDO_RETORNO,
-    status: "AGUARDANDO_RETORNO",
-    border: "border-t-amber-500",
-  },
-  {
     id: "entrevista",
     title: kanbanStatusLabels.ENTREVISTA_AGENDADA,
     status: "ENTREVISTA_AGENDADA",
     border: "border-t-violet-500",
+  },
+  {
+    id: "analise",
+    title: kanbanStatusLabels.AGUARDANDO_RETORNO,
+    status: "AGUARDANDO_RETORNO",
+    border: "border-t-amber-500",
   },
   {
     id: "contratados",
@@ -83,7 +97,108 @@ function getInitials(name) {
     .toUpperCase();
 }
 
-function StudentCard({ candidate }) {
+// Evita que cliques e teclas nos botões do cartão iniciem o arrastar.
+const stopDrag = {
+  onPointerDown: (event) => event.stopPropagation(),
+  onKeyDown: (event) => event.stopPropagation(),
+};
+
+// Menu "⋯" do cartão: alternativa ao arrastar (útil no celular).
+function CardMenu({ candidate, onAction }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [isMoveOpen, setIsMoveOpen] = useState(false);
+  const close = () => {
+    setIsOpen(false);
+    setIsMoveOpen(false);
+  };
+  const run = (action, payload) => {
+    close();
+    onAction(action, candidate, payload);
+  };
+  const itemClass =
+    "flex w-full items-center gap-2.5 whitespace-nowrap px-4 py-3 text-left sm:px-3 sm:py-2 text-sm font-semibold text-marinho-900 transition-colors hover:bg-marinho-50 disabled:cursor-not-allowed disabled:text-slate-400 disabled:hover:bg-transparent";
+
+  return (
+    <div className="relative shrink-0" {...stopDrag}>
+      <button
+        type="button"
+        aria-label={`Ações para ${candidate.nome}`}
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
+        title="Ações"
+        onClick={() => setIsOpen((open) => !open)}
+        className="grid size-8 place-items-center rounded-md text-slate-500 transition-colors hover:bg-marinho-50 hover:text-marinho-900"
+      >
+        <MoreHorizontal size={18} />
+      </button>
+
+      {isOpen && (
+        <>
+          <button
+            type="button"
+            aria-label="Fechar ações"
+            onClick={close}
+            className="fixed inset-0 z-40 cursor-default bg-marinho-950/40 sm:z-10 sm:bg-transparent"
+          />
+          {/* Celular: folha que sobe de baixo (não é cortada pela coluna). Telas maiores: menu suspenso. */}
+          <div
+            role="menu"
+            className="fixed inset-x-0 bottom-0 z-50 max-h-[80vh] overflow-y-auto rounded-t-xl border border-slate-200 bg-white pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1 shadow-2xl sm:absolute sm:inset-x-auto sm:bottom-auto sm:right-0 sm:z-20 sm:mt-1 sm:max-h-none sm:w-64 sm:rounded-md sm:pb-1 sm:shadow-lg"
+          >
+            <p className="truncate border-b border-slate-100 px-4 pb-2 pt-2 text-xs font-extrabold uppercase tracking-wide text-slate-500 sm:hidden">
+              {candidate.nome}
+            </p>
+            <button type="button" role="menuitem" className={itemClass} onClick={() => run("profile")}>
+              <UserRound size={16} className="text-marinho-600" /> Ver perfil
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              className={itemClass}
+              disabled
+              title="Disponível depois da Frente 2 (campo de observação na candidatura)"
+            >
+              <MessageSquarePlus size={16} /> Adicionar observação
+              <span className="ml-auto text-[10px] font-bold uppercase text-slate-400">em breve</span>
+            </button>
+            <button type="button" role="menuitem" className={itemClass} onClick={() => run("indicate")}>
+              <Send size={16} className="text-marinho-600" /> Indicar para outra vaga
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              aria-expanded={isMoveOpen}
+              className={itemClass}
+              onClick={() => setIsMoveOpen((open) => !open)}
+            >
+              <ArrowRightLeft size={16} className="text-marinho-600" /> Mover para…
+              <ChevronDown size={15} className={`ml-auto transition-transform ${isMoveOpen ? "rotate-180" : ""}`} />
+            </button>
+            {isMoveOpen && (
+              <div className="border-t border-slate-100 bg-slate-50 py-1">
+                {columns
+                  .filter((column) => column.id !== candidate.coluna)
+                  .map((column) => (
+                    <button
+                      key={column.id}
+                      type="button"
+                      role="menuitem"
+                      onClick={() => run("move", column)}
+                      className="flex w-full items-center gap-2 py-3 pl-11 pr-3 text-left sm:py-2 sm:pl-9 text-sm text-slate-700 transition-colors hover:bg-white hover:text-marinho-900"
+                    >
+                      {column.title}
+                    </button>
+                  ))}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function StudentCard({ candidate, onAction }) {
   const {
     attributes,
     isDragging,
@@ -113,12 +228,21 @@ function StudentCard({ candidate }) {
         >
           {getInitials(candidate.nome)}
         </span>
-        <div className="min-w-0">
-          <h3 className="truncate text-sm font-semibold text-slate-900">
-            {candidate.nome}
+        <div className="min-w-0 flex-1">
+          <h3 className="truncate text-sm font-semibold">
+            <button
+              type="button"
+              {...stopDrag}
+              onClick={() => onAction("profile", candidate)}
+              title="Ver perfil"
+              className="max-w-full truncate text-left text-marinho-900 underline-offset-2 hover:text-marinho-600 hover:underline"
+            >
+              {candidate.nome}
+            </button>
           </h3>
           <p className="mt-1 truncate text-xs text-slate-600">{candidate.curso}</p>
         </div>
+        <CardMenu candidate={candidate} onAction={onAction} />
       </div>
 
       {candidate.coluna === "entrevista" && candidate.dataEntrevista && (
@@ -138,18 +262,18 @@ function StudentCard({ candidate }) {
   );
 }
 
-function KanbanColumn({ column, candidates }) {
+function KanbanColumn({ column, candidates, onAction }) {
   const { isOver, setNodeRef } = useDroppable({ id: column.id });
 
   return (
     <section
       ref={setNodeRef}
       className={`flex h-full w-72 flex-col overflow-hidden rounded-md border border-slate-200 border-t-4 transition-colors sm:w-80 ${column.border} ${
-        isOver ? "bg-sky-50" : column.background ?? "bg-slate-50"
+        isOver ? "bg-ambar-50" : column.background ?? "bg-slate-50"
       }`}
     >
       <header className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-200 px-4 py-3">
-        <h2 className="text-sm font-semibold text-slate-800">{column.title}</h2>
+        <h2 className="text-xs font-extrabold uppercase tracking-wide text-marinho-900">{column.title}</h2>
         <span className="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-slate-600 ring-1 ring-slate-200">
           {candidates.length}
         </span>
@@ -161,7 +285,7 @@ function KanbanColumn({ column, candidates }) {
       >
         <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
           {candidates.map((candidate) => (
-            <StudentCard key={candidate.applicationId} candidate={candidate} />
+            <StudentCard key={candidate.applicationId} candidate={candidate} onAction={onAction} />
           ))}
         </div>
       </SortableContext>
@@ -201,7 +325,7 @@ function MoveDetailsForm({ move, onConfirm, onCancel }) {
     <form onSubmit={handleSubmit} className="space-y-4">
       <p className="text-sm text-slate-700">
         {isInterview ? "Agendar entrevista de " : "Dispensar "}
-        <strong className="font-semibold text-slate-900">{move.candidate.nome}</strong>.
+        <strong className="font-semibold text-marinho-900">{move.candidate.nome}</strong>.
       </p>
 
       <label htmlFor="kanban-move-detail" className="block space-y-1.5">
@@ -216,7 +340,7 @@ function MoveDetailsForm({ move, onConfirm, onCancel }) {
             min={minDateTime}
             value={value}
             onChange={(event) => setValue(event.target.value)}
-            className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none focus:border-sky-700 focus:ring-2 focus:ring-sky-700/15"
+            className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none focus:border-marinho-600 focus:ring-2 focus:ring-ambar-400/40"
           />
         ) : (
           <textarea
@@ -227,7 +351,7 @@ function MoveDetailsForm({ move, onConfirm, onCancel }) {
             value={value}
             onChange={(event) => setValue(event.target.value)}
             placeholder="Ex.: perfil não aderente à vaga, aceitou outra proposta..."
-            className="w-full resize-y rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-sky-700 focus:ring-2 focus:ring-sky-700/15"
+            className="w-full resize-y rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-marinho-600 focus:ring-2 focus:ring-ambar-400/40"
           />
         )}
       </label>
@@ -237,7 +361,7 @@ function MoveDetailsForm({ move, onConfirm, onCancel }) {
           type="button"
           onClick={onCancel}
           disabled={isSaving}
-          className="h-10 rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 disabled:opacity-50"
+          className="h-10 rounded-md border border-slate-300 bg-white px-4 text-sm font-semibold text-marinho-800 transition-colors hover:bg-marinho-50 disabled:opacity-50"
         >
           Cancelar
         </button>
@@ -245,7 +369,7 @@ function MoveDetailsForm({ move, onConfirm, onCancel }) {
           type="submit"
           disabled={isSaving}
           className={`h-10 rounded-md px-4 text-sm font-medium text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-            isInterview ? "bg-sky-800 hover:bg-sky-900" : "bg-rose-600 hover:bg-rose-700"
+            isInterview ? "bg-ambar-400 text-marinho-900 hover:bg-ambar-500" : "bg-rose-600 text-white hover:bg-rose-700"
           }`}
         >
           {isSaving ? "A guardar..." : isInterview ? "Agendar" : "Dispensar"}
@@ -284,16 +408,17 @@ function VagaPicker() {
   }, []);
 
   return (
-    <section className="min-h-[calc(100vh-4rem)] bg-slate-50 px-4 py-8 sm:px-6 lg:px-8">
+    <section className="min-h-[calc(100vh-4rem)] px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto w-full max-w-3xl">
-        <PageHeader title="Kanban" subtitle="Escolha uma vaga para abrir o quadro de candidatos" />
+        <PageHeader subtitle="Escolha uma vaga para abrir o quadro de candidatos" />
 
         {isLoading ? (
           <p className="text-sm text-slate-500">A carregar...</p>
         ) : vagas.length === 0 ? (
           <p className="text-sm text-slate-500">Nenhuma vaga cadastrada.</p>
         ) : (
-          <ul className="divide-y divide-slate-200 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+          <PanelCard title="Vagas" icon={BriefcaseBusiness} bodyClassName="p-0">
+          <ul className="divide-y divide-slate-100">
             {vagas.map((vaga) => (
               <li key={vaga.id}>
                 <Link
@@ -301,7 +426,7 @@ function VagaPicker() {
                   className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-slate-50"
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-slate-900">{vaga.titulo}</p>
+                    <p className="truncate text-sm font-semibold text-marinho-900">{vaga.titulo}</p>
                     <p className="truncate text-xs text-slate-500">
                       Nº {vaga.codigo_vaga} · {vaga.empresa?.nome}
                     </p>
@@ -309,11 +434,12 @@ function VagaPicker() {
                   <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${statusStyles[vaga.status]}`}>
                     {statusLabels[vaga.status]}
                   </span>
-                  <span aria-hidden="true" className="text-sky-800">&rarr;</span>
+                  <span aria-hidden="true" className="text-marinho-700">&rarr;</span>
                 </Link>
               </li>
             ))}
           </ul>
+          </PanelCard>
         )}
       </div>
     </section>
@@ -340,6 +466,8 @@ function KanbanBoard({ vagaId }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [pendingMove, setPendingMove] = useState(null);
+  const [profileId, setProfileId] = useState(null);
+  const [indicating, setIndicating] = useState(null);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
@@ -436,15 +564,28 @@ function KanbanBoard({ vagaId }) {
       return;
     }
 
+    requestMove(draggedCandidate, destination);
+  }
+
+  // Usado ao arrastar e pelo "Mover para…" do menu do cartão.
+  function requestMove(candidate, destination) {
+    if (pendingMove || candidate.coluna === destination.id) return;
+
     // O cartão vai para a coluna de destino já; se a pessoa cancelar o modal, ele volta.
-    placeCandidate(draggedCandidate.applicationId, { status: destination.status, coluna: destination.id });
-    const move = { candidate: draggedCandidate, destination };
+    placeCandidate(candidate.applicationId, { status: destination.status, coluna: destination.id });
+    const move = { candidate, destination };
 
     if (destination.status === "ENTREVISTA_AGENDADA" || destination.status === "RECUSADO") {
       setPendingMove(move);
     } else {
       saveMove(move);
     }
+  }
+
+  function handleCardAction(action, candidate, payload) {
+    if (action === "profile") setProfileId(candidate.id);
+    if (action === "indicate") setIndicating(candidate);
+    if (action === "move") requestMove(candidate, payload);
   }
 
   function cancelPendingMove() {
@@ -461,7 +602,7 @@ function KanbanBoard({ vagaId }) {
   }
 
   return (
-    <section className="flex h-[calc(100vh-4rem)] min-h-[32rem] flex-col bg-slate-100">
+    <section className="flex h-[calc(100vh-4rem)] min-h-[32rem] flex-col">
       <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 px-5 py-5 sm:px-7">
         <div className="flex min-w-0 items-center gap-3">
           <Link
@@ -473,9 +614,9 @@ function KanbanBoard({ vagaId }) {
             <ArrowLeft size={19} />
           </Link>
           <div className="min-w-0">
-            <h1 className="truncate text-xl font-semibold text-slate-900">
+            <h2 className="truncate text-xl font-extrabold text-marinho-900">
               {vaga?.titulo ?? "Candidatos"}
-            </h1>
+            </h2>
             {vaga && (
               <p className="truncate text-sm text-slate-600">
                 {vaga.empresa?.nome} · Nº {vaga.codigo_vaga}
@@ -489,7 +630,7 @@ function KanbanBoard({ vagaId }) {
       {error ? (
         <div className="mx-5 sm:mx-7">
           <p role="alert" className="text-sm text-rose-700">{error}</p>
-          <Link to="/kanban" className="mt-3 inline-block text-sm font-semibold text-sky-800 hover:text-sky-950">
+          <Link to="/kanban" className="mt-3 inline-block text-sm font-semibold text-marinho-700 hover:text-marinho-900">
             Escolher outra vaga <span aria-hidden="true">&rarr;</span>
           </Link>
         </div>
@@ -506,6 +647,7 @@ function KanbanBoard({ vagaId }) {
                   key={column.id}
                   column={column}
                   candidates={candidates.filter((candidate) => candidate.coluna === column.id)}
+                  onAction={handleCardAction}
                 />
               ))}
             </div>
@@ -524,6 +666,20 @@ function KanbanBoard({ vagaId }) {
             move={pendingMove}
             onConfirm={confirmPendingMove}
             onCancel={cancelPendingMove}
+          />
+        )}
+      </Modal>
+
+      <Modal isOpen={Boolean(profileId)} title="Perfil do estudante" onClose={() => setProfileId(null)}>
+        {profileId && <StudentQuickProfile studentId={profileId} onClose={() => setProfileId(null)} />}
+      </Modal>
+
+      <Modal isOpen={Boolean(indicating)} title="Indicar para outra vaga" onClose={() => setIndicating(null)}>
+        {indicating && (
+          <IndicateDialog
+            studentId={indicating.id}
+            onDone={() => setIndicating(null)}
+            onCancel={() => setIndicating(null)}
           />
         )}
       </Modal>

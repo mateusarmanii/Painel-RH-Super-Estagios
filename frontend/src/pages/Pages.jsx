@@ -4,6 +4,7 @@ import EntityList from "../components/EntityList.jsx";
 import { statusLabels, statusStyles } from "../vagaStatus.js";
 import { kanbanStatusLabels } from "../kanbanStatus.js";
 import { csvDate, csvDecimal } from "../csv.js";
+import { hasNoOpenJob } from "../regras.js";
 
 const horarioLabels = { MANHA: "Manhã", TARDE: "Tarde", NOITE: "Noite" };
 
@@ -34,12 +35,12 @@ const vagaConfig = {
         </span>
         <span className="py-1 text-xs text-slate-500">Nº {vaga.codigo_vaga}</span>
       </div>
-      <h2 className="text-lg font-semibold leading-6 text-slate-900">{vaga.titulo}</h2>
+      <h2 className="text-lg font-semibold leading-6 text-marinho-900">{vaga.titulo}</h2>
       <p className="mt-2 text-sm text-slate-600">{vaga.empresa?.nome}</p>
       <p className="mt-1 text-sm text-slate-500">{currency.format(vaga.valor)}</p>
       <Link
         to={`/kanban/${vaga.id}`}
-        className="mt-auto pt-6 text-left text-sm font-semibold text-sky-800 transition-colors hover:text-sky-950"
+        className="mt-auto pt-6 text-left text-sm font-semibold text-marinho-700 transition-colors hover:text-marinho-900"
       >
         Abrir Kanban <span aria-hidden="true">&rarr;</span>
       </Link>
@@ -52,10 +53,10 @@ const empresaConfig = {
   getName: (empresa) => empresa.nome,
   renderItem: (empresa) => (
     <>
-      <span className="mb-5 self-start rounded-full bg-sky-50 px-2.5 py-1 text-xs font-medium text-sky-800">
+      <span className="mb-5 self-start rounded-full bg-marinho-50 px-2.5 py-1 text-xs font-semibold text-marinho-700">
         {empresa.setor}
       </span>
-      <h2 className="pr-20 text-lg font-semibold leading-6 text-slate-900">{empresa.nome}</h2>
+      <h2 className="pr-20 text-lg font-semibold leading-6 text-marinho-900">{empresa.nome}</h2>
       <dl className="mt-auto space-y-1 pt-6 text-sm text-slate-600">
         <div><dt className="sr-only">Contato</dt><dd>{empresa.nome_contato}</dd></div>
         <div><dt className="sr-only">Telefone</dt><dd>{empresa.telefone_contato}</dd></div>
@@ -98,7 +99,7 @@ const estudanteConfig = {
       <span className="mb-5 self-start rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
         {horarioLabels[estudante.horario_estudo]}
       </span>
-      <h2 className="pr-20 text-lg font-semibold leading-6 text-slate-900">{estudante.nome_completo}</h2>
+      <h2 className="pr-20 text-lg font-semibold leading-6 text-marinho-900">{estudante.nome_completo}</h2>
       <p className="mt-2 text-sm text-slate-600">{estudante.curso}</p>
       <p className="text-sm text-slate-500">{estudante.instituicao_ensino}</p>
       {estudante.anotacoes_recrutador && (
@@ -117,7 +118,6 @@ const estudanteConfig = {
 export function VagasPage() {
   return (
     <EntityList
-      title="Vagas"
       type="vaga"
       endpoint="vagas"
       entityLabel={{ singular: "vaga", plural: "vagas", article: "a" }}
@@ -131,7 +131,6 @@ export function VagasPage() {
 export function EmpresasPage() {
   return (
     <EntityList
-      title="Empresas"
       type="empresa"
       endpoint="empresas"
       entityLabel={{ singular: "empresa", plural: "empresas", article: "a" }}
@@ -144,8 +143,6 @@ export function EmpresasPage() {
 
 const dateFormat = new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium" });
 
-// Empresas sem nenhuma vaga ABERTA (inclui as que nunca tiveram vaga) — candidatas a contato comercial.
-const hasNoOpenJob = (empresa) => !(empresa.vagas ?? []).some((vaga) => vaga.status === "ABERTA");
 
 const empresaSemVagaConfig = {
   ...empresaConfig,
@@ -153,10 +150,10 @@ const empresaSemVagaConfig = {
     const lastJob = empresa.vagas?.[0];
     return (
       <>
-        <span className="mb-5 self-start rounded-full bg-sky-50 px-2.5 py-1 text-xs font-medium text-sky-800">
+        <span className="mb-5 self-start rounded-full bg-marinho-50 px-2.5 py-1 text-xs font-semibold text-marinho-700">
           {empresa.setor}
         </span>
-        <h2 className="pr-20 text-lg font-semibold leading-6 text-slate-900">{empresa.nome}</h2>
+        <h2 className="pr-20 text-lg font-semibold leading-6 text-marinho-900">{empresa.nome}</h2>
         <p className="mt-2 text-sm text-slate-600">
           {lastJob ? (
             <>
@@ -195,7 +192,6 @@ const empresaSemVagaConfig = {
 export function EmpresasSemVagaPage() {
   return (
     <EntityList
-      title="Empresas sem vaga"
       subtitle="Empresas parceiras sem nenhuma vaga aberta no momento — boas candidatas a um novo contato"
       type="empresa"
       endpoint="empresas"
@@ -211,7 +207,6 @@ export function EmpresasSemVagaPage() {
 export function EstudantesPage() {
   return (
     <EntityList
-      title="Estudantes"
       type="estudante"
       endpoint="candidatos"
       entityLabel={{ singular: "estudante", plural: "estudantes", article: "o" }}

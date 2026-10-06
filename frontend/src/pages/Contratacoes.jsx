@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import { UserRoundCheck } from "lucide-react";
 import ListToolbar from "../components/ListToolbar.jsx";
 import PageHeader from "../components/PageHeader.jsx";
+import PanelCard from "../components/PanelCard.jsx";
 import { csvDate, downloadCsv, toCsv, todayForFilename } from "../csv.js";
 import { normalize, plural } from "../text.js";
 import { API_URL as apiUrl } from "../api.js";
@@ -77,10 +78,9 @@ export default function ContratacoesPage() {
   }
 
   return (
-    <section className="min-h-[calc(100vh-4rem)] bg-slate-50 px-4 py-8 sm:px-6 lg:px-8">
+    <section className="min-h-[calc(100vh-4rem)] px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto w-full max-w-7xl">
         <PageHeader
-          title="Contratações efetivas"
           subtitle={isLoading ? "A carregar..." : `${plural(hires.length, "estudante contratado", "estudantes contratados")}, da contratação mais recente para a mais antiga`}
         />
         <ListToolbar
@@ -103,7 +103,7 @@ export default function ContratacoesPage() {
             <span className="grid size-12 place-items-center rounded-full bg-emerald-50 text-emerald-700">
               <UserRoundCheck size={22} />
             </span>
-            <p className="mt-4 text-base font-semibold text-slate-900">
+            <p className="mt-4 text-base font-semibold text-marinho-900">
               {search.trim() ? `Nenhuma contratação encontrada para "${search.trim()}".` : "Nenhuma contratação ainda"}
             </p>
             {!search.trim() && (
@@ -113,7 +113,7 @@ export default function ContratacoesPage() {
             )}
           </div>
         ) : (
-          <div className="overflow-hidden rounded-md border border-slate-200 bg-white shadow-sm">
+          <PanelCard title={plural(filteredHires.length, "contratação", "contratações")} icon={UserRoundCheck} bodyClassName="p-0">
             {/* Celular: cartões empilhados. */}
             <ul className="divide-y divide-slate-100 md:hidden">
               {filteredHires.map((hire) => {
@@ -129,7 +129,7 @@ export default function ContratacoesPage() {
                         {hire.data_aprovacao ? dateFormat.format(new Date(hire.data_aprovacao)) : "—"}
                       </p>
                     </div>
-                    <Link to={`/kanban/${hire.vaga_id}`} className="block text-slate-700 hover:text-sky-800">
+                    <Link to={`/kanban/${hire.vaga_id}`} className="block text-slate-700 hover:text-marinho-700">
                       {hire.vaga?.titulo}
                     </Link>
                     <p className="text-xs text-slate-500">
@@ -143,7 +143,7 @@ export default function ContratacoesPage() {
             {/* Telas maiores: tabela. */}
             <div className="hidden overflow-x-auto md:block">
               <table className="w-full min-w-[44rem] text-left text-sm">
-                <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                <thead className="bg-marinho-50 text-[11px] font-extrabold uppercase tracking-wider text-marinho-700">
                   <tr>
                     <th className="px-5 py-3 font-medium">Estudante</th>
                     <th className="px-5 py-3 font-medium">Vaga</th>
@@ -161,7 +161,7 @@ export default function ContratacoesPage() {
                           <p className="text-xs text-slate-500">{hire.estudante.curso}</p>
                         </td>
                         <td className="px-5 py-4">
-                          <Link to={`/kanban/${hire.vaga_id}`} className="text-slate-700 hover:text-sky-800 hover:underline">
+                          <Link to={`/kanban/${hire.vaga_id}`} className="text-slate-700 hover:text-marinho-700 hover:underline">
                             {hire.vaga?.titulo}
                           </Link>
                           <p className="text-xs text-slate-500">Nº {hire.vaga?.codigo_vaga}</p>
@@ -179,7 +179,7 @@ export default function ContratacoesPage() {
                 </tbody>
               </table>
             </div>
-          </div>
+          </PanelCard>
         )}
       </div>
     </section>
