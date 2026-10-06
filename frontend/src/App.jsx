@@ -5,8 +5,9 @@ import KanbanPage from "./pages/Kanban.jsx";
 import DashboardPage from "./pages/Dashboard.jsx";
 import AgendaPage from "./pages/Agenda.jsx";
 import ContratacoesPage from "./pages/Contratacoes.jsx";
+import BancoTalentosPage from "./pages/BancoTalentos.jsx";
 import {
-  BancoDeTalentosPage,
+  EstudantesPage,
   EmpresasPage,
   EmpresasSemVagaPage,
   VagasPage,
@@ -24,7 +25,8 @@ export default function App() {
           <Route path="/agenda" element={<AgendaPage />} />
           <Route path="/empresas" element={<EmpresasPage />} />
           <Route path="/empresas-sem-vaga" element={<EmpresasSemVagaPage />} />
-          <Route path="/banco-de-talentos" element={<BancoDeTalentosPage />} />
+          <Route path="/estudantes" element={<EstudantesPage />} />
+          <Route path="/banco-de-talentos" element={<BancoTalentosPage />} />
           <Route path="/contratacoes" element={<ContratacoesPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

@@ -25,6 +25,8 @@ router.get("/", async (_req, res) => {
             motivo_recusa: true,
             data_aprovacao: true,
             created_at: true,
+            // Enquanto RECUSADO, a última atualização corresponde à data da dispensa (Banco de Talentos).
+            updated_at: true,
             vaga: {
               select: { codigo_vaga: true, titulo: true, empresa: { select: { nome: true } } },
             },
@@ -104,6 +106,43 @@ router.patch("/:id", async (req, res) => {
   } catch (error) {
     console.error("Erro ao atualizar candidatura:", error);
     return res.status(500).json({ erro: "Não foi possível atualizar a candidatura." });
+  }
+});
+
+// Indica um estudante já cadastrado para outra vaga (Banco de Talentos): nova candidatura em ENVIADO_EMPRESA.
+router.post("/:id/candidaturas", async (req, res) => {
+  const { id } = req.params;
+  const { vaga_id } = req.body ?? {};
+
+  if (!uuidValido.test(id) || !uuidValido.test(vaga_id ?? "")) {
+    return res.status(400).json({ erro: "ID de candidato ou de vaga inválido." });
+  }
+
+  try {
+    const [estudante, vaga] = await Promise.all([
+      prisma.estudante.findUnique({ where: { id }, select: { id: true } }),
+      prisma.vaga.findUnique({ where: { id: vaga_id }, select: { id: true, status: true } }),
+    ]);
+
+    if (!estudante) return res.status(404).json({ erro: "Candidato não encontrado." });
+    if (!vaga) return res.status(404).json({ erro: "Vaga não encontrada." });
+    if (vaga.status !== "ABERTA") {
+      return res.status(409).json({ erro: "A vaga selecionada não está aberta." });
+    }
+
+    const candidatura = await prisma.aplicacao.create({
+      data: { estudante_id: id, vaga_id },
+      include: { vaga: { select: { codigo_vaga: true, titulo: true, empresa: { select: { nome: true } } } } },
+    });
+
+    return res.status(201).json(candidatura);
+  } catch (error) {
+    if (error.code === "P2002") {
+      return res.status(409).json({ erro: "Este candidato já está inscrito nessa vaga." });
+    }
+
+    console.error("Erro ao indicar candidato para vaga:", error);
+    return res.status(500).json({ erro: "Não foi possível indicar o candidato para a vaga." });
   }
 });
 

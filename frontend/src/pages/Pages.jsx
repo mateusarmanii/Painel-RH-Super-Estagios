@@ -80,7 +80,7 @@ const estudanteConfig = {
   getName: (estudante) => estudante.nome_completo,
   renderEditExtra: (estudante) => <CandidaturaHistory aplicacoes={estudante.aplicacoes} />,
   csvExport: {
-    filename: "banco-de-talentos",
+    filename: "estudantes",
     columns: [
       { header: "Nome", value: (estudante) => estudante.nome_completo },
       { header: "Curso", value: (estudante) => estudante.curso },
@@ -154,10 +154,10 @@ export function EmpresasSemVagaPage() {
   return <PlaceholderPage title="Empresas sem vaga" />;
 }
 
-export function BancoDeTalentosPage() {
+export function EstudantesPage() {
   return (
     <EntityList
-      title="Banco de Talentos"
+      title="Estudantes"
       type="estudante"
       endpoint="candidatos"
       entityLabel={{ singular: "estudante", plural: "estudantes", article: "o" }}

@@ -22,6 +22,7 @@ const navigationItems = [
   { label: "Agenda de Entrevistas", path: "/agenda", icon: CalendarDays },
   { label: "Empresas", path: "/empresas", icon: Building2 },
   { label: "Empresas sem vaga", path: "/empresas-sem-vaga", icon: Building2 },
+  { label: "Estudantes", path: "/estudantes", icon: GraduationCap },
   { label: "Banco de Talentos", path: "/banco-de-talentos", icon: Users },
   { label: "Contratações Efetivas", path: "/contratacoes", icon: UserRoundCheck },
 ];

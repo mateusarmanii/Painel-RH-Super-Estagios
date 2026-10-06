@@ -220,6 +220,14 @@ Build OK; testes `cd backend && npm run test:etapa2d` (10/10, registros `[TESTE]
 - Conferida com os dados `[DEMO]` (5 contratados), criados com aprovação do usuário via `npm run demo:criar`.
 - Componentes compartilhados novos: `components/ListToolbar.jsx` (busca + filtros + CSV, usado também pelo `EntityList`) e `text.js` (`normalize`, `plural`).
 
+### ✅ Estudantes × Banco de Talentos — IMPLEMENTADO (05/10/2026)
+- **Estudantes** (`/estudantes`, `EstudantesPage` em `pages/Pages.jsx`): é a antiga lista "Banco de Talentos", renomeada — todos os cadastrados, com busca, editar, excluir, histórico e CSV (`estudantes-AAAA-MM-DD.csv`).
+- **Banco de Talentos** (`/banco-de-talentos`, `pages/BancoTalentos.jsx`): quem tem ao menos uma candidatura `RECUSADO` **e nenhuma** `APROVADO`. Mostra a última vaga/empresa da dispensa, motivo, data, curso e contato; etiqueta **"Em processo"** se houver candidatura em `ENVIADO_EMPRESA`/`AGUARDANDO_RETORNO`/`ENTREVISTA_AGENDADA` (o título das vagas aparece ao passar o mouse). Ordenado pela dispensa mais recente. Busca por nome e filtro por curso (grafias agrupadas, `courseOptions` em `text.js`).
+- **Indicar para vaga**: modal com as vagas `ABERTA` em que o estudante ainda não está inscrito → `POST /candidatos/:id/candidaturas { vaga_id }` (novo) cria a candidatura em `ENVIADO_EMPRESA`. Respostas: 201; 400 ids inválidos; 404 estudante/vaga; 409 vaga não aberta ou candidatura duplicada (inclusive na vaga em que foi dispensado). Testes: `npm run test:banco-talentos` (11/11, `[TESTE]`, 0 sobras).
+- **Data da dispensa = `updated_at` da candidatura** (incluído no `GET /candidatos`). Não existe coluna própria; enquanto a candidatura está `RECUSADO`, a última alteração é a dispensa. Para uma data exata e imutável seria preciso uma migration (`data_recusa`) — **aguardando aprovação**. O `seed-demo.js` passou a gravar `updated_at` realista; os `[DEMO]` já criados mostram a data de hoje até serem recriados.
+- Menu lateral: "Estudantes" e "Banco de Talentos".
+- ⚠️ O Vite em modo dev rodando há horas na pasta do OneDrive parou de gerar classes novas do Tailwind (ex.: `sm:w-60`); o build está correto. Se algo aparecer sem estilo, reinicie o `npm run dev` do frontend.
+
 ## Regras de trabalho
 
 - **Banco de dados: antes de aplicar QUALQUER alteração no banco (migrations, `migrate deploy`/`dev`/`reset`, `db push`, SQL manual, escrita em `_prisma_migrations`, criação/remoção de bancos, scripts de teste que gravam dados), mostrar o SQL/operações ao usuário e esperar aprovação explícita.**

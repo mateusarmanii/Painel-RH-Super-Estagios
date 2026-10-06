@@ -10,6 +10,7 @@
     "test:etapa1": "node scripts/testar-etapa1.js",
     "test:etapa2a": "node scripts/testar-etapa2a.js",
     "test:etapa2d": "node scripts/testar-etapa2d.js",
+    "test:banco-talentos": "node scripts/testar-banco-talentos.js",
     "demo:criar": "node scripts/seed-demo.js",
     "demo:limpar": "node scripts/limpar-demo.js"
   },

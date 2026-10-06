@@ -172,6 +172,11 @@ function montarPlano(agora = new Date(), codigosEmUso = new Set()) {
     if (status === "RECUSADO") {
       candidatura.motivo_recusa = vaga.status === "FECHADA" ? "Vaga preenchida" : motivos[ordem % motivos.length];
     }
+    // Última alteração da candidatura (para dispensados, é a data da dispensa mostrada no Banco de Talentos).
+    const alteradaEm = status === "APROVADO"
+      ? candidatura.data_aprovacao
+      : new Date(criadaEm.getTime() + (1 + Math.floor(aleatorio() * 8)) * DIA_MS);
+    candidatura.updated_at = new Date(Math.min(alteradaEm.getTime(), agora.getTime() - HORA_MS));
     return candidatura;
   });
 

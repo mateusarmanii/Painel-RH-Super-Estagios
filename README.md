@@ -2,7 +2,9 @@
 
 Painel interno da Super Estágios (agência de estágios) para acompanhar o fechamento das vagas das empresas clientes:
 
-- **Empresas, vagas e Banco de Talentos**, com busca, edição, exclusão e exportação para CSV (Excel).
+- **Empresas, vagas e estudantes**, com busca, edição, exclusão e exportação para CSV (Excel).
+- **Banco de Talentos**: candidatos dispensados (e não contratados), com filtro por curso e "Indicar para vaga".
+- **Contratações efetivas**: todos os estudantes contratados, com data e vaga.
 - **Kanban por vaga**: cada candidato passa por *Enviado à empresa → Em análise → Entrevista → Contratado* ou *Dispensado*. Ao mover para "Entrevista" o sistema pede data e hora; para "Dispensado", o motivo.
 - **Agenda de entrevistas**, agrupada por dia, com reagendamento.
 - **Dashboard** com vagas abertas, tempo médio de contratação, vagas paradas há mais de 10 dias, funil de contratação e distribuição dos estudantes por curso.
@@ -86,6 +88,7 @@ cd backend
 npm run test:etapa1    # PUT/DELETE de empresas, vagas e estudantes; exclusões bloqueadas (409)
 npm run test:etapa2a   # datas da candidatura, Kanban por vaga, entrevistas e métricas do dashboard
 npm run test:etapa2d   # histórico de candidaturas e reagendamento de entrevista
+npm run test:banco-talentos   # "Indicar para vaga" (nova candidatura, sem duplicatas) e data da dispensa
 ```
 
 ## Dados de demonstração
