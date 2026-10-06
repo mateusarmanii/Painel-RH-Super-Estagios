@@ -8,6 +8,7 @@ const vagasRoutes = require("./src/routes/vagas");
 const candidatosRoutes = require("./src/routes/candidatos");
 const entrevistasRoutes = require("./src/routes/entrevistas");
 const { DIA_MS, DIAS_PARA_ALERTA, aparaTextos } = require("./src/utils");
+const { PASTA_LOGOS, URL_LOGOS } = require("./src/logos");
 
 const app = express();
 const port = Number(process.env.PORT) || 3333;
@@ -15,6 +16,19 @@ const port = Number(process.env.PORT) || 3333;
 app.use(cors());
 app.use(express.json());
 app.use(aparaTextos);
+
+// Logos das empresas como arquivos estáticos (nomes únicos, então podem ficar em cache).
+// nosniff e CSP restrita: o navegador só trata o arquivo como imagem.
+app.use(URL_LOGOS, express.static(PASTA_LOGOS, {
+  index: false,
+  dotfiles: "deny",
+  maxAge: "30d",
+  immutable: true,
+  setHeaders: (res) => {
+    res.set("X-Content-Type-Options", "nosniff");
+    res.set("Content-Security-Policy", "default-src 'none'");
+  },
+}));
 
 app.get("/", (_req, res) => {
   res.json({ status: "ok", mensagem: "API Super Estágios" });
@@ -95,7 +109,7 @@ app.get("/dashboard-metrics", async (_req, res) => {
             codigo_vaga: true,
             titulo: true,
             created_at: true,
-            empresa: { select: { nome: true } },
+            empresa: { select: { id: true, nome: true, logo_url: true } },
             _count: { select: { aplicacoes: true } },
           },
         }),

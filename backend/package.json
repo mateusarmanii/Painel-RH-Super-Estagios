@@ -13,6 +13,8 @@
     "test:banco-talentos": "node scripts/testar-banco-talentos.js",
     "test:resumos": "node scripts/testar-resumos.js",
     "test:frente2": "node scripts/testar-frente2.js",
+    "test:logos": "node scripts/testar-logos.js",
+    "test:agenda": "node scripts/testar-agenda.js",
     "demo:criar": "node scripts/seed-demo.js",
     "demo:limpar": "node scripts/limpar-demo.js"
   },
@@ -20,7 +22,8 @@
     "@prisma/client": "^5.22.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
-    "express": "^4.21.2"
+    "express": "^4.21.2",
+    "multer": "^2.4.0"
   },
   "devDependencies": {
     "prisma": "^5.22.0"

@@ -7,12 +7,13 @@ const path = require("path");
 process.chdir(path.resolve(__dirname, ".."));
 require("dotenv").config();
 const prisma = require("../src/prisma");
+const { apagarLogo } = require("../src/logos");
 
 const PREFIXO = "[DEMO]";
 
 async function main() {
   const resultado = await prisma.$transaction(async (tx) => {
-    const empresas = await tx.empresa.findMany({ where: { nome: { startsWith: PREFIXO } }, select: { id: true } });
+    const empresas = await tx.empresa.findMany({ where: { nome: { startsWith: PREFIXO } }, select: { id: true, logo_url: true } });
     const empresaIds = empresas.map((e) => e.id);
     const vagas = await tx.vaga.findMany({ where: { titulo: { startsWith: PREFIXO } }, select: { id: true } });
     const vagaIds = vagas.map((v) => v.id);
@@ -41,6 +42,7 @@ async function main() {
     const removidasEmpresas = await tx.empresa.deleteMany({ where: { id: { in: empresaIds } } });
 
     return {
+      logos: empresas.map((e) => e.logo_url).filter(Boolean),
       removidos: {
         candidaturas: candidaturas.count,
         estudantes: removidosEstudantes.count,
@@ -64,7 +66,10 @@ async function main() {
     return;
   }
 
-  const { removidos } = resultado;
+  const { removidos, logos } = resultado;
+  // Os arquivos de logo só saem depois que o banco confirmou a exclusão das empresas.
+  logos.forEach(apagarLogo);
+  if (logos.length) console.log(`Logos [DEMO] apagadas: ${logos.length}`);
   console.log(`Removidos: ${removidos.empresas} empresas, ${removidos.vagas} vagas, ${removidos.estudantes} estudantes e ${removidos.candidaturas} candidaturas ${PREFIXO}.`);
 
   const sobras = await prisma.empresa.count({ where: { nome: { startsWith: PREFIXO } } })

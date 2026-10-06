@@ -99,7 +99,7 @@ function renderEmpresa(empresa, { showLastJob = false } = {}) {
   return (
     <>
       <div className="flex items-center gap-3 pr-10">
-        <CompanyAvatar id={empresa.id} name={empresa.nome} size="lg" />
+        <CompanyAvatar id={empresa.id} name={empresa.nome} logoUrl={empresa.logo_url} size="lg" />
         <div className="min-w-0">
           <h2 className="text-lg font-extrabold leading-snug text-marinho-900">{empresa.nome}</h2>
           <p className="truncate text-sm text-slate-500">{empresa.setor}</p>

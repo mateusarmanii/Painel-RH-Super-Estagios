@@ -2,3 +2,5 @@ node_modules
 backend/.env
 frontend/dist
 frontend/.env
+# Logos enviadas pelas telas (entram no backup, não no git)
+backend/uploads/

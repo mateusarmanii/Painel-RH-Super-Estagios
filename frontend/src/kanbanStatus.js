@@ -19,13 +19,6 @@ export const kanbanStatusStyles = {
   RECUSADO: "bg-rose-50 text-rose-700",
 };
 
-// Valor mínimo/inicial de um <input type="datetime-local">, no fuso do navegador.
-export function toDateTimeInputValue(date = new Date()) {
-  const value = new Date(date);
-  value.setSeconds(0, 0);
-  return new Date(value.getTime() - value.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-}
-
 export const dateTimeFormat = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" });
 
 // Cores da barra do mini funil nos cards de vaga (mesmos tons das etiquetas acima).

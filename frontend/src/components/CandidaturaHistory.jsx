@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { dateTimeFormat, kanbanStatusLabels, kanbanStatusStyles } from "../kanbanStatus.js";
+import CompanyAvatar from "./CompanyAvatar.jsx";
 
 const dateFormat = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" });
 
@@ -18,7 +19,14 @@ export default function CandidaturaHistory({ aplicacoes = [] }) {
           {aplicacoes.map((aplicacao) => (
             <li key={aplicacao.id} className="rounded-md border border-slate-200 p-3 text-sm">
               <div className="flex flex-wrap items-start justify-between gap-2">
-                <div className="min-w-0">
+                <div className="flex min-w-0 items-start gap-2.5">
+                  <CompanyAvatar
+                    id={aplicacao.vaga?.empresa?.id}
+                    name={aplicacao.vaga?.empresa?.nome ?? ""}
+                    logoUrl={aplicacao.vaga?.empresa?.logo_url}
+                    size="sm"
+                  />
+                  <div className="min-w-0">
                   <Link
                     to={`/kanban/${aplicacao.vaga_id}`}
                     className="font-medium text-slate-900 underline-offset-2 hover:text-marinho-700 hover:underline"
@@ -29,6 +37,7 @@ export default function CandidaturaHistory({ aplicacoes = [] }) {
                     {aplicacao.vaga?.empresa?.nome} · Nº {aplicacao.vaga?.codigo_vaga}
                     {aplicacao.created_at && ` · desde ${dateFormat.format(new Date(aplicacao.created_at))}`}
                   </p>
+                  </div>
                 </div>
                 <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${kanbanStatusStyles[aplicacao.status_kanban]}`}>
                   {kanbanStatusLabels[aplicacao.status_kanban]}

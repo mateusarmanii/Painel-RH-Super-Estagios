@@ -5,6 +5,7 @@ import { UserRoundCheck } from "lucide-react";
 import ListToolbar from "../components/ListToolbar.jsx";
 import PageHeader from "../components/PageHeader.jsx";
 import PanelCard from "../components/PanelCard.jsx";
+import CompanyAvatar from "../components/CompanyAvatar.jsx";
 import { csvDate, downloadCsv, toCsv, todayForFilename } from "../csv.js";
 import { normalize, plural } from "../text.js";
 import { API_URL as apiUrl } from "../api.js";
@@ -132,7 +133,8 @@ export default function ContratacoesPage() {
                     <Link to={`/kanban/${hire.vaga_id}`} className="block text-slate-700 hover:text-marinho-700">
                       {hire.vaga?.titulo}
                     </Link>
-                    <p className="text-xs text-slate-500">
+                    <p className="flex items-center gap-1.5 text-xs text-slate-500">
+                      <CompanyAvatar id={hire.vaga?.empresa?.id} name={hire.vaga?.empresa?.nome} logoUrl={hire.vaga?.empresa?.logo_url} size="xs" />
                       {hire.vaga?.empresa?.nome} · Nº {hire.vaga?.codigo_vaga}
                       {days !== null && ` · ${days < 1 ? "no mesmo dia" : `${plural(days, "dia", "dias")} após a candidatura`}`}
                     </p>
@@ -166,7 +168,12 @@ export default function ContratacoesPage() {
                           </Link>
                           <p className="text-xs text-slate-500">Nº {hire.vaga?.codigo_vaga}</p>
                         </td>
-                        <td className="px-5 py-4 text-slate-600">{hire.vaga?.empresa?.nome}</td>
+                        <td className="px-5 py-4 text-slate-600">
+                          <span className="flex items-center gap-2">
+                            <CompanyAvatar id={hire.vaga?.empresa?.id} name={hire.vaga?.empresa?.nome} logoUrl={hire.vaga?.empresa?.logo_url} size="sm" />
+                            {hire.vaga?.empresa?.nome}
+                          </span>
+                        </td>
                         <td className="whitespace-nowrap px-5 py-4">
                           <p className="text-slate-700">{hire.data_aprovacao ? dateFormat.format(new Date(hire.data_aprovacao)) : "—"}</p>
                           {days !== null && (

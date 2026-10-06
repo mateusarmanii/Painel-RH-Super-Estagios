@@ -35,9 +35,13 @@ import StudentQuickProfile from "../components/StudentQuickProfile.jsx";
 import PageHeader from "../components/PageHeader.jsx";
 import PanelCard from "../components/PanelCard.jsx";
 import { statusLabels, statusStyles } from "../vagaStatus.js";
-import { dateTimeFormat, kanbanStatusLabels, toDateTimeInputValue } from "../kanbanStatus.js";
+import { dateTimeFormat, kanbanStatusLabels } from "../kanbanStatus.js";
 import { API_URL as apiUrl } from "../api.js";
 import { getInitials } from "../text.js";
+import CompanyAvatar from "../components/CompanyAvatar.jsx";
+import InterviewFields, { interviewFormValues, interviewPayload } from "../components/InterviewFields.jsx";
+import { interviewStatus, interviewStatusBadge, interviewStatusLabels } from "../interviewStatus.js";
+import { conflictWarning } from "../agenda/conflicts.js";
 import { turnoVagaLabels } from "../estudante.js";
 
 const TAMANHO_MAXIMO_OBSERVACAO = 1000;
@@ -171,10 +175,17 @@ function StudentCard({ candidate, onAction }) {
       </div>
 
       {candidate.coluna === "entrevista" && candidate.dataEntrevista && (
-        <p className="mt-3 flex items-center gap-1.5 rounded bg-violet-50 px-2 py-1 text-xs font-medium text-violet-800">
-          <CalendarClock size={14} className="shrink-0" />
-          {dateTimeFormat.format(new Date(candidate.dataEntrevista))}
-        </p>
+        <div className="mt-3 flex flex-wrap items-center gap-1.5">
+          <p className="flex items-center gap-1.5 rounded bg-violet-50 px-2 py-1 text-xs font-medium text-violet-800">
+            <CalendarClock size={14} className="shrink-0" />
+            {dateTimeFormat.format(new Date(candidate.dataEntrevista))}
+          </p>
+          {candidate.entrevistaStatus && (
+            <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${interviewStatusBadge[candidate.entrevistaStatus]}`}>
+              {interviewStatusLabels[candidate.entrevistaStatus]}
+            </span>
+          )}
+        </div>
       )}
 
       {candidate.observacao && (
@@ -225,31 +236,34 @@ function KanbanColumn({ column, candidates, onAction }) {
   );
 }
 
-// Formulário dos modais de "Entrevista" (data e hora) e "Dispensado" (motivo).
+// Formulário dos modais de "Entrevista" (data, formato, local ou link, duração, entrevistador) e "Dispensado" (motivo).
 function MoveDetailsForm({ move, onConfirm, onCancel }) {
   const isInterview = move.destination.status === "ENTREVISTA_AGENDADA";
-  const [value, setValue] = useState("");
+  const [interview, setInterview] = useState(() => interviewFormValues());
+  const [reason, setReason] = useState("");
   const [isSaving, setIsSaving] = useState(false);
-  const minDateTime = toDateTimeInputValue();
 
   async function handleSubmit(event) {
     event.preventDefault();
+    let details;
 
-    if (isInterview && new Date(value) <= new Date()) {
-      toast.error("Escolha uma data e hora no futuro.");
-      return;
-    }
-    if (!isInterview && !value.trim()) {
-      toast.error("Informe o motivo da dispensa.");
-      return;
+    if (isInterview) {
+      const payload = interviewPayload(interview);
+      if (payload.erro) {
+        toast.error(payload.erro);
+        return;
+      }
+      details = payload.body;
+    } else {
+      if (!reason.trim()) {
+        toast.error("Informe o motivo da dispensa.");
+        return;
+      }
+      details = { motivo_recusa: reason.trim() };
     }
 
     setIsSaving(true);
-    const saved = await onConfirm(
-      isInterview
-        ? { data_hora_entrevista: new Date(value).toISOString() }
-        : { motivo_recusa: value.trim() },
-    );
+    const saved = await onConfirm(details);
     if (!saved) setIsSaving(false);
   }
 
@@ -260,33 +274,23 @@ function MoveDetailsForm({ move, onConfirm, onCancel }) {
         <strong className="font-semibold text-marinho-900">{move.candidate.nome}</strong>.
       </p>
 
-      <label htmlFor="kanban-move-detail" className="block space-y-1.5">
-        <span className="text-sm font-medium text-slate-700">
-          {isInterview ? "Data e hora da entrevista" : "Motivo da dispensa"}
-        </span>
-        {isInterview ? (
-          <input
-            id="kanban-move-detail"
-            type="datetime-local"
-            required
-            min={minDateTime}
-            value={value}
-            onChange={(event) => setValue(event.target.value)}
-            className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none focus:border-marinho-600 focus:ring-2 focus:ring-ambar-400/40"
-          />
-        ) : (
+      {isInterview ? (
+        <InterviewFields idPrefix="kanban-entrevista" values={interview} onChange={setInterview} />
+      ) : (
+        <label htmlFor="kanban-move-detail" className="block space-y-1.5">
+          <span className="text-sm font-medium text-slate-700">Motivo da dispensa</span>
           <textarea
             id="kanban-move-detail"
             required
             rows={4}
             maxLength={500}
-            value={value}
-            onChange={(event) => setValue(event.target.value)}
+            value={reason}
+            onChange={(event) => setReason(event.target.value)}
             placeholder="Ex.: perfil não aderente à vaga, aceitou outra proposta..."
             className="w-full resize-y rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-marinho-600 focus:ring-2 focus:ring-ambar-400/40"
           />
-        )}
-      </label>
+        </label>
+      )}
 
       <div className="flex justify-end gap-2 pt-2">
         <button
@@ -300,7 +304,7 @@ function MoveDetailsForm({ move, onConfirm, onCancel }) {
         <button
           type="submit"
           disabled={isSaving}
-          className={`h-10 rounded-md px-4 text-sm font-medium text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+          className={`h-10 rounded-md px-4 text-sm font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
             isInterview ? "bg-ambar-400 text-marinho-900 hover:bg-ambar-500" : "bg-rose-600 text-white hover:bg-rose-700"
           }`}
         >
@@ -472,6 +476,7 @@ function toCandidate(application, index) {
     status: application.status_kanban,
     coluna: columnByStatus[application.status_kanban],
     dataEntrevista: application.data_hora_entrevista,
+    entrevistaStatus: interviewStatus(application),
     motivo: application.motivo_recusa,
     observacao: application.observacao,
     avatar: avatarStyles[index % avatarStyles.length],
@@ -554,9 +559,11 @@ function KanbanBoard({ vagaId }) {
         status: result.status_kanban,
         coluna: columnByStatus[result.status_kanban],
         dataEntrevista: result.data_hora_entrevista,
+        entrevistaStatus: interviewStatus(result),
         motivo: result.motivo_recusa,
       });
       toast.success(`Candidatura de ${candidate.nome} movida para "${destination.title}".`);
+      if (result.conflitos?.length) toast(conflictWarning(candidate.nome, result.conflitos), { icon: "⚠️", duration: 8000 });
       window.dispatchEvent(new Event("dashboard:refresh"));
       return true;
     } catch (updateError) {
@@ -633,6 +640,7 @@ function KanbanBoard({ vagaId }) {
           >
             <ArrowLeft size={19} />
           </Link>
+          {vaga && <CompanyAvatar id={vaga.empresa_id} name={vaga.empresa?.nome} logoUrl={vaga.empresa?.logo_url} />}
           <div className="min-w-0">
             <h2 className="truncate text-xl font-extrabold text-marinho-900">
               {vaga?.titulo ?? "Candidatos"}

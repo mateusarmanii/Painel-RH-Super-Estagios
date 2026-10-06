@@ -2,6 +2,8 @@
 // espalhadas por todas as colunas do Kanban, com datas variadas e vagas em alerta. Inclui os campos novos:
 // turno da vaga, turno de estudo, disponibilidade, semestre, previsão de formatura (algumas em até 6 meses),
 // nascimento (alguns estudantes com menos de 18 anos) e observações em algumas candidaturas.
+// Agenda: entrevistas em todos os status (aguardando, confirmada, realizada, não compareceu, cancelada) e formatos
+// (presencial e online), algumas nas próximas 24h sem confirmação e um conflito de horário do mesmo estudante.
 // Uso: npm run demo:criar   (para remover: npm run demo:limpar)
 // ATENÇÃO: grava no banco do DATABASE_URL. Não altera nem apaga registros que não sejam [DEMO].
 const path = require("path");
@@ -83,6 +85,14 @@ const perfisDeEstudo = [
 const mesesParaFormatura = [18, 3, 30, 12, null, 24, 5, 36, 8, 42];
 // Idades (null = não informada); 17 e 16 aparecem no alerta de menor de 18 anos.
 const idades = [21, 19, 23, 17, 20, 25, 22, null, 19, 28, 16, 24, 20, 22, 26];
+const enderecos = [
+  "Av. do Contorno, 6000, 8º andar — Savassi, BH",
+  "Rua dos Carijós, 400, loja 2 — Centro, BH",
+  "Av. Brasil, 1200, sala 305 — Funcionários, BH",
+  "Rua da Bahia, 1148, conj. 1102 — Centro, BH",
+  "Av. Raja Gabaglia, 3000 — Estoril, BH",
+];
+const duracoes = [45, 60, 30, 45];
 const observacoes = [
   "Prefere estágio perto do metrô.",
   "Pediu retorno até sexta-feira.",
@@ -220,7 +230,83 @@ function montarPlano(agora = new Date(), codigosEmUso = new Set()) {
     return candidatura;
   });
 
+  agendarEntrevistas(planoCandidaturas, planoVagas, planoEmpresas, agora);
   return { empresas: planoEmpresas, vagas: planoVagas, estudantes: planoEstudantes, candidaturas: planoCandidaturas };
+}
+
+// Detalhes e status das entrevistas da demonstração (sem sorteio: sai igual a cada execução).
+function agendarEntrevistas(candidaturas, planoVagas, planoEmpresas, agora) {
+  const em = (dias, hora, minuto = 0) => new Date(agora.getFullYear(), agora.getMonth(), agora.getDate() + dias, hora, minuto);
+  // Próximo horário comercial "redondo" daqui a 2h ou mais, sempre dentro das próximas 24h (alerta de sem confirmação).
+  let embreve = new Date(Math.ceil((agora.getTime() + 2 * HORA_MS) / (30 * 60 * 1000)) * 30 * 60 * 1000);
+  if (embreve.getHours() >= 19) embreve = em(1, 9);
+  else if (embreve.getHours() < 8) embreve = new Date(embreve.getFullYear(), embreve.getMonth(), embreve.getDate(), 9);
+  let contador = 0;
+
+  const detalhes = (candidatura, status, data) => {
+    const vaga = planoVagas[candidatura.vaga];
+    const online = contador % 2 === 0;
+    Object.assign(candidatura, {
+      data_hora_entrevista: data,
+      entrevista_status: status,
+      entrevista_formato: online ? "ONLINE" : "PRESENCIAL",
+      entrevista_local: online
+        ? `https://meet.google.com/demo-${String(100 + contador).padStart(3, "0")}-sse`
+        : enderecos[vaga.empresa % enderecos.length],
+      entrevista_duracao: duracoes[contador % duracoes.length],
+      entrevistador: contador % 3 === 2 ? null : planoEmpresas[vaga.empresa].nome_contato,
+    });
+    contador += 1;
+  };
+
+  // Conflito: um estudante com duas candidaturas em vagas abertas (fora das vagas "paradas", que precisam ficar
+  // sem entrevista para aparecer em alerta) tem entrevistas sobrepostas amanhã, às 14:00 e às 14:30.
+  const porEstudante = new Map();
+  candidaturas.forEach((c) => porEstudante.set(c.estudante, [...(porEstudante.get(c.estudante) ?? []), c]));
+  const conflito = [...porEstudante.values()].find((lista) => lista.length === 2
+    && lista.every((c) => planoVagas[c.vaga].status === "ABERTA" && planoVagas[c.vaga].perfil !== "parada"));
+  if (conflito) {
+    for (const [indice, c] of conflito.entries()) {
+      Object.assign(c, { status_kanban: "ENTREVISTA_AGENDADA", motivo_recusa: null, data_aprovacao: null });
+      detalhes(c, "AGUARDANDO", em(1, 14, indice * 30));
+    }
+  }
+
+  // Na coluna "Entrevista": próximas 24h sem confirmação, confirmadas, uma que já passou sem o candidato aparecer.
+  const horarios = [
+    ["AGUARDANDO", embreve],
+    ["AGUARDANDO", em(1, 10)],
+    ["CONFIRMADA", em(1, 16)],
+    ["CONFIRMADA", em(2, 9, 30)],
+    ["NAO_COMPARECEU", em(-1, 11)],
+    ["AGUARDANDO", em(4, 15, 30)],
+    ["CONFIRMADA", em(6, 10)],
+  ];
+  candidaturas
+    .filter((c) => c.status_kanban === "ENTREVISTA_AGENDADA" && !conflito?.includes(c))
+    .forEach((c, i) => detalhes(c, ...horarios[i % horarios.length]));
+
+  // Seguiram no processo depois da entrevista: realizadas (dias anteriores, horário comercial).
+  candidaturas
+    .filter((c) => c.status_kanban === "AGUARDANDO_RETORNO")
+    .forEach((c, i) => {
+      if (i % 4 !== 3) detalhes(c, "REALIZADA", em(-1 - (i % 9), 9 + (i % 8), i % 2 ? 30 : 0));
+    });
+  candidaturas
+    .filter((c) => c.status_kanban === "APROVADO")
+    .forEach((c) => detalhes(c, "REALIZADA", c.data_hora_entrevista));
+
+  // Dispensados: alguns faltaram à entrevista, outros tiveram a entrevista cancelada.
+  candidaturas
+    .filter((c) => c.status_kanban === "RECUSADO" && planoVagas[c.vaga].status === "ABERTA")
+    .forEach((c, i) => {
+      if (i % 3 === 0) {
+        c.motivo_recusa = "Não compareceu à entrevista";
+        detalhes(c, "NAO_COMPARECEU", em(-2 - i, 14));
+      } else if (i % 3 === 1) {
+        detalhes(c, "CANCELADA", em(i % 2 ? 1 : 3, 11, 30));
+      }
+    });
 }
 
 async function main() {
@@ -270,6 +356,9 @@ async function main() {
   console.log("Formam em até 6 meses:", plano.estudantes.filter((e) => e.previsao_formatura && e.previsao_formatura <= seisMeses).length,
     "| Menores de 18:", plano.estudantes.filter((e) => e.data_nascimento && idadeEm(e.data_nascimento) < 18).length,
     "| Candidaturas com observação:", plano.candidaturas.filter((c) => c.observacao).length);
+  const porStatus = plano.candidaturas.filter((c) => c.entrevista_status)
+    .reduce((acc, c) => ({ ...acc, [c.entrevista_status]: (acc[c.entrevista_status] ?? 0) + 1 }), {});
+  console.log("Entrevistas por status:", porStatus);
   console.log("Vagas que devem aparecer em alerta:", plano.vagas.filter((v) => v.perfil === "parada").map((v) => v.titulo).join(", "));
 }
 

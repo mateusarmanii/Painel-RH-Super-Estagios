@@ -117,6 +117,15 @@ router.patch("/:id", async (req, res) => {
       });
 
       if (status === "FECHADA" || status === "SUSPENSA") {
+        // Entrevistas ainda em aberto dessas candidaturas ficam como canceladas na Agenda.
+        await transaction.aplicacao.updateMany({
+          where: {
+            vaga_id: id,
+            status_kanban: "ENTREVISTA_AGENDADA",
+            OR: [{ entrevista_status: null }, { entrevista_status: { in: ["AGUARDANDO", "CONFIRMADA"] } }],
+          },
+          data: { entrevista_status: "CANCELADA" },
+        });
         await transaction.aplicacao.updateMany({
           where: {
             vaga_id: id,

@@ -91,6 +91,9 @@ npm run test:etapa1    # PUT/DELETE de empresas, vagas e estudantes; exclusões 
 npm run test:etapa2a   # datas da candidatura, Kanban por vaga, entrevistas e métricas do dashboard
 npm run test:etapa2d   # histórico de candidaturas e reagendamento de entrevista
 npm run test:banco-talentos   # "Indicar para vaga" (nova candidatura, sem duplicatas) e data da dispensa
+npm run test:resumos   # números dos cards de vagas e empresas; espaços extras tirados ao salvar
+npm run test:frente2   # turno, disponibilidade, semestre, formatura, nascimento, turno da vaga e observação
+npm run test:logos     # envio, troca e remoção da logo; recusa de SVG, de arquivos grandes e de formatos falsos
 ```
 
 ## Dados de demonstração
@@ -108,12 +111,23 @@ npm run demo:limpar   # remove tudo o que for [DEMO]
 
 > ⚠️ **Cuidado com o `npm run seed`** (`backend/prisma/seed.js`): ele **apaga TODOS os dados do banco** (empresas, vagas, estudantes e candidaturas) antes de criar alguns exemplos. Por isso ele só roda com a confirmação explícita `npm run seed -- --confirmar-apagar-tudo`; sem ela, avisa e não faz nada. Use apenas num banco vazio ou descartável. Para demonstrações, prefira o `demo:criar`.
 
+## Backup
+
+O backup precisa de **duas partes**:
+
+1. **O banco de dados** (PostgreSQL), por exemplo com `pg_dump`. Com o banco no Docker:
+   ```bash
+   docker exec superestagios-db pg_dump -U <usuário> -d superestagios -Fc > backup.dump
+   ```
+2. **A pasta `backend/uploads/logos`**, com as logos das empresas. Os arquivos ficam nessa pasta e o banco guarda só o caminho (`logo_url`). Ela está no `.gitignore`, então **não vai para o GitHub**: sem copiar essa pasta, as empresas voltam sem logo (e aparecem com as iniciais).
+
 ## Estrutura
 
 ```
 backend/
   server.js               API Express e /dashboard-metrics
-  src/routes/             empresas, vagas, candidatos (inclui o PATCH do Kanban), entrevistas
+  src/routes/             empresas (inclui o envio da logo), vagas, candidatos (inclui o PATCH do Kanban), entrevistas
+  uploads/logos/          logos das empresas (fora do git; precisa entrar no backup)
   prisma/schema.prisma    modelo de dados (Empresa, Vaga, Estudante, Aplicacao)
   prisma/migrations/      histórico de alterações do banco
   scripts/                testes e dados de demonstração

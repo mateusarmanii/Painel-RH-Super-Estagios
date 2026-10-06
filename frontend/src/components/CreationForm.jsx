@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { API_URL as apiUrl } from "../api.js";
+import LogoField, { saveLogoChange } from "./LogoField.jsx";
 import { periodoLabels, toDateInput, toMonthInput, turnoEstudoLabels, turnoVagaLabels } from "../estudante.js";
 
 const toOptions = (labels) => Object.entries(labels).map(([id, label]) => ({ id, label }));
@@ -89,6 +90,8 @@ export default function CreationForm({ type, initialData, onSuccess }) {
   const [options, setOptions] = useState([]);
   const [isLoadingOptions, setIsLoadingOptions] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Logo da empresa: { file } para enviar/trocar, { remove: true } para apagar; enviada depois de salvar os dados.
+  const [logoChange, setLogoChange] = useState(null);
   const optionKey = fields.find((field) => field.optionsKey)?.optionsKey;
   const optionType = optionKey ?? null;
 
@@ -152,6 +155,14 @@ export default function CreationForm({ type, initialData, onSuccess }) {
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.erro ?? "Não foi possível salvar o cadastro.");
 
+      if (logoChange) {
+        try {
+          await saveLogoChange(result.id, logoChange);
+        } catch (logoError) {
+          toast.error(`Os dados foram salvos, mas a logo não: ${logoError.message}`);
+        }
+      }
+
       toast.success(successMessages[type][isEditing ? "edit" : "create"]);
       // Avisa o Dashboard e as listas para recarregarem.
       window.dispatchEvent(new Event("dashboard:refresh"));
@@ -165,6 +176,15 @@ export default function CreationForm({ type, initialData, onSuccess }) {
 
   return (
     <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      {type === "empresa" && (
+        <LogoField
+          empresaId={initialData?.id}
+          name={form.nome}
+          currentLogoUrl={initialData?.logo_url}
+          change={logoChange}
+          onChange={setLogoChange}
+        />
+      )}
       {fields.map((field) => {
         const commonProps = {
           id: `${type}-${field.name}`,

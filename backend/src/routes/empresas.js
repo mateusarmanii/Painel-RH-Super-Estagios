@@ -1,6 +1,7 @@
 const express = require("express");
 const prisma = require("../prisma");
 const { uuidValido, pluralizar, resumirCandidaturas } = require("../utils");
+const { lerArquivoDaLogo, gravarLogo, apagarLogo } = require("../logos");
 
 const router = express.Router();
 
@@ -97,6 +98,49 @@ router.put("/:id", async (req, res) => {
   }
 });
 
+// Envia ou troca a logo (multipart, campo "logo"): PNG, JPG ou WEBP até 2 MB. A logo anterior é apagada.
+router.post("/:id/logo", async (req, res, next) => {
+  if (!uuidValido.test(req.params.id)) {
+    return res.status(400).json({ erro: "ID de empresa inválido." });
+  }
+  // A empresa é conferida antes de ler o arquivo, para não receber upload de empresa inexistente.
+  const empresa = await prisma.empresa.findUnique({ where: { id: req.params.id }, select: { logo_url: true } }).catch(() => null);
+  if (!empresa) return res.status(404).json({ erro: "Empresa não encontrada." });
+  req.logoAnterior = empresa.logo_url;
+  return next();
+}, lerArquivoDaLogo, async (req, res) => {
+  let novaLogo = null;
+  try {
+    novaLogo = gravarLogo(req.file.buffer, req.formatoLogo);
+    const empresa = await prisma.empresa.update({ where: { id: req.params.id }, data: { logo_url: novaLogo } });
+    apagarLogo(req.logoAnterior);
+    return res.json(empresa);
+  } catch (error) {
+    apagarLogo(novaLogo);
+    if (error.code === "P2025") return res.status(404).json({ erro: "Empresa não encontrada." });
+    console.error("Erro ao salvar logo:", error);
+    return res.status(500).json({ erro: "Não foi possível salvar a logo." });
+  }
+});
+
+router.delete("/:id/logo", async (req, res) => {
+  const { id } = req.params;
+  if (!uuidValido.test(id)) {
+    return res.status(400).json({ erro: "ID de empresa inválido." });
+  }
+
+  try {
+    const anterior = await prisma.empresa.findUnique({ where: { id }, select: { logo_url: true } });
+    if (!anterior) return res.status(404).json({ erro: "Empresa não encontrada." });
+    const empresa = await prisma.empresa.update({ where: { id }, data: { logo_url: null } });
+    apagarLogo(anterior.logo_url);
+    return res.json(empresa);
+  } catch (error) {
+    console.error("Erro ao remover logo:", error);
+    return res.status(500).json({ erro: "Não foi possível remover a logo." });
+  }
+});
+
 router.delete("/:id", async (req, res) => {
   const { id } = req.params;
 
@@ -107,7 +151,7 @@ router.delete("/:id", async (req, res) => {
   try {
     const empresa = await prisma.empresa.findUnique({
       where: { id },
-      select: { _count: { select: { vagas: true } } },
+      select: { logo_url: true, _count: { select: { vagas: true } } },
     });
 
     if (!empresa) {
@@ -122,6 +166,7 @@ router.delete("/:id", async (req, res) => {
     }
 
     await prisma.empresa.delete({ where: { id } });
+    apagarLogo(empresa.logo_url);
     return res.status(204).end();
   } catch (error) {
     if (error.code === "P2003") {

@@ -2,6 +2,7 @@ const express = require("express");
 const prisma = require("../prisma");
 const { uuidValido, pluralizar } = require("../utils");
 const { camposEstudante, observacao } = require("../campos");
+const { camposEntrevista, conflitosDoEstudante, statusAoSairDaEntrevista } = require("../agenda");
 
 const router = express.Router();
 const statusKanbanValidos = new Set([
@@ -29,7 +30,7 @@ router.get("/", async (_req, res) => {
             // Enquanto RECUSADO, a última atualização corresponde à data da dispensa (Banco de Talentos).
             updated_at: true,
             vaga: {
-              select: { codigo_vaga: true, titulo: true, empresa: { select: { nome: true } } },
+              select: { codigo_vaga: true, titulo: true, empresa: { select: { id: true, nome: true, logo_url: true } } },
             },
           },
           orderBy: { created_at: "desc" },
@@ -67,10 +68,13 @@ router.patch("/:id", async (req, res) => {
     return res.status(400).json({ erro: "Informe o motivo da dispensa." });
   }
 
+  const detalhes = status_kanban === "ENTREVISTA_AGENDADA" ? camposEntrevista(req.body) : { data: {} };
+  if (detalhes.erro) return res.status(400).json({ erro: detalhes.erro });
+
   try {
     const aplicacao = await prisma.aplicacao.findFirst({
       where: { id: aplicacao_id, estudante_id: id },
-      select: { id: true, status_kanban: true },
+      select: { id: true, status_kanban: true, entrevista_status: true, entrevista_duracao: true },
     });
 
     if (!aplicacao) {
@@ -86,7 +90,12 @@ router.patch("/:id", async (req, res) => {
     }
 
     // A data da entrevista fica no histórico mesmo após mudar de coluna; o motivo só vale enquanto RECUSADO.
-    if (status_kanban === "ENTREVISTA_AGENDADA") data.data_hora_entrevista = dataEntrevista;
+    if (status_kanban === "ENTREVISTA_AGENDADA") {
+      // Agendar (ou reagendar) começa sempre como "Aguardando" confirmação.
+      Object.assign(data, detalhes.data, { data_hora_entrevista: dataEntrevista, entrevista_status: "AGUARDANDO" });
+    } else if (aplicacao.status_kanban === "ENTREVISTA_AGENDADA") {
+      data.entrevista_status = statusAoSairDaEntrevista(aplicacao.entrevista_status, status_kanban);
+    }
     data.motivo_recusa = status_kanban === "RECUSADO" ? motivo : null;
 
     const atualizada = await prisma.aplicacao.update({
@@ -100,10 +109,25 @@ router.patch("/:id", async (req, res) => {
         data_hora_entrevista: true,
         motivo_recusa: true,
         data_aprovacao: true,
+        entrevista_status: true,
+        entrevista_formato: true,
+        entrevista_local: true,
+        entrevista_duracao: true,
+        entrevistador: true,
       },
     });
 
-    return res.json(atualizada);
+    // Aviso (não bloqueia): o estudante já tem outra entrevista nesse horário.
+    const conflitos = status_kanban === "ENTREVISTA_AGENDADA"
+      ? await conflitosDoEstudante(prisma, {
+        estudanteId: id,
+        aplicacaoId: atualizada.id,
+        inicio: atualizada.data_hora_entrevista,
+        duracao: atualizada.entrevista_duracao,
+      })
+      : [];
+
+    return res.json({ ...atualizada, conflitos });
   } catch (error) {
     console.error("Erro ao atualizar candidatura:", error);
     return res.status(500).json({ erro: "Não foi possível atualizar a candidatura." });
@@ -165,7 +189,7 @@ router.post("/:id/candidaturas", async (req, res) => {
 
     const candidatura = await prisma.aplicacao.create({
       data: { estudante_id: id, vaga_id },
-      include: { vaga: { select: { codigo_vaga: true, titulo: true, empresa: { select: { nome: true } } } } },
+      include: { vaga: { select: { codigo_vaga: true, titulo: true, empresa: { select: { id: true, nome: true, logo_url: true } } } } },
     });
 
     return res.status(201).json(candidatura);
