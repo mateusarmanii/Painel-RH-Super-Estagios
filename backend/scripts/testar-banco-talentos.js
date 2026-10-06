@@ -1,4 +1,4 @@
-// Testes do Banco de Talentos ("Indicar para vaga" e dados da dispensa). Sobe a API na porta 3399,
+// Testes do Banco de Talentos ("Indicar para vaga", dados da dispensa e cadastro sem vaga). Sobe a API na porta 3399,
 // cria registros "[TESTE]" e remove tudo no final.
 // ATENÇÃO: grava e apaga dados no banco do DATABASE_URL (só os registros que o próprio teste cria).
 const path = require("path");
@@ -12,7 +12,7 @@ const prisma = require("../src/prisma");
 const PORT = 3399;
 const BASE = `http://localhost:${PORT}`;
 const UUID_INEXISTENTE = "00000000-0000-4000-8000-000000000000";
-const ids = { empresa: null, vagas: [], estudante: null };
+const ids = { empresa: null, vagas: [], estudante: null, semVaga: [] };
 let falhas = 0;
 
 async function req(method, url, body) {
@@ -96,10 +96,36 @@ async function main() {
     checar("Estudante ficou com exatamente 2 candidaturas", total === 2, `${total}`);
     r = await req("GET", `/vagas/${vagaNova.id}/candidatos`);
     checar("Indicação aparece no Kanban da vaga nova", r.body.some((a) => a.estudante.id === ids.estudante));
+
+    console.log("\n== Cadastro de estudante sem vaga");
+    const semVaga = { telefone: "000", curso: "Teste", instituicao_ensino: "Teste" };
+    r = await req("POST", "/candidatos", { ...semVaga, nome_completo: "[TESTE] Sem vaga" });
+    if (r.body?.id) ids.semVaga.push(r.body.id);
+    checar("Sem vaga_id → 201, sem nenhuma candidatura",
+      r.status === 201 && r.body.aplicacoes.length === 0, `[${r.status}] ${r.body?.erro ?? r.body?.aplicacoes?.length}`);
+    const idSemVaga = r.body?.id;
+    r = await req("POST", "/candidatos", { ...semVaga, nome_completo: "[TESTE] Sem vaga (vazio)", vaga_id: "" });
+    if (r.body?.id) ids.semVaga.push(r.body.id);
+    checar("vaga_id vazio → 201, sem candidatura", r.status === 201 && r.body.aplicacoes.length === 0, `[${r.status}] ${r.body?.erro ?? ""}`);
+    r = await req("POST", "/candidatos", { ...semVaga, nome_completo: "[TESTE] Vaga inválida", vaga_id: "abc" });
+    if (r.body?.id) ids.semVaga.push(r.body.id);
+    checar("vaga_id inválido → 400", r.status === 400, `[${r.status}] ${r.body?.erro}`);
+    r = await req("POST", "/candidatos", { ...semVaga, nome_completo: "[TESTE] Vaga fechada", vaga_id: vagaFechada.id });
+    if (r.body?.id) ids.semVaga.push(r.body.id);
+    checar("Cadastro em vaga fechada continua → 409", r.status === 409, `[${r.status}] ${r.body?.erro}`);
+    r = await req("POST", "/candidatos", { telefone: "000", curso: "Teste", nome_completo: "[TESTE] Sem instituição" });
+    if (r.body?.id) ids.semVaga.push(r.body.id);
+    checar("Sem instituição continua → 400", r.status === 400, `[${r.status}] ${r.body?.erro}`);
+    r = await req("GET", "/candidatos");
+    checar("Aparece em Estudantes com 0 candidaturas",
+      r.body.some((e) => e.id === idSemVaga && e.aplicacoes.length === 0));
+    r = await req("POST", `/candidatos/${idSemVaga}/candidaturas`, { vaga_id: vagaNova.id });
+    checar("Depois pode ser indicado para uma vaga → 201", r.status === 201 && r.body.status_kanban === "ENVIADO_EMPRESA",
+      `[${r.status}] ${r.body?.erro ?? ""}`);
   } finally {
-    if (ids.estudante) {
-      await prisma.aplicacao.deleteMany({ where: { estudante_id: ids.estudante } }).catch(() => {});
-      await prisma.estudante.delete({ where: { id: ids.estudante } }).catch(() => {});
+    for (const id of [ids.estudante, ...ids.semVaga].filter(Boolean)) {
+      await prisma.aplicacao.deleteMany({ where: { estudante_id: id } }).catch(() => {});
+      await prisma.estudante.delete({ where: { id } }).catch(() => {});
     }
     await prisma.vaga.deleteMany({ where: { id: { in: ids.vagas } } }).catch(() => {});
     if (ids.empresa) await prisma.empresa.delete({ where: { id: ids.empresa } }).catch(() => {});

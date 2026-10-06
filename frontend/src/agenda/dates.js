@@ -109,7 +109,9 @@ export function confirmationMessage(interview) {
   const format = interviewFormatLabels[interview.entrevista_formato];
   const where = interview.entrevista_local
     ? `${format ? `${format}: ` : isLink(interview.entrevista_local) ? "Link: " : "Local: "}${interview.entrevista_local}`
-    : format ?? "";
+    : format
+      ? `Entrevista ${format.toLowerCase()}`
+      : "";
   return [
     `Olá, ${firstName}! Aqui é da Super Estágios.`,
     `Sua entrevista para a vaga "${interview.vaga.titulo}" na empresa ${interview.vaga.empresa.nome} está marcada para ${weekdayDate.format(start)}, às ${timeFormat.format(start)}.`,

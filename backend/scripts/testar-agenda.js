@@ -1,4 +1,4 @@
-// Testes da Agenda (Frente B): agendamento com formato/local/duração/entrevistador, status da entrevista,
+// Testes da Agenda (Frente B): agendamento com formato/local (opcional)/duração/entrevistador, status da entrevista,
 // conflito de horário, período (?inicio&fim), resumo do topo e ações do painel.
 // Sobe a API na porta 3394, cria registros "[TESTE]" e remove tudo no final.
 // ATENÇÃO: grava e apaga dados no banco do DATABASE_URL (só os registros que o próprio teste cria).
@@ -172,6 +172,26 @@ async function main() {
     r = await req("GET", `/entrevistas/resumo?${semana()}`);
     checar("Comparecimento: +1 realizada e +1 falta", r.body.comparecimento.realizadas === resumoAntes.comparecimento.realizadas + 1
       && r.body.comparecimento.faltas === resumoAntes.comparecimento.faltas + 1, JSON.stringify(r.body.comparecimento));
+
+    console.log("\n== Local ou link opcional");
+    const semLocalP = await estudante("Agenda Sem Local P", vagaA.id);
+    const semLocalO = await estudante("Agenda Sem Local O", vagaA.id);
+    r = await agendar(semLocalP.id, semLocalP.aplicacao, daqui(4 * DIA), { entrevista_formato: "PRESENCIAL", entrevista_local: null });
+    checar("Presencial sem endereço → 200, local vazio", r.status === 200 && r.body.entrevista_local === null
+      && r.body.entrevista_formato === "PRESENCIAL", `[${r.status}] ${r.body?.erro ?? r.body?.entrevista_local}`);
+    r = await agendar(semLocalO.id, semLocalO.aplicacao, daqui(4 * DIA + 2 * HORA), { entrevista_formato: "ONLINE", entrevista_local: "" });
+    checar("Online sem link → 200, local vazio", r.status === 200 && r.body.entrevista_local === null
+      && r.body.entrevista_formato === "ONLINE", `[${r.status}] ${r.body?.erro ?? r.body?.entrevista_local}`);
+    r = await req("GET", "/entrevistas");
+    checar("Entrevistas sem local aparecem na Agenda",
+      [semLocalP.aplicacao, semLocalO.aplicacao].every((id) => r.body.some((e) => e.id === id && e.entrevista_local === null)));
+    r = await acao(semLocalP.aplicacao, { acao: "reagendar", data_hora_entrevista: daqui(5 * DIA).toISOString(),
+      entrevista_formato: "PRESENCIAL", entrevista_local: null });
+    checar("Reagendar sem local → 200", r.status === 200 && r.body.entrevista_local === null, `[${r.status}] ${r.body?.erro ?? ""}`);
+    r = await acao(semLocalO.aplicacao, { acao: "reagendar", data_hora_entrevista: daqui(5 * DIA + 2 * HORA).toISOString(),
+      entrevista_local: "https://meet.google.com/xyz" });
+    checar("Reagendar preenchendo o link depois → 200", r.status === 200 && r.body.entrevista_local === "https://meet.google.com/xyz",
+      `[${r.status}] ${r.body?.erro ?? ""}`);
 
     console.log("\n== Mover pelo Kanban dá desfecho à entrevista");
     await agendar(w.id, w.aplicacao, daqui(2 * DIA));

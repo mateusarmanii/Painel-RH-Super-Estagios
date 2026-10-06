@@ -24,14 +24,11 @@ export function interviewPayload(values) {
   const date = new Date(values.dataHora);
   if (Number.isNaN(date.getTime()) || date <= new Date()) return { erro: "Escolha uma data e hora no futuro." };
   if (!values.formato) return { erro: "Escolha se a entrevista é presencial ou online." };
-  if (!values.local.trim()) {
-    return { erro: values.formato === "ONLINE" ? "Informe o link da reunião." : "Informe o endereço da entrevista." };
-  }
   return {
     body: {
       data_hora_entrevista: date.toISOString(),
       entrevista_formato: values.formato,
-      entrevista_local: values.local.trim(),
+      entrevista_local: values.local.trim() || null,
       entrevista_duracao: Number(values.duracao),
       entrevistador: values.entrevistador.trim() || null,
     },
@@ -88,7 +85,9 @@ export default function InterviewFields({ idPrefix, values, onChange }) {
       </fieldset>
 
       <label htmlFor={`${idPrefix}-local`} className="block space-y-1.5 sm:col-span-2">
-        <span className="text-sm font-medium text-slate-700">{isOnline ? "Link da reunião" : "Endereço"}</span>
+        <span className="text-sm font-medium text-slate-700">
+          {isOnline ? "Link da reunião" : "Endereço"} <span className="font-normal text-slate-400">(opcional)</span>
+        </span>
         <input
           id={`${idPrefix}-local`}
           type={isOnline ? "url" : "text"}

@@ -253,36 +253,39 @@ router.post("/", async (req, res) => {
     vaga_id,
   } = req.body ?? {};
 
-  if (!nome_completo || !telefone || !curso || !instituicao_ensino || !vaga_id) {
+  if (!nome_completo || !telefone || !curso || !instituicao_ensino) {
     return res.status(400).json({
-      erro: "Informe nome, telefone, curso, instituição de ensino e vaga.",
+      erro: "Informe nome, telefone, curso e instituição de ensino.",
     });
   }
 
   const extras = camposEstudante(req.body);
   if (extras.erro) return res.status(400).json({ erro: extras.erro });
 
-  if (!uuidValido.test(vaga_id)) {
+  // Vaga é opcional: sem ela o estudante é criado sem candidatura e pode ser indicado depois.
+  if (vaga_id && !uuidValido.test(vaga_id)) {
     return res.status(400).json({ erro: "ID de vaga inválido." });
   }
 
   try {
     const candidato = await prisma.$transaction(async (transaction) => {
-      const vaga = await transaction.vaga.findUnique({
-        where: { id: vaga_id },
-        select: { id: true, status: true },
-      });
+      if (vaga_id) {
+        const vaga = await transaction.vaga.findUnique({
+          where: { id: vaga_id },
+          select: { id: true, status: true },
+        });
 
-      if (!vaga) {
-        const error = new Error("Vaga não encontrada.");
-        error.status = 404;
-        throw error;
-      }
+        if (!vaga) {
+          const error = new Error("Vaga não encontrada.");
+          error.status = 404;
+          throw error;
+        }
 
-      if (vaga.status !== "ABERTA") {
-        const error = new Error("A vaga selecionada não está aberta.");
-        error.status = 409;
-        throw error;
+        if (vaga.status !== "ABERTA") {
+          const error = new Error("A vaga selecionada não está aberta.");
+          error.status = 409;
+          throw error;
+        }
       }
 
       return transaction.estudante.create({
@@ -296,7 +299,7 @@ router.post("/", async (req, res) => {
           endereco,
           anotacoes_recrutador,
           ...extras.data,
-          aplicacoes: { create: { vaga: { connect: { id: vaga_id } } } },
+          ...(vaga_id && { aplicacoes: { create: { vaga: { connect: { id: vaga_id } } } } }),
         },
         include: { aplicacoes: true },
       });

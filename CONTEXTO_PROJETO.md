@@ -233,6 +233,11 @@ Build OK; testes `cd backend && npm run test:etapa2d` (10/10, registros `[TESTE]
 - **`VITE_API_URL`**: `frontend/src/api.js` (`API_URL`, padrão `http://localhost:3333`, barra final removida) usado nos 8 arquivos que tinham o endereço fixo; `frontend/.env.example` criado e `frontend/.env` no `.gitignore`. Conferido com build usando outro endereço.
 - **Empresas sem vaga** (`/empresas-sem-vaga`): empresas **sem nenhuma vaga `ABERTA`** (inclui as que nunca tiveram vaga), com a última vaga (título, status, data) ou "Nunca teve vaga cadastrada", contato, busca, editar/excluir e CSV. `GET /empresas` passou a trazer `vagas` resumidas (id, Nº, título, status, `created_at`). `EntityList` ganhou as props `filterItems` e `subtitle`. Conferida com empresas `[TESTE]` temporárias (0 sobras). O `PlaceholderPage` foi removido (nenhuma página usa mais).
 
+### ✅ Local da entrevista e vaga do estudante opcionais (06/10/2026)
+Sem migration.
+- **Local/link da entrevista** (`entrevista_local`) é opcional no Presencial e no Online (modal do Kanban e Reagendar da Agenda, `InterviewFields.jsx`); o backend já aceitava vazio. Sem local: o painel da Agenda mostra "Local a definir", o WhatsApp diz só "Entrevista presencial/online." e o link do Google Agenda vai sem `location`. Testes em `npm run test:agenda`.
+- **Vaga no cadastro do estudante** é opcional (`CreationForm`, opção "Sem vaga — indicar depois"; `POST /candidatos` sem `vaga_id` cria o estudante sem candidatura). Vaga informada continua validada (400 id inválido, 404, 409 não aberta). Testes em `npm run test:banco-talentos` (18/18).
+
 ## Regras de trabalho
 
 - **Banco de dados: antes de aplicar QUALQUER alteração no banco (migrations, `migrate deploy`/`dev`/`reset`, `db push`, SQL manual, escrita em `_prisma_migrations`, criação/remoção de bancos, scripts de teste que gravam dados), mostrar o SQL/operações ao usuário e esperar aprovação explícita.**

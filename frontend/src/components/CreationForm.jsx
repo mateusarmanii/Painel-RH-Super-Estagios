@@ -47,7 +47,7 @@ const fieldSets = {
     { name: "previsao_formatura", label: "Previsão de formatura", type: "month", optional: true, half: true },
     { name: "data_nascimento", label: "Data de nascimento", type: "date", optional: true, half: true },
     // A vaga só é escolhida no cadastro; depois, as candidaturas são geridas pelo Kanban.
-    { name: "vaga_id", label: "Vaga", type: "select", optionsKey: "vagas", createOnly: true },
+    { name: "vaga_id", label: "Vaga", type: "select", optionsKey: "vagas", createOnly: true, optional: true },
     {
       name: "anotacoes_recrutador",
       label: "Anotações do Recrutador",
@@ -92,8 +92,8 @@ export default function CreationForm({ type, initialData, onSuccess }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   // Logo da empresa: { file } para enviar/trocar, { remove: true } para apagar; enviada depois de salvar os dados.
   const [logoChange, setLogoChange] = useState(null);
-  const optionKey = fields.find((field) => field.optionsKey)?.optionsKey;
-  const optionType = optionKey ?? null;
+  const optionField = fields.find((field) => field.optionsKey);
+  const optionType = optionField?.optionsKey ?? null;
 
   useEffect(() => {
     if (!optionType) return undefined;
@@ -251,11 +251,13 @@ export default function CreationForm({ type, initialData, onSuccess }) {
                     ? "Não informado"
                     : isLoadingOptions && field.optionsKey
                     ? "Carregando..."
+                    : field.optionsKey === "vagas"
+                      ? options.length === 0
+                        ? "Nenhuma vaga aberta — indicar depois"
+                        : "Sem vaga — indicar depois"
                     : options.length === 0 && field.optionsKey === "empresas"
                       ? "Cadastre uma empresa primeiro"
-                      : options.length === 0 && field.optionsKey === "vagas"
-                        ? "Nenhuma vaga aberta disponível"
-                        : "Selecione uma opção"}
+                      : "Selecione uma opção"}
                 </option>
                 {(field.options ?? options.map((item) => ({
                   id: item.id,
@@ -285,7 +287,7 @@ export default function CreationForm({ type, initialData, onSuccess }) {
       <div className="flex justify-end pt-2 sm:col-span-2">
         <button
           type="submit"
-          disabled={isSubmitting || (optionType !== null && isLoadingOptions) || (optionType !== null && options.length === 0)}
+          disabled={isSubmitting || (optionType !== null && isLoadingOptions) || (optionType !== null && !optionField.optional && options.length === 0)}
           className="h-10 rounded-md bg-ambar-400 px-4 text-sm font-bold text-marinho-900 transition-colors hover:bg-ambar-500 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isSubmitting ? "Salvando..." : "Salvar"}

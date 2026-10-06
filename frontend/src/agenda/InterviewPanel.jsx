@@ -185,17 +185,15 @@ export default function InterviewPanel({ interview, conflicts, onClose, onUpdate
           <section className="space-y-2.5">
             <Detail icon={FormatIcon}>
               {interview.entrevista_formato ? interviewFormatLabels[interview.entrevista_formato] : "Formato não informado"}
-              {interview.entrevista_local && (
-                <>
-                  {" · "}
-                  {isLink(interview.entrevista_local) ? (
-                    <a href={interview.entrevista_local} target="_blank" rel="noopener noreferrer" className="font-semibold text-marinho-700 underline">
-                      {interview.entrevista_local}
-                    </a>
-                  ) : (
-                    interview.entrevista_local
-                  )}
-                </>
+              {" · "}
+              {!interview.entrevista_local ? (
+                "Local a definir"
+              ) : isLink(interview.entrevista_local) ? (
+                <a href={interview.entrevista_local} target="_blank" rel="noopener noreferrer" className="font-semibold text-marinho-700 underline">
+                  {interview.entrevista_local}
+                </a>
+              ) : (
+                interview.entrevista_local
               )}
             </Detail>
             <Detail icon={UserRound}>{interview.entrevistador ? `Entrevistador: ${interview.entrevistador}` : "Entrevistador não informado"}</Detail>
