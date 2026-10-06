@@ -21,6 +21,15 @@ export function courseOptions(courses) {
     .sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
 }
 
+// Link wa.me a partir de um telefone brasileiro em qualquer formato ("(31) 98888-7504" → 5531988887504).
+// Devolve null se o número não tiver ao menos DDD + telefone.
+export function whatsappLink(phone, message) {
+  let digits = (phone ?? "").replace(/\D/g, "");
+  if (digits.length === 10 || digits.length === 11) digits = `55${digits}`;
+  if (digits.length < 12) return null;
+  return `https://wa.me/${digits}${message ? `?text=${encodeURIComponent(message)}` : ""}`;
+}
+
 export function plural(total, singular, pluralForm) {
   return `${total} ${total === 1 ? singular : pluralForm}`;
 }

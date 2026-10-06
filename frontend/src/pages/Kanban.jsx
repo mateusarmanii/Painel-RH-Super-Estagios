@@ -6,10 +6,8 @@ import {
   ArrowRightLeft,
   BriefcaseBusiness,
   CalendarClock,
-  ChevronDown,
   MessageSquarePlus,
   MessageSquareX,
-  MoreHorizontal,
   Send,
   UserRound,
 } from "lucide-react";
@@ -29,6 +27,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import ActionMenu from "../components/ActionMenu.jsx";
 import { IndicateDialog } from "../components/IndicateForm.jsx";
 import Modal from "../components/Modal.jsx";
 import StudentQuickProfile from "../components/StudentQuickProfile.jsx";
@@ -105,96 +104,32 @@ const stopDrag = {
 
 // Menu "⋯" do cartão: alternativa ao arrastar (útil no celular).
 function CardMenu({ candidate, onAction }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [isMoveOpen, setIsMoveOpen] = useState(false);
-  const close = () => {
-    setIsOpen(false);
-    setIsMoveOpen(false);
-  };
-  const run = (action, payload) => {
-    close();
-    onAction(action, candidate, payload);
-  };
-  const itemClass =
-    "flex w-full items-center gap-2.5 whitespace-nowrap px-4 py-3 text-left sm:px-3 sm:py-2 text-sm font-semibold text-marinho-900 transition-colors hover:bg-marinho-50 disabled:cursor-not-allowed disabled:text-slate-400 disabled:hover:bg-transparent";
-
   return (
-    <div className="relative shrink-0" {...stopDrag}>
-      <button
-        type="button"
-        aria-label={`Ações para ${candidate.nome}`}
-        aria-haspopup="menu"
-        aria-expanded={isOpen}
-        title="Ações"
-        onClick={() => setIsOpen((open) => !open)}
-        className="grid size-8 place-items-center rounded-md text-slate-500 transition-colors hover:bg-marinho-50 hover:text-marinho-900"
-      >
-        <MoreHorizontal size={18} />
-      </button>
-
-      {isOpen && (
-        <>
-          <button
-            type="button"
-            aria-label="Fechar ações"
-            onClick={close}
-            className="fixed inset-0 z-40 cursor-default bg-marinho-950/40 sm:z-10 sm:bg-transparent"
-          />
-          {/* Celular: folha que sobe de baixo (não é cortada pela coluna). Telas maiores: menu suspenso. */}
-          <div
-            role="menu"
-            className="fixed inset-x-0 bottom-0 z-50 max-h-[80vh] overflow-y-auto rounded-t-xl border border-slate-200 bg-white pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1 shadow-2xl sm:absolute sm:inset-x-auto sm:bottom-auto sm:right-0 sm:z-20 sm:mt-1 sm:max-h-none sm:w-64 sm:rounded-md sm:pb-1 sm:shadow-lg"
-          >
-            <p className="truncate border-b border-slate-100 px-4 pb-2 pt-2 text-xs font-extrabold uppercase tracking-wide text-slate-500 sm:hidden">
-              {candidate.nome}
-            </p>
-            <button type="button" role="menuitem" className={itemClass} onClick={() => run("profile")}>
-              <UserRound size={16} className="text-marinho-600" /> Ver perfil
-            </button>
-            <button
-              type="button"
-              role="menuitem"
-              className={itemClass}
-              disabled
-              title="Disponível depois da Frente 2 (campo de observação na candidatura)"
-            >
-              <MessageSquarePlus size={16} /> Adicionar observação
-              <span className="ml-auto text-[10px] font-bold uppercase text-slate-400">em breve</span>
-            </button>
-            <button type="button" role="menuitem" className={itemClass} onClick={() => run("indicate")}>
-              <Send size={16} className="text-marinho-600" /> Indicar para outra vaga
-            </button>
-            <button
-              type="button"
-              role="menuitem"
-              aria-expanded={isMoveOpen}
-              className={itemClass}
-              onClick={() => setIsMoveOpen((open) => !open)}
-            >
-              <ArrowRightLeft size={16} className="text-marinho-600" /> Mover para…
-              <ChevronDown size={15} className={`ml-auto transition-transform ${isMoveOpen ? "rotate-180" : ""}`} />
-            </button>
-            {isMoveOpen && (
-              <div className="border-t border-slate-100 bg-slate-50 py-1">
-                {columns
-                  .filter((column) => column.id !== candidate.coluna)
-                  .map((column) => (
-                    <button
-                      key={column.id}
-                      type="button"
-                      role="menuitem"
-                      onClick={() => run("move", column)}
-                      className="flex w-full items-center gap-2 py-3 pl-11 pr-3 text-left sm:py-2 sm:pl-9 text-sm text-slate-700 transition-colors hover:bg-white hover:text-marinho-900"
-                    >
-                      {column.title}
-                    </button>
-                  ))}
-              </div>
-            )}
-          </div>
-        </>
-      )}
-    </div>
+    <ActionMenu
+      label={`Ações para ${candidate.nome}`}
+      title={candidate.nome}
+      wrapperProps={stopDrag}
+      items={[
+        { key: "profile", label: "Ver perfil", icon: UserRound, onClick: () => onAction("profile", candidate) },
+        {
+          key: "note",
+          label: "Adicionar observação",
+          icon: MessageSquarePlus,
+          disabled: true,
+          hint: "em breve",
+          disabledReason: "Disponível depois da Frente 2 (campo de observação na candidatura)",
+        },
+        { key: "indicate", label: "Indicar para outra vaga", icon: Send, onClick: () => onAction("indicate", candidate) },
+        {
+          key: "move",
+          label: "Mover para…",
+          icon: ArrowRightLeft,
+          submenu: columns
+            .filter((column) => column.id !== candidate.coluna)
+            .map((column) => ({ key: column.id, label: column.title, onClick: () => onAction("move", candidate, column) })),
+        },
+      ]}
+    />
   );
 }
 

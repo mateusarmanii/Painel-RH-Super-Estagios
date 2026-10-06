@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { Inbox, Pencil, SearchX, Trash2 } from "lucide-react";
+import ActionMenu from "./ActionMenu.jsx";
 import CreationForm from "./CreationForm.jsx";
 import EmptyState from "./EmptyState.jsx";
 import ListToolbar from "./ListToolbar.jsx";
@@ -24,6 +25,8 @@ export default function EntityList({
   csvExport,
   filterItems,
   subtitle,
+  // Opcional: itens do menu "⋯" (recebe o item e as ações edit/remove). Substitui os botões soltos de editar e excluir.
+  getMenuItems,
 }) {
   const [items, setItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -120,6 +123,15 @@ export default function EntityList({
                 key={item.id}
                 className="relative flex min-h-56 flex-col rounded-lg border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
               >
+                {getMenuItems ? (
+                  <div className="absolute right-3 top-3">
+                    <ActionMenu
+                      label={`Ações para ${getName(item)}`}
+                      title={getName(item)}
+                      items={getMenuItems(item, { edit: () => setEditingItem(item), remove: () => setDeletingItem(item) })}
+                    />
+                  </div>
+                ) : (
                 <div className="absolute right-3 top-3 flex gap-1">
                   <button
                     type="button"
@@ -140,6 +152,7 @@ export default function EntityList({
                     <Trash2 size={16} />
                   </button>
                 </div>
+                )}
                 {renderItem(item)}
               </article>
             ))}

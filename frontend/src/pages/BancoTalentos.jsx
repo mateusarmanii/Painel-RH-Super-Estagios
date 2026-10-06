@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
-import { Mail, MessageSquareX, Phone, Send, Users } from "lucide-react";
+import { Mail, MessageCircle, MessageSquareX, Phone, Send, UserRound, Users } from "lucide-react";
+import ActionMenu from "../components/ActionMenu.jsx";
 import ListToolbar from "../components/ListToolbar.jsx";
 import { IndicateForm } from "../components/IndicateForm.jsx";
 import Modal from "../components/Modal.jsx";
 import PageHeader from "../components/PageHeader.jsx";
-import { courseOptions, normalize, plural } from "../text.js";
+import StudentQuickProfile from "../components/StudentQuickProfile.jsx";
+import { courseOptions, normalize, plural, whatsappLink } from "../text.js";
 import { toTalents } from "../regras.js";
 import { API_URL as apiUrl } from "../api.js";
 
@@ -19,6 +21,7 @@ export default function BancoTalentosPage() {
   const [search, setSearch] = useState("");
   const [course, setCourse] = useState("");
   const [indicating, setIndicating] = useState(null);
+  const [profileId, setProfileId] = useState(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -114,17 +117,39 @@ export default function BancoTalentosPage() {
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <h2 className="text-lg font-semibold leading-6 text-marinho-900">{talent.nome_completo}</h2>
+                    <h2 className="text-lg font-semibold leading-6">
+                      <button
+                        type="button"
+                        onClick={() => setProfileId(talent.id)}
+                        title="Ver perfil"
+                        className="text-left text-marinho-900 underline-offset-2 hover:text-marinho-600 hover:underline"
+                      >
+                        {talent.nome_completo}
+                      </button>
+                    </h2>
                     <p className="mt-1 text-sm text-slate-600">{talent.curso}</p>
                   </div>
-                  {talent.inProcess.length > 0 && (
-                    <span
-                      className="shrink-0 rounded-full bg-violet-50 px-2.5 py-1 text-xs font-medium text-violet-700"
-                      title={`Em processo: ${talent.inProcess.map((application) => application.vaga?.titulo).join(", ")}`}
-                    >
-                      Em processo
-                    </span>
-                  )}
+                  <div className="flex shrink-0 items-start gap-1">
+                    {talent.inProcess.length > 0 && (
+                      <span
+                        className="mt-1 rounded-full bg-violet-50 px-2.5 py-1 text-xs font-medium text-violet-700"
+                        title={`Em processo: ${talent.inProcess.map((application) => application.vaga?.titulo).join(", ")}`}
+                      >
+                        Em processo
+                      </span>
+                    )}
+                    <ActionMenu
+                      label={`Ações para ${talent.nome_completo}`}
+                      title={talent.nome_completo}
+                      items={[
+                        { key: "profile", label: "Ver perfil", icon: UserRound, onClick: () => setProfileId(talent.id) },
+                        { key: "indicate", label: "Indicar para vaga", icon: Send, onClick: () => setIndicating(talent) },
+                        whatsappLink(talent.telefone)
+                          ? { key: "whatsapp", label: "Abrir WhatsApp", icon: MessageCircle, href: whatsappLink(talent.telefone) }
+                          : { key: "whatsapp", label: "Abrir WhatsApp", icon: MessageCircle, disabled: true, disabledReason: "Telefone sem DDD" },
+                      ]}
+                    />
+                  </div>
                 </div>
 
                 <div className="mt-4 rounded-md bg-rose-50/70 p-3 text-sm">
@@ -165,6 +190,10 @@ export default function BancoTalentosPage() {
           </div>
         )}
       </div>
+
+      <Modal isOpen={Boolean(profileId)} title="Perfil do estudante" onClose={() => setProfileId(null)}>
+        {profileId && <StudentQuickProfile studentId={profileId} onClose={() => setProfileId(null)} />}
+      </Modal>
 
       <Modal isOpen={Boolean(indicating)} title="Indicar para vaga" onClose={() => setIndicating(null)}>
         {indicating && (
