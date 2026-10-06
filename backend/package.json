@@ -15,6 +15,7 @@
     "test:frente2": "node scripts/testar-frente2.js",
     "test:logos": "node scripts/testar-logos.js",
     "test:agenda": "node scripts/testar-agenda.js",
+    "test:status-vaga": "node scripts/testar-status-vaga.js",
     "demo:criar": "node scripts/seed-demo.js",
     "demo:limpar": "node scripts/limpar-demo.js"
   },

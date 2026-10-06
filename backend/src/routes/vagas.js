@@ -101,47 +101,52 @@ router.post("/", async (req, res) => {
   }
 });
 
+const MOTIVO_PADRAO_FECHAMENTO = "Vaga encerrada pela empresa";
+
+// Muda o status da vaga (Abrir, Suspender, Fechar).
+//  FECHADA  → candidaturas em andamento viram "Dispensado" com o motivo (opcional; padrão acima) e as entrevistas
+//             em aberto são canceladas. Contratados não mudam.
+//  SUSPENSA → pausa a vaga: ninguém novo é indicado, mas os candidatos continuam onde estão (reabrir retoma).
+//  ABERTA   → reabre.
 router.patch("/:id", async (req, res) => {
   const { id } = req.params;
-  const { status } = req.body ?? {};
+  const { status, motivo } = req.body ?? {};
 
+  if (!uuidValido.test(id)) {
+    return res.status(400).json({ erro: "ID de vaga inválido." });
+  }
   if (!statusVagaValidos.has(status)) {
     return res.status(400).json({ erro: "Status de vaga inválido." });
   }
+  if (motivo !== undefined && motivo !== null && typeof motivo !== "string") {
+    return res.status(400).json({ erro: "Motivo inválido." });
+  }
+  if (typeof motivo === "string" && motivo.length > 500) {
+    return res.status(400).json({ erro: "O motivo pode ter no máximo 500 caracteres." });
+  }
 
   try {
-    const vaga = await prisma.$transaction(async (transaction) => {
-      const vagaAtualizada = await transaction.vaga.update({
-        where: { id },
-        data: { status },
+    const resultado = await prisma.$transaction(async (transaction) => {
+      const vaga = await transaction.vaga.update({ where: { id }, data: { status } });
+      if (status !== "FECHADA") return { vaga, dispensados: 0, entrevistasCanceladas: 0 };
+
+      const entrevistas = await transaction.aplicacao.updateMany({
+        where: {
+          vaga_id: id,
+          status_kanban: "ENTREVISTA_AGENDADA",
+          OR: [{ entrevista_status: null }, { entrevista_status: { in: ["AGUARDANDO", "CONFIRMADA"] } }],
+        },
+        data: { entrevista_status: "CANCELADA" },
       });
-
-      if (status === "FECHADA" || status === "SUSPENSA") {
-        // Entrevistas ainda em aberto dessas candidaturas ficam como canceladas na Agenda.
-        await transaction.aplicacao.updateMany({
-          where: {
-            vaga_id: id,
-            status_kanban: "ENTREVISTA_AGENDADA",
-            OR: [{ entrevista_status: null }, { entrevista_status: { in: ["AGUARDANDO", "CONFIRMADA"] } }],
-          },
-          data: { entrevista_status: "CANCELADA" },
-        });
-        await transaction.aplicacao.updateMany({
-          where: {
-            vaga_id: id,
-            status_kanban: { notIn: ["APROVADO", "RECUSADO"] },
-          },
-          data: {
-            status_kanban: "RECUSADO",
-            motivo_recusa: "Vaga preenchida",
-          },
-        });
-      }
-
-      return vagaAtualizada;
+      // updated_at (preenchido automaticamente) fica como a data da dispensa.
+      const dispensadas = await transaction.aplicacao.updateMany({
+        where: { vaga_id: id, status_kanban: { notIn: ["APROVADO", "RECUSADO"] } },
+        data: { status_kanban: "RECUSADO", motivo_recusa: motivo || MOTIVO_PADRAO_FECHAMENTO, data_aprovacao: null },
+      });
+      return { vaga, dispensados: dispensadas.count, entrevistasCanceladas: entrevistas.count };
     });
 
-    return res.json(vaga);
+    return res.json({ ...resultado.vaga, dispensados: resultado.dispensados, entrevistasCanceladas: resultado.entrevistasCanceladas });
   } catch (error) {
     if (error.code === "P2025") {
       return res.status(404).json({ erro: "Vaga não encontrada." });

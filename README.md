@@ -94,6 +94,8 @@ npm run test:banco-talentos   # "Indicar para vaga" (nova candidatura, sem dupli
 npm run test:resumos   # números dos cards de vagas e empresas; espaços extras tirados ao salvar
 npm run test:frente2   # turno, disponibilidade, semestre, formatura, nascimento, turno da vaga e observação
 npm run test:logos     # envio, troca e remoção da logo; recusa de SVG, de arquivos grandes e de formatos falsos
+npm run test:agenda    # agendamento com detalhes, conflito de horário, resumo da agenda e ações do painel
+npm run test:status-vaga   # suspender, fechar (motivo, dispensas, entrevistas canceladas) e reabrir vagas
 ```
 
 ## Dados de demonstração

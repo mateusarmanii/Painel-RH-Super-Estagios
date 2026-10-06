@@ -33,6 +33,8 @@ export default function EntityList({
   renderHeader,
   toolbarExtra,
   groupItems,
+  // Opcional: exclusão bloqueada pela API (409) — a tela mostra a explicação do jeito dela, em vez do aviso padrão.
+  onDeleteBlocked,
 }) {
   const [items, setItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -105,7 +107,12 @@ export default function EntityList({
 
       if (!response.ok) {
         const result = await response.json().catch(() => ({}));
-        throw new Error(result.erro ?? `Não foi possível excluir ${entityLabel.article} ${entityLabel.singular}.`);
+        const message = result.erro ?? `Não foi possível excluir ${entityLabel.article} ${entityLabel.singular}.`;
+        if (response.status === 409 && onDeleteBlocked) {
+          onDeleteBlocked(deletingItem, message);
+          return;
+        }
+        throw new Error(message);
       }
 
       setItems((current) => current.filter((item) => item.id !== deletingItem.id));
@@ -123,7 +130,7 @@ export default function EntityList({
   return (
     <section className="min-h-[calc(100vh-4rem)] px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto w-full max-w-7xl">
-        {renderHeader ? renderHeader({ items: visibleItems, isLoading }) : <PageHeader subtitle={subtitle} />}
+        {renderHeader ? renderHeader({ items: visibleItems, allItems: items, isLoading }) : <PageHeader subtitle={subtitle} />}
         <ListToolbar
           id={type}
           search={search}
