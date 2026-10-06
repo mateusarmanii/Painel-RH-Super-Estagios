@@ -1,6 +1,7 @@
-import { useCallback, useState } from "react";
-import { Link } from "react-router-dom";
-import { Pencil, Send, Trash2, UserRound } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { BriefcaseBusiness, KanbanSquare, Pencil, Send, Trash2, UserRound, X } from "lucide-react";
+import { API_URL as apiUrl } from "../api.js";
 import CandidaturaHistory from "../components/CandidaturaHistory.jsx";
 import EntityList from "../components/EntityList.jsx";
 import { IndicateDialog } from "../components/IndicateForm.jsx";
@@ -32,7 +33,7 @@ const vagaConfig = {
   },
   renderItem: (vaga) => (
     <>
-      <div className="mb-5 flex items-start gap-3 pr-20">
+      <div className="mb-5 flex items-start gap-3 pr-10">
         <span
           className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${statusStyles[vaga.status]}`}
         >
@@ -61,7 +62,7 @@ const empresaConfig = {
       <span className="mb-5 self-start rounded-full bg-marinho-50 px-2.5 py-1 text-xs font-semibold text-marinho-700">
         {empresa.setor}
       </span>
-      <h2 className="pr-20 text-lg font-semibold leading-6 text-marinho-900">{empresa.nome}</h2>
+      <h2 className="pr-10 text-lg font-semibold leading-6 text-marinho-900">{empresa.nome}</h2>
       <dl className="mt-auto space-y-1 pt-6 text-sm text-slate-600">
         <div><dt className="sr-only">Contato</dt><dd>{empresa.nome_contato}</dd></div>
         <div><dt className="sr-only">Telefone</dt><dd>{empresa.telefone_contato}</dd></div>
@@ -133,20 +134,85 @@ function renderEstudante(estudante, onOpenProfile) {
   );
 }
 
+function getVagaMenuItems(vaga, { edit, remove }, navigate) {
+  return [
+    { key: "kanban", label: "Abrir Kanban", icon: KanbanSquare, onClick: () => navigate(`/kanban/${vaga.id}`) },
+    { key: "edit", label: "Editar", icon: Pencil, onClick: edit },
+    { key: "delete", label: "Excluir", icon: Trash2, danger: true, onClick: remove },
+  ];
+}
+
+function getEmpresaMenuItems(empresa, { edit, remove }, navigate) {
+  return [
+    {
+      key: "jobs",
+      label: "Ver vagas da empresa",
+      icon: BriefcaseBusiness,
+      onClick: () => navigate(`/vagas?empresa=${empresa.id}`, { state: { empresaNome: empresa.nome } }),
+    },
+    { key: "edit", label: "Editar", icon: Pencil, onClick: edit },
+    { key: "delete", label: "Excluir", icon: Trash2, danger: true, onClick: remove },
+  ];
+}
+
+// "Ver vagas da empresa" chega aqui com ?empresa=<id>; o filtro aparece como etiqueta removível.
 export function VagasPage() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const empresaId = searchParams.get("empresa");
+  const [fetchedNames, setFetchedNames] = useState({});
+  const empresaNome = location.state?.empresaNome ?? fetchedNames[empresaId];
+
+  // Link aberto direto (sem o nome no estado da navegação): busca o nome da empresa.
+  useEffect(() => {
+    if (!empresaId || empresaNome) return;
+    fetch(`${apiUrl}/empresas`)
+      .then((response) => (response.ok ? response.json() : []))
+      .then((empresas) => {
+        const empresa = empresas.find((item) => item.id === empresaId);
+        if (empresa) setFetchedNames((names) => ({ ...names, [empresaId]: empresa.nome }));
+      })
+      .catch(() => {});
+  }, [empresaId, empresaNome]);
+
+  const filterItems = useCallback((vaga) => vaga.empresa_id === empresaId, [empresaId]);
+  const getMenuItems = useCallback((vaga, actions) => getVagaMenuItems(vaga, actions, navigate), [navigate]);
+
   return (
     <EntityList
+      key={empresaId ?? "todas"}
       type="vaga"
       endpoint="vagas"
       entityLabel={{ singular: "vaga", plural: "vagas", article: "a" }}
       searchPlaceholder="Buscar vaga por título ou Nº"
-      emptyMessage="Nenhuma vaga cadastrada."
+      emptyMessage={empresaId ? "Esta empresa ainda não tem vagas cadastradas." : "Nenhuma vaga cadastrada."}
       {...vagaConfig}
+      filterItems={empresaId ? filterItems : undefined}
+      subtitle={
+        empresaId && (
+          <span className="inline-flex items-center gap-1 rounded-full border border-marinho-200 bg-marinho-50 py-1 pl-3 pr-1 text-sm font-semibold text-marinho-800">
+            Empresa: {empresaNome ?? "selecionada"}
+            <Link
+              to="/vagas"
+              aria-label="Remover filtro de empresa"
+              title="Ver todas as vagas"
+              className="grid size-6 place-items-center rounded-full text-marinho-600 transition-colors hover:bg-marinho-100 hover:text-marinho-900"
+            >
+              <X size={14} />
+            </Link>
+          </span>
+        )
+      }
+      getMenuItems={getMenuItems}
     />
   );
 }
 
 export function EmpresasPage() {
+  const navigate = useNavigate();
+  const getMenuItems = useCallback((empresa, actions) => getEmpresaMenuItems(empresa, actions, navigate), [navigate]);
+
   return (
     <EntityList
       type="empresa"
@@ -155,6 +221,7 @@ export function EmpresasPage() {
       searchPlaceholder="Buscar empresa por nome"
       emptyMessage="Nenhuma empresa cadastrada."
       {...empresaConfig}
+      getMenuItems={getMenuItems}
     />
   );
 }
@@ -171,7 +238,7 @@ const empresaSemVagaConfig = {
         <span className="mb-5 self-start rounded-full bg-marinho-50 px-2.5 py-1 text-xs font-semibold text-marinho-700">
           {empresa.setor}
         </span>
-        <h2 className="pr-20 text-lg font-semibold leading-6 text-marinho-900">{empresa.nome}</h2>
+        <h2 className="pr-10 text-lg font-semibold leading-6 text-marinho-900">{empresa.nome}</h2>
         <p className="mt-2 text-sm text-slate-600">
           {lastJob ? (
             <>
@@ -208,6 +275,9 @@ const empresaSemVagaConfig = {
 };
 
 export function EmpresasSemVagaPage() {
+  const navigate = useNavigate();
+  const getMenuItems = useCallback((empresa, actions) => getEmpresaMenuItems(empresa, actions, navigate), [navigate]);
+
   return (
     <EntityList
       subtitle="Empresas parceiras sem nenhuma vaga aberta no momento — boas candidatas a um novo contato"
@@ -218,6 +288,7 @@ export function EmpresasSemVagaPage() {
       emptyMessage="Todas as empresas têm ao menos uma vaga aberta."
       filterItems={hasNoOpenJob}
       {...empresaSemVagaConfig}
+      getMenuItems={getMenuItems}
     />
   );
 }

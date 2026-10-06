@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ChevronDown, MoreHorizontal } from "lucide-react";
 
-// Menu "⋯" dos cards (Kanban, Estudantes, Banco de Talentos).
+// Menu "⋯" dos cards (Kanban, Estudantes, Banco de Talentos, Vagas e Empresas).
 // Celular: folha que sobe de baixo (não é cortada pelo card). Telas maiores: menu suspenso.
 // Cada item: { key, label, icon, onClick?, href?, danger?, disabled?, hint?, submenu?: [{ key, label, onClick }] }
 export default function ActionMenu({ label, title, items, wrapperProps }) {

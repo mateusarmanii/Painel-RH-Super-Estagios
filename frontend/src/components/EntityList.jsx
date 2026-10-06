@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
-import { Inbox, Pencil, SearchX, Trash2 } from "lucide-react";
+import { Inbox, SearchX } from "lucide-react";
 import ActionMenu from "./ActionMenu.jsx";
 import CreationForm from "./CreationForm.jsx";
 import EmptyState from "./EmptyState.jsx";
@@ -25,7 +25,7 @@ export default function EntityList({
   csvExport,
   filterItems,
   subtitle,
-  // Opcional: itens do menu "⋯" (recebe o item e as ações edit/remove). Substitui os botões soltos de editar e excluir.
+  // Itens do menu "⋯" de cada card (recebe o item e as ações edit/remove).
   getMenuItems,
 }) {
   const [items, setItems] = useState([]);
@@ -123,36 +123,13 @@ export default function EntityList({
                 key={item.id}
                 className="relative flex min-h-56 flex-col rounded-lg border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
               >
-                {getMenuItems ? (
-                  <div className="absolute right-3 top-3">
-                    <ActionMenu
-                      label={`Ações para ${getName(item)}`}
-                      title={getName(item)}
-                      items={getMenuItems(item, { edit: () => setEditingItem(item), remove: () => setDeletingItem(item) })}
-                    />
-                  </div>
-                ) : (
-                <div className="absolute right-3 top-3 flex gap-1">
-                  <button
-                    type="button"
-                    aria-label={`Editar ${getName(item)}`}
-                    title="Editar"
-                    onClick={() => setEditingItem(item)}
-                    className="grid size-8 place-items-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-marinho-700"
-                  >
-                    <Pencil size={16} />
-                  </button>
-                  <button
-                    type="button"
-                    aria-label={`Excluir ${getName(item)}`}
-                    title="Excluir"
-                    onClick={() => setDeletingItem(item)}
-                    className="grid size-8 place-items-center rounded-md text-rose-600 transition-colors hover:bg-rose-50 hover:text-rose-700"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                <div className="absolute right-3 top-3">
+                  <ActionMenu
+                    label={`Ações para ${getName(item)}`}
+                    title={getName(item)}
+                    items={getMenuItems(item, { edit: () => setEditingItem(item), remove: () => setDeletingItem(item) })}
+                  />
                 </div>
-                )}
                 {renderItem(item)}
               </article>
             ))}
