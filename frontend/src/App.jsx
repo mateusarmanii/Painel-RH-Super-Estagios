@@ -8,7 +8,7 @@ import ContratacoesPage from "./pages/Contratacoes.jsx";
 import BancoTalentosPage from "./pages/BancoTalentos.jsx";
 import VagasPage from "./pages/Vagas.jsx";
 import { EmpresasPage, EmpresasSemVagaPage } from "./pages/Empresas.jsx";
-import { EstudantesPage } from "./pages/Pages.jsx";
+import EstudantesPage from "./pages/Estudantes.jsx";
 import EstudantePerfilPage from "./pages/EstudantePerfil.jsx";
 
 export default function App() {
