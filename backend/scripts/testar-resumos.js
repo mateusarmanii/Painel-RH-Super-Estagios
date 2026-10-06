@@ -1,5 +1,5 @@
 // Testes dos números dos cards de Vagas e Empresas (candidatos por etapa, dias em aberto, alerta,
-// vagas abertas, em processo e contratados). Sobe a API na porta 3398, cria registros "[TESTE]" e remove tudo no final.
+// vagas abertas, em processo e contratados) e dos espaços extras tirados ao salvar. Sobe a API na porta 3398, cria registros "[TESTE]" e remove tudo no final.
 // ATENÇÃO: grava e apaga dados no banco do DATABASE_URL (só os registros que o próprio teste cria).
 const path = require("path");
 const { spawn } = require("child_process");
@@ -115,6 +115,27 @@ async function main() {
     checar("Contratados", e?.resumo.contratados === 1, `${e?.resumo.contratados}`);
     checar("Vagas da empresa continuam resumidas, sem candidaturas",
       e?.vagas.length === 4 && e.vagas.every((v) => !("aplicacoes" in v) && v.status && v.titulo));
+
+    console.log("\n== Espaços extras no começo e no fim são tirados ao salvar");
+    r = await req("PUT", `/empresas/${ids.empresa}`, { nome: "  [TESTE] Empresa Resumos  ", setor: " Saúde ",
+      nome_contato: "  Ana  Paula ", telefone_contato: " (31) 98888-7777 ", email_contato: " ana@teste.com " });
+    checar("Empresa: nome, setor, contato, telefone e e-mail aparados",
+      r.body?.nome === "[TESTE] Empresa Resumos" && r.body?.setor === "Saúde" && r.body?.nome_contato === "Ana  Paula"
+        && r.body?.telefone_contato === "(31) 98888-7777" && r.body?.email_contato === "ana@teste.com", JSON.stringify(r.body));
+    r = await req("PUT", `/vagas/${vagaNova.id}`, { codigo_vaga: vagaNova.codigo_vaga, titulo: "  [TESTE] Vaga nova ",
+      descricao: " Teste ", valor: 1000, empresa_id: ids.empresa });
+    checar("Vaga: título e descrição aparados", r.body?.titulo === "[TESTE] Vaga nova" && r.body?.descricao === "Teste",
+      `"${r.body?.titulo}"`);
+    r = await req("POST", "/candidatos", { nome_completo: "   [TESTE] Estudante espaços  ", telefone: " 000 ",
+      curso: " Direito ", instituicao_ensino: " UFMG ", horario_estudo: "NOITE", vaga_id: vagaNova.id });
+    if (r.body?.id) ids.estudantes.push(r.body.id);
+    checar("Estudante: nome, curso e instituição aparados",
+      r.body?.nome_completo === "[TESTE] Estudante espaços" && r.body?.curso === "Direito" && r.body?.instituicao_ensino === "UFMG",
+      `"${r.body?.nome_completo}"`);
+    r = await req("POST", "/empresas", { nome: "    ", setor: "Teste", nome_contato: "Teste", telefone_contato: "000",
+      email_contato: "teste@teste.com" });
+    if (r.body?.id) await prisma.empresa.delete({ where: { id: r.body.id } });
+    checar("Nome só com espaços é recusado como vazio", r.status === 400, `[${r.status}]`);
   } finally {
     await prisma.aplicacao.deleteMany({ where: { estudante_id: { in: ids.estudantes } } }).catch(() => {});
     await prisma.estudante.deleteMany({ where: { id: { in: ids.estudantes } } }).catch(() => {});

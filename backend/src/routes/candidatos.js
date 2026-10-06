@@ -1,9 +1,9 @@
 const express = require("express");
 const prisma = require("../prisma");
 const { uuidValido, pluralizar } = require("../utils");
+const { camposEstudante, observacao } = require("../campos");
 
 const router = express.Router();
-const horariosValidos = new Set(["MANHA", "TARDE", "NOITE"]);
 const statusKanbanValidos = new Set([
   "ENVIADO_EMPRESA",
   "ENTREVISTA_AGENDADA",
@@ -23,6 +23,7 @@ router.get("/", async (_req, res) => {
             status_kanban: true,
             data_hora_entrevista: true,
             motivo_recusa: true,
+            observacao: true,
             data_aprovacao: true,
             created_at: true,
             // Enquanto RECUSADO, a última atualização corresponde à data da dispensa (Banco de Talentos).
@@ -109,6 +110,38 @@ router.patch("/:id", async (req, res) => {
   }
 });
 
+// Observação livre da candidatura (menu "⋯" do Kanban). Vazia apaga; não interfere na etapa nem no motivo da dispensa.
+router.put("/:id/candidaturas/:aplicacaoId/observacao", async (req, res) => {
+  const { id, aplicacaoId } = req.params;
+
+  if (!uuidValido.test(id) || !uuidValido.test(aplicacaoId)) {
+    return res.status(400).json({ erro: "ID de candidato ou aplicação inválido." });
+  }
+
+  const campo = observacao(req.body?.observacao);
+  if (campo.erro) return res.status(400).json({ erro: campo.erro });
+
+  try {
+    const aplicacao = await prisma.aplicacao.findFirst({
+      where: { id: aplicacaoId, estudante_id: id },
+      select: { id: true },
+    });
+    if (!aplicacao) {
+      return res.status(404).json({ erro: "Aplicação não encontrada para este candidato." });
+    }
+
+    const atualizada = await prisma.aplicacao.update({
+      where: { id: aplicacao.id },
+      data: campo.data,
+      select: { id: true, status_kanban: true, motivo_recusa: true, observacao: true },
+    });
+    return res.json(atualizada);
+  } catch (error) {
+    console.error("Erro ao salvar observação:", error);
+    return res.status(500).json({ erro: "Não foi possível salvar a observação." });
+  }
+});
+
 // Indica um estudante já cadastrado para outra vaga (Banco de Talentos): nova candidatura em ENVIADO_EMPRESA.
 router.post("/:id/candidaturas", async (req, res) => {
   const { id } = req.params;
@@ -155,7 +188,6 @@ router.post("/", async (req, res) => {
     instituicao_ensino,
     link_curriculo,
     endereco,
-    horario_estudo,
     anotacoes_recrutador,
     vaga_id,
   } = req.body ?? {};
@@ -166,9 +198,8 @@ router.post("/", async (req, res) => {
     });
   }
 
-  if (!horariosValidos.has(horario_estudo)) {
-    return res.status(400).json({ erro: "Horário de estudo inválido." });
-  }
+  const extras = camposEstudante(req.body);
+  if (extras.erro) return res.status(400).json({ erro: extras.erro });
 
   if (!uuidValido.test(vaga_id)) {
     return res.status(400).json({ erro: "ID de vaga inválido." });
@@ -202,8 +233,8 @@ router.post("/", async (req, res) => {
           instituicao_ensino,
           link_curriculo,
           endereco,
-          horario_estudo,
           anotacoes_recrutador,
+          ...extras.data,
           aplicacoes: { create: { vaga: { connect: { id: vaga_id } } } },
         },
         include: { aplicacoes: true },
@@ -232,7 +263,6 @@ router.put("/:id", async (req, res) => {
     instituicao_ensino,
     link_curriculo,
     endereco,
-    horario_estudo,
     anotacoes_recrutador,
   } = req.body ?? {};
 
@@ -246,9 +276,8 @@ router.put("/:id", async (req, res) => {
     });
   }
 
-  if (!horariosValidos.has(horario_estudo)) {
-    return res.status(400).json({ erro: "Horário de estudo inválido." });
-  }
+  const extras = camposEstudante(req.body);
+  if (extras.erro) return res.status(400).json({ erro: extras.erro });
 
   try {
     const candidato = await prisma.estudante.update({
@@ -261,8 +290,8 @@ router.put("/:id", async (req, res) => {
         instituicao_ensino,
         link_curriculo,
         endereco,
-        horario_estudo,
         anotacoes_recrutador,
+        ...extras.data,
       },
     });
 

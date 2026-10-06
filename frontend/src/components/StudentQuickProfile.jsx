@@ -4,8 +4,7 @@ import { Mail, Phone } from "lucide-react";
 import CandidaturaHistory from "./CandidaturaHistory.jsx";
 import { API_URL as apiUrl } from "../api.js";
 import { formatPhone } from "../text.js";
-
-const horarioTexto = { MANHA: "estuda de manhã", TARDE: "estuda à tarde", NOITE: "estuda à noite" };
+import { ageFrom, availabilityText, formatMonthYear, studyShiftPhrase } from "../estudante.js";
 
 // Perfil resumido em modal (dados, contato, anotações e histórico).
 // Provisório: a página completa /estudantes/:id chega na Frente 3.
@@ -39,8 +38,20 @@ export default function StudentQuickProfile({ studentId, onClose }) {
     <div>
       <p className="text-lg font-extrabold text-marinho-900">{student.nome_completo}</p>
       <p className="text-sm text-slate-600">
-        {student.curso} · {student.instituicao_ensino} · {horarioTexto[student.horario_estudo]}
+        {[student.curso, student.instituicao_ensino, studyShiftPhrase(student)].filter(Boolean).join(" · ")}
       </p>
+      {(student.semestre_atual || student.previsao_formatura || student.data_nascimento || student.disponibilidade?.length > 0) && (
+        <p className="mt-1 text-sm text-slate-600">
+          {[
+            student.semestre_atual && `${student.semestre_atual}º semestre`,
+            student.previsao_formatura && `forma em ${formatMonthYear(student.previsao_formatura)}`,
+            student.data_nascimento && `${ageFrom(student.data_nascimento)} anos`,
+            student.disponibilidade?.length > 0 && `disponível: ${availabilityText(student.disponibilidade).toLowerCase()}`,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+        </p>
+      )}
       <div className="mt-3 space-y-1 text-sm text-slate-700">
         <p className="flex items-center gap-2"><Phone size={14} className="text-slate-400" /> {formatPhone(student.telefone)}</p>
         {student.email && <p className="flex items-center gap-2 break-all"><Mail size={14} className="text-slate-400" /> {student.email}</p>}

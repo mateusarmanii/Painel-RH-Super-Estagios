@@ -7,13 +7,14 @@ const empresasRoutes = require("./src/routes/empresas");
 const vagasRoutes = require("./src/routes/vagas");
 const candidatosRoutes = require("./src/routes/candidatos");
 const entrevistasRoutes = require("./src/routes/entrevistas");
-const { DIA_MS, DIAS_PARA_ALERTA } = require("./src/utils");
+const { DIA_MS, DIAS_PARA_ALERTA, aparaTextos } = require("./src/utils");
 
 const app = express();
 const port = Number(process.env.PORT) || 3333;
 
 app.use(cors());
 app.use(express.json());
+app.use(aparaTextos);
 
 app.get("/", (_req, res) => {
   res.json({ status: "ok", mensagem: "API Super Estágios" });

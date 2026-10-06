@@ -6,9 +6,8 @@ import { IndicateDialog } from "../components/IndicateForm.jsx";
 import Modal from "../components/Modal.jsx";
 import StudentQuickProfile from "../components/StudentQuickProfile.jsx";
 import { kanbanStatusLabels } from "../kanbanStatus.js";
-
-
-const horarioLabels = { MANHA: "Manhã", TARDE: "Tarde", NOITE: "Noite" };
+import { formatPhone } from "../text.js";
+import { availabilityText, formatDate, formatMonthYear, studyShiftLabel } from "../estudante.js";
 
 const estudanteConfig = {
   getSearchText: (estudante) => estudante.nome_completo,
@@ -20,9 +19,13 @@ const estudanteConfig = {
       { header: "Nome", value: (estudante) => estudante.nome_completo },
       { header: "Curso", value: (estudante) => estudante.curso },
       { header: "Instituição de ensino", value: (estudante) => estudante.instituicao_ensino },
-      { header: "Telefone", value: (estudante) => estudante.telefone },
+      { header: "Telefone", value: (estudante) => formatPhone(estudante.telefone) },
       { header: "E-mail", value: (estudante) => estudante.email },
-      { header: "Horário de estudo", value: (estudante) => horarioLabels[estudante.horario_estudo] },
+      { header: "Turno de estudo", value: (estudante) => studyShiftLabel(estudante) },
+      { header: "Disponibilidade", value: (estudante) => availabilityText(estudante.disponibilidade) },
+      { header: "Semestre atual", value: (estudante) => estudante.semestre_atual },
+      { header: "Previsão de formatura", value: (estudante) => formatMonthYear(estudante.previsao_formatura) },
+      { header: "Data de nascimento", value: (estudante) => formatDate(estudante.data_nascimento) },
       { header: "Endereço", value: (estudante) => estudante.endereco },
       { header: "Currículo", value: (estudante) => estudante.link_curriculo },
       { header: "Candidaturas", value: (estudante) => estudante.aplicacoes?.length ?? 0 },
@@ -42,9 +45,18 @@ const estudanteConfig = {
 function renderEstudante(estudante, onOpenProfile) {
   return (
     <>
-      <span className="mb-5 self-start rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
-        {horarioLabels[estudante.horario_estudo]}
-      </span>
+      <div className="mb-5 flex flex-wrap gap-1.5 pr-10">
+        {studyShiftLabel(estudante) && (
+          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600" title="Turno de estudo">
+            {studyShiftLabel(estudante)}
+          </span>
+        )}
+        {estudante.semestre_atual && (
+          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+            {estudante.semestre_atual}º semestre
+          </span>
+        )}
+      </div>
       <h2 className="pr-10 text-lg font-semibold leading-6">
         <button
           type="button"
@@ -57,6 +69,13 @@ function renderEstudante(estudante, onOpenProfile) {
       </h2>
       <p className="mt-2 text-sm text-slate-600">{estudante.curso}</p>
       <p className="text-sm text-slate-500">{estudante.instituicao_ensino}</p>
+      {(estudante.disponibilidade?.length > 0 || estudante.previsao_formatura) && (
+        <p className="mt-2 text-xs text-slate-500">
+          {estudante.disponibilidade?.length > 0 && <>Disponível: <span className="font-semibold text-slate-700">{availabilityText(estudante.disponibilidade)}</span></>}
+          {estudante.disponibilidade?.length > 0 && estudante.previsao_formatura && " · "}
+          {estudante.previsao_formatura && <>Forma em <span className="font-semibold text-slate-700">{formatMonthYear(estudante.previsao_formatura)}</span></>}
+        </p>
+      )}
       {estudante.anotacoes_recrutador && (
         <p className="mt-3 line-clamp-2 border-l-2 border-amber-300 pl-2 text-sm italic text-slate-600">
           {estudante.anotacoes_recrutador}

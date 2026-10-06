@@ -12,6 +12,7 @@
     "test:etapa2d": "node scripts/testar-etapa2d.js",
     "test:banco-talentos": "node scripts/testar-banco-talentos.js",
     "test:resumos": "node scripts/testar-resumos.js",
+    "test:frente2": "node scripts/testar-frente2.js",
     "demo:criar": "node scripts/seed-demo.js",
     "demo:limpar": "node scripts/limpar-demo.js"
   },

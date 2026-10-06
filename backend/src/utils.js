@@ -32,4 +32,15 @@ function resumirVaga(vaga, aplicacoes, agora = new Date()) {
   };
 }
 
-module.exports = { uuidValido, pluralizar, resumirCandidaturas, resumirVaga, DIA_MS, DIAS_PARA_ALERTA };
+// Tira os espaços do começo e do fim de todos os textos enviados ao salvar (empresas, vagas, estudantes...).
+// Um campo só com espaços vira "" e cai na validação de campo obrigatório.
+function aparaTextos(req, _res, next) {
+  if (["POST", "PUT", "PATCH"].includes(req.method) && req.body && typeof req.body === "object" && !Array.isArray(req.body)) {
+    for (const [campo, valor] of Object.entries(req.body)) {
+      if (typeof valor === "string") req.body[campo] = valor.trim();
+    }
+  }
+  next();
+}
+
+module.exports = { uuidValido, pluralizar, resumirCandidaturas, resumirVaga, aparaTextos, DIA_MS, DIAS_PARA_ALERTA };

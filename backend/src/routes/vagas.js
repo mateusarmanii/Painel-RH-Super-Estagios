@@ -1,6 +1,7 @@
 const express = require("express");
 const prisma = require("../prisma");
 const { uuidValido, pluralizar, resumirVaga } = require("../utils");
+const { turnoVaga } = require("../campos");
 
 const router = express.Router();
 const statusVagaValidos = new Set(["ABERTA", "FECHADA", "SUSPENSA"]);
@@ -77,9 +78,12 @@ router.post("/", async (req, res) => {
     return res.status(400).json({ erro: "Status de vaga inválido." });
   }
 
+  const turno = turnoVaga(req.body);
+  if (turno.erro) return res.status(400).json({ erro: turno.erro });
+
   try {
     const vaga = await prisma.vaga.create({
-      data: { codigo_vaga, titulo, descricao, valor, empresa_id, ...(status && { status }) },
+      data: { codigo_vaga, titulo, descricao, valor, empresa_id, ...turno.data, ...(status && { status }) },
       include: { empresa: true },
     });
 
@@ -160,10 +164,13 @@ router.put("/:id", async (req, res) => {
     return res.status(400).json({ erro: "ID de empresa inválido." });
   }
 
+  const turno = turnoVaga(req.body);
+  if (turno.erro) return res.status(400).json({ erro: turno.erro });
+
   try {
     const vaga = await prisma.vaga.update({
       where: { id },
-      data: { codigo_vaga, titulo, descricao, valor, empresa_id },
+      data: { codigo_vaga, titulo, descricao, valor, empresa_id, ...turno.data },
       include: { empresa: true },
     });
 

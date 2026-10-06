@@ -19,6 +19,39 @@ enum StatusVaga {
   SUSPENSA
 }
 
+enum TurnoEstudo {
+  MANHA
+  TARDE
+  NOITE
+  INTEGRAL
+  EAD
+}
+
+enum Periodo {
+  MANHA
+  TARDE
+  NOITE
+}
+
+enum TurnoVaga {
+  MANHA
+  TARDE
+  INTEGRAL
+}
+
+enum EntrevistaStatus {
+  AGUARDANDO
+  CONFIRMADA
+  REALIZADA
+  NAO_COMPARECEU
+  CANCELADA
+}
+
+enum EntrevistaFormato {
+  PRESENCIAL
+  ONLINE
+}
+
 enum StatusKanban {
   ENVIADO_EMPRESA
   ENTREVISTA_AGENDADA
@@ -34,6 +67,7 @@ model Empresa {
   nome_contato     String
   telefone_contato String
   email_contato    String?
+  logo_url         String?
   vagas            Vaga[]
 }
 
@@ -46,8 +80,14 @@ model Estudante {
   instituicao_ensino   String
   link_curriculo       String?
   endereco             String?
-  horario_estudo       HorarioEstudo
+  // Campo antigo, mantido como histórico; as telas usam turno_estudo.
+  horario_estudo       HorarioEstudo?
   anotacoes_recrutador String?       @db.Text
+  turno_estudo         TurnoEstudo?
+  disponibilidade      Periodo[]     @default([])
+  semestre_atual       Int?
+  previsao_formatura   DateTime?     @db.Date
+  data_nascimento      DateTime?     @db.Date
   aplicacoes           Aplicacao[]
 }
 
@@ -58,6 +98,7 @@ model Vaga {
   descricao   String
   valor       Float
   status      StatusVaga  @default(ABERTA)
+  turno       TurnoVaga?
   empresa_id  String      @db.Uuid
   created_at  DateTime    @default(now())
   empresa     Empresa     @relation(fields: [empresa_id], references: [id])
@@ -72,6 +113,12 @@ model Aplicacao {
   data_hora_entrevista DateTime?
   motivo_recusa        String?
   data_aprovacao       DateTime?
+  observacao           String?            @db.Text
+  entrevista_status    EntrevistaStatus?
+  entrevista_formato   EntrevistaFormato?
+  entrevista_local     String?
+  entrevista_duracao   Int?               @default(45)
+  entrevistador        String?
   created_at           DateTime     @default(now())
   updated_at           DateTime     @default(now()) @updatedAt
   vaga                 Vaga         @relation(fields: [vaga_id], references: [id])

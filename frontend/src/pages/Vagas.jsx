@@ -9,11 +9,10 @@ import { csvDate, csvDecimal } from "../csv.js";
 import { normalize, plural } from "../text.js";
 import { buttonPrimary, buttonSecondary } from "../ui.js";
 import { API_URL as apiUrl } from "../api.js";
+import { turnoVagaLabels } from "../estudante.js";
 
 const currency = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 
-// Turno da vaga (chega na Frente 2; até lá a etiqueta não aparece).
-const turnoLabels = { MANHA: "Manhã", TARDE: "Tarde", INTEGRAL: "Integral" };
 
 // Texto do mini funil: só as etapas com alguém, na ordem do Kanban.
 const funnelWords = {
@@ -100,7 +99,7 @@ function renderVaga(vaga) {
 
       <div className="mt-3 flex flex-wrap gap-1.5">
         <span className={`${tagBase} bg-marinho-50 text-marinho-800`}>{currency.format(vaga.valor)}</span>
-        {vaga.turno && <span className={`${tagBase} bg-marinho-50 text-marinho-800`}>{turnoLabels[vaga.turno] ?? vaga.turno}</span>}
+        {vaga.turno && <span className={`${tagBase} bg-marinho-50 text-marinho-800`}>{turnoVagaLabels[vaga.turno] ?? vaga.turno}</span>}
         <AgeTag vaga={vaga} />
       </div>
 
@@ -126,6 +125,7 @@ const csvExport = {
     { header: "Empresa", value: (vaga) => vaga.empresa?.nome },
     { header: "Status", value: (vaga) => statusLabels[vaga.status] },
     { header: "Bolsa-auxílio (R$)", value: (vaga) => csvDecimal(vaga.valor) },
+    { header: "Turno", value: (vaga) => turnoVagaLabels[vaga.turno] },
     { header: "Candidatos", value: (vaga) => vaga.resumo?.total ?? 0 },
     { header: "Criada em", value: (vaga) => csvDate(vaga.created_at) },
     { header: "Descrição", value: (vaga) => vaga.descricao },

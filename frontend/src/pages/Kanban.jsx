@@ -8,6 +8,7 @@ import {
   CalendarClock,
   MessageSquarePlus,
   MessageSquareX,
+  StickyNote,
   Send,
   UserRound,
 } from "lucide-react";
@@ -37,6 +38,9 @@ import { statusLabels, statusStyles } from "../vagaStatus.js";
 import { dateTimeFormat, kanbanStatusLabels, toDateTimeInputValue } from "../kanbanStatus.js";
 import { API_URL as apiUrl } from "../api.js";
 import { getInitials } from "../text.js";
+import { turnoVagaLabels } from "../estudante.js";
+
+const TAMANHO_MAXIMO_OBSERVACAO = 1000;
 
 const columns = [
   {
@@ -101,11 +105,9 @@ function CardMenu({ candidate, onAction }) {
         { key: "profile", label: "Ver perfil", icon: UserRound, onClick: () => onAction("profile", candidate) },
         {
           key: "note",
-          label: "Adicionar observação",
+          label: candidate.observacao ? "Editar observação" : "Adicionar observação",
           icon: MessageSquarePlus,
-          disabled: true,
-          hint: "em breve",
-          disabledReason: "Disponível depois da Frente 2 (campo de observação na candidatura)",
+          onClick: () => onAction("note", candidate),
         },
         { key: "indicate", label: "Indicar para outra vaga", icon: Send, onClick: () => onAction("indicate", candidate) },
         {
@@ -172,6 +174,13 @@ function StudentCard({ candidate, onAction }) {
         <p className="mt-3 flex items-center gap-1.5 rounded bg-violet-50 px-2 py-1 text-xs font-medium text-violet-800">
           <CalendarClock size={14} className="shrink-0" />
           {dateTimeFormat.format(new Date(candidate.dataEntrevista))}
+        </p>
+      )}
+
+      {candidate.observacao && (
+        <p className="mt-3 flex items-start gap-1.5 rounded border-l-2 border-marinho-300 bg-slate-50 px-2 py-1 text-xs text-slate-700">
+          <StickyNote size={14} className="mt-px shrink-0 text-marinho-500" aria-label="Observação" />
+          <span className="line-clamp-3 whitespace-pre-line">{candidate.observacao}</span>
         </p>
       )}
 
@@ -302,6 +311,91 @@ function MoveDetailsForm({ move, onConfirm, onCancel }) {
   );
 }
 
+// Observação livre da candidatura (opcional; não substitui o motivo da dispensa).
+function NoteForm({ candidate, onSaved, onCancel }) {
+  const [value, setValue] = useState(candidate.observacao ?? "");
+  const [isSaving, setIsSaving] = useState(false);
+
+  async function save(observacao) {
+    setIsSaving(true);
+    try {
+      const response = await fetch(
+        `${apiUrl}/candidatos/${candidate.id}/candidaturas/${candidate.applicationId}/observacao`,
+        { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ observacao }) },
+      );
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.erro ?? "Não foi possível salvar a observação.");
+      toast.success(result.observacao ? "Observação salva." : "Observação removida.");
+      onSaved(result.observacao);
+    } catch (saveError) {
+      toast.error(saveError.message);
+      setIsSaving(false);
+    }
+  }
+
+  return (
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        save(value.trim());
+      }}
+      className="space-y-4"
+    >
+      <p className="text-sm text-slate-700">
+        Observação sobre <strong className="font-semibold text-marinho-900">{candidate.nome}</strong> nesta vaga.
+        Fica visível no cartão do Kanban.
+      </p>
+      <label htmlFor="kanban-note" className="block space-y-1.5">
+        <span className="text-sm font-medium text-slate-700">Observação</span>
+        <textarea
+          id="kanban-note"
+          rows={5}
+          autoFocus
+          maxLength={TAMANHO_MAXIMO_OBSERVACAO}
+          value={value}
+          onChange={(event) => setValue(event.target.value)}
+          placeholder="Ex.: prefere estágio no centro, pediu retorno até sexta..."
+          className="w-full resize-y rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-marinho-600 focus:ring-2 focus:ring-ambar-400/40"
+        />
+        <span className="block text-right text-xs text-slate-500">
+          {value.length}/{TAMANHO_MAXIMO_OBSERVACAO}
+        </span>
+      </label>
+      <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+        {candidate.observacao ? (
+          <button
+            type="button"
+            onClick={() => save("")}
+            disabled={isSaving}
+            className="h-10 rounded-md px-3 text-sm font-semibold text-rose-700 transition-colors hover:bg-rose-50 disabled:opacity-50"
+          >
+            Remover observação
+          </button>
+        ) : (
+          <span />
+        )}
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={isSaving}
+            className="h-10 rounded-md border border-slate-300 bg-white px-4 text-sm font-semibold text-marinho-800 transition-colors hover:bg-marinho-50 disabled:opacity-50"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            disabled={isSaving || (!value.trim() && !candidate.observacao)}
+            className="h-10 rounded-md bg-ambar-400 px-4 text-sm font-bold text-marinho-900 transition-colors hover:bg-ambar-500 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isSaving ? "A guardar..." : "Salvar"}
+          </button>
+        </div>
+      </div>
+    </form>
+  );
+}
+
 // /kanban sem ID: escolher de qual vaga abrir o quadro.
 function VagaPicker() {
   const [vagas, setVagas] = useState([]);
@@ -379,6 +473,7 @@ function toCandidate(application, index) {
     coluna: columnByStatus[application.status_kanban],
     dataEntrevista: application.data_hora_entrevista,
     motivo: application.motivo_recusa,
+    observacao: application.observacao,
     avatar: avatarStyles[index % avatarStyles.length],
   };
 }
@@ -391,6 +486,7 @@ function KanbanBoard({ vagaId }) {
   const [pendingMove, setPendingMove] = useState(null);
   const [profileId, setProfileId] = useState(null);
   const [indicating, setIndicating] = useState(null);
+  const [noting, setNoting] = useState(null);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
@@ -508,6 +604,7 @@ function KanbanBoard({ vagaId }) {
   function handleCardAction(action, candidate, payload) {
     if (action === "profile") setProfileId(candidate.id);
     if (action === "indicate") setIndicating(candidate);
+    if (action === "note") setNoting(candidate);
     if (action === "move") requestMove(candidate, payload);
   }
 
@@ -543,6 +640,7 @@ function KanbanBoard({ vagaId }) {
             {vaga && (
               <p className="truncate text-sm text-slate-600">
                 {vaga.empresa?.nome} · Nº {vaga.codigo_vaga}
+                {vaga.turno && ` · ${turnoVagaLabels[vaga.turno]}`}
               </p>
             )}
           </div>
@@ -595,6 +693,20 @@ function KanbanBoard({ vagaId }) {
 
       <Modal isOpen={Boolean(profileId)} title="Perfil do estudante" onClose={() => setProfileId(null)}>
         {profileId && <StudentQuickProfile studentId={profileId} onClose={() => setProfileId(null)} />}
+      </Modal>
+
+      <Modal isOpen={Boolean(noting)} title={noting?.observacao ? "Editar observação" : "Adicionar observação"} onClose={() => setNoting(null)}>
+        {noting && (
+          <NoteForm
+            key={noting.applicationId}
+            candidate={noting}
+            onSaved={(observacao) => {
+              placeCandidate(noting.applicationId, { observacao });
+              setNoting(null);
+            }}
+            onCancel={() => setNoting(null)}
+          />
+        )}
       </Modal>
 
       <Modal isOpen={Boolean(indicating)} title="Indicar para outra vaga" onClose={() => setIndicating(null)}>

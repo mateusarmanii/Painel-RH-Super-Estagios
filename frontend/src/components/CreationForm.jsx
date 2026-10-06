@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { API_URL as apiUrl } from "../api.js";
+import { periodoLabels, toDateInput, toMonthInput, turnoEstudoLabels, turnoVagaLabels } from "../estudante.js";
+
+const toOptions = (labels) => Object.entries(labels).map(([id, label]) => ({ id, label }));
 
 const endpoints = { empresa: "empresas", vaga: "vagas", estudante: "candidatos" };
 const successMessages = {
@@ -23,6 +26,7 @@ const fieldSets = {
     { name: "descricao", label: "Descrição", type: "textarea", placeholder: "Descreva as responsabilidades" },
     { name: "valor", label: "Bolsa-auxílio", type: "number", placeholder: "0,00", min: "0", step: "0.01" },
     { name: "empresa_id", label: "Empresa", type: "select", optionsKey: "empresas" },
+    { name: "turno", label: "Turno", type: "select", options: toOptions(turnoVagaLabels), optional: true },
   ],
   estudante: [
     { name: "nome_completo", label: "Nome", placeholder: "Nome completo" },
@@ -30,16 +34,17 @@ const fieldSets = {
     { name: "email", label: "E-mail", type: "email", placeholder: "estudante@email.com", optional: true },
     { name: "telefone", label: "Telefone", type: "tel", placeholder: "(00) 00000-0000" },
     { name: "instituicao_ensino", label: "Instituição de ensino", placeholder: "Nome da instituição" },
+    { name: "turno_estudo", label: "Turno de estudo", type: "select", options: toOptions(turnoEstudoLabels), optional: true, half: true },
+    { name: "semestre_atual", label: "Semestre atual", type: "integer", min: "1", max: "12", placeholder: "Ex.: 5", optional: true, half: true },
     {
-      name: "horario_estudo",
-      label: "Horário de estudo",
-      type: "select",
-      options: [
-        { id: "MANHA", label: "Manhã" },
-        { id: "TARDE", label: "Tarde" },
-        { id: "NOITE", label: "Noite" },
-      ],
+      name: "disponibilidade",
+      label: "Disponibilidade para estagiar",
+      type: "checkboxes",
+      options: toOptions(periodoLabels),
+      optional: true,
     },
+    { name: "previsao_formatura", label: "Previsão de formatura", type: "month", optional: true, half: true },
+    { name: "data_nascimento", label: "Data de nascimento", type: "date", optional: true, half: true },
     // A vaga só é escolhida no cadastro; depois, as candidaturas são geridas pelo Kanban.
     { name: "vaga_id", label: "Vaga", type: "select", optionsKey: "vagas", createOnly: true },
     {
@@ -53,14 +58,28 @@ const fieldSets = {
   ],
 };
 
-function initialFormState(type, initialData) {
-  if (!initialData) return { horario_estudo: "NOITE" };
+// Valor do campo no formulário a partir do que veio da API.
+function toFormValue(field, value) {
+  if (field.type === "checkboxes") return value ?? [];
+  if (value == null) return "";
+  if (field.type === "month") return toMonthInput(value);
+  if (field.type === "date") return toDateInput(value);
+  return String(value);
+}
 
-  return Object.fromEntries(
-    fieldSets[type]
-      .filter((field) => !field.createOnly)
-      .map((field) => [field.name, initialData[field.name] == null ? "" : String(initialData[field.name])]),
-  );
+// Valor enviado à API (opcional em branco vira null; o backend apaga o campo).
+function toPayloadValue(field, value) {
+  if (field.type === "checkboxes") return value ?? [];
+  const text = value ?? "";
+  if (field.name === "valor") return Number(text);
+  if (field.optional && text.trim() === "") return null;
+  if (field.type === "integer") return Number(text);
+  return text;
+}
+
+function initialFormState(type, initialData) {
+  const fields = fieldSets[type].filter((field) => !(initialData && field.createOnly));
+  return Object.fromEntries(fields.map((field) => [field.name, toFormValue(field, initialData?.[field.name])]));
 }
 
 export default function CreationForm({ type, initialData, onSuccess }) {
@@ -107,18 +126,18 @@ export default function CreationForm({ type, initialData, onSuccess }) {
     setForm((current) => ({ ...current, [name]: value }));
   }
 
+  function toggleOption(name, option) {
+    setForm((current) => {
+      const selected = current[name] ?? [];
+      return { ...current, [name]: selected.includes(option) ? selected.filter((item) => item !== option) : [...selected, option] };
+    });
+  }
+
   async function handleSubmit(event) {
     event.preventDefault();
     setIsSubmitting(true);
 
-    const payload = Object.fromEntries(
-      fields.map((field) => {
-        const value = form[field.name] ?? "";
-        if (field.name === "valor") return [field.name, Number(value)];
-        if (field.optional && value.trim() === "") return [field.name, null];
-        return [field.name, value];
-      }),
-    );
+    const payload = Object.fromEntries(fields.map((field) => [field.name, toPayloadValue(field, form[field.name])]));
 
     try {
       const response = await fetch(
@@ -145,7 +164,7 @@ export default function CreationForm({ type, initialData, onSuccess }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
       {fields.map((field) => {
         const commonProps = {
           id: `${type}-${field.name}`,
@@ -155,13 +174,49 @@ export default function CreationForm({ type, initialData, onSuccess }) {
           required: !field.optional,
           className: "h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-marinho-600 focus:ring-2 focus:ring-ambar-400/40",
         };
+        const labelText = (
+          <span className="text-sm font-medium text-slate-700">
+            {field.label}
+            {field.optional && <span className="font-normal text-slate-400"> (opcional)</span>}
+          </span>
+        );
+        const span = field.half ? "" : "sm:col-span-2";
+
+        if (field.type === "checkboxes") {
+          const selected = form[field.name] ?? [];
+          return (
+            <fieldset key={field.name} className={`space-y-1.5 ${span}`}>
+              <legend className="mb-1.5">{labelText}</legend>
+              <div className="flex flex-wrap gap-2">
+                {field.options.map((option) => {
+                  const checked = selected.includes(option.id);
+                  return (
+                    <label
+                      key={option.id}
+                      className={`inline-flex h-10 cursor-pointer items-center gap-2 rounded-md border px-3 text-sm font-semibold transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ambar-400/60 ${
+                        checked ? "border-marinho-700 bg-marinho-50 text-marinho-900" : "border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        name={field.name}
+                        value={option.id}
+                        checked={checked}
+                        onChange={() => toggleOption(field.name, option.id)}
+                        className="size-4 accent-marinho-800"
+                      />
+                      {option.label}
+                    </label>
+                  );
+                })}
+              </div>
+            </fieldset>
+          );
+        }
 
         return (
-          <label key={field.name} htmlFor={commonProps.id} className="block space-y-1.5">
-            <span className="text-sm font-medium text-slate-700">
-              {field.label}
-              {field.optional && <span className="font-normal text-slate-400"> (opcional)</span>}
-            </span>
+          <label key={field.name} htmlFor={commonProps.id} className={`block space-y-1.5 ${span}`}>
+            {labelText}
             {field.type === "textarea" ? (
               <textarea
                 {...commonProps}
@@ -172,7 +227,9 @@ export default function CreationForm({ type, initialData, onSuccess }) {
             ) : field.type === "select" ? (
               <select {...commonProps}>
                 <option value="">
-                  {isLoadingOptions && field.optionsKey
+                  {field.optional && field.options
+                    ? "Não informado"
+                    : isLoadingOptions && field.optionsKey
                     ? "A carregar..."
                     : options.length === 0 && field.optionsKey === "empresas"
                       ? "Cadastre uma empresa primeiro"
@@ -192,19 +249,20 @@ export default function CreationForm({ type, initialData, onSuccess }) {
             ) : (
               <input
                 {...commonProps}
-                type={field.type ?? "text"}
+                type={field.type === "integer" ? "number" : field.type ?? "text"}
                 placeholder={field.placeholder}
                 pattern={field.pattern}
                 maxLength={field.maxLength}
                 min={field.min}
-                step={field.step}
+                max={field.type === "date" ? toDateInput(new Date().toISOString()) : field.max}
+                step={field.type === "integer" ? "1" : field.step}
               />
             )}
           </label>
         );
       })}
 
-      <div className="flex justify-end pt-2">
+      <div className="flex justify-end pt-2 sm:col-span-2">
         <button
           type="submit"
           disabled={isSubmitting || (optionType !== null && isLoadingOptions) || (optionType !== null && options.length === 0)}

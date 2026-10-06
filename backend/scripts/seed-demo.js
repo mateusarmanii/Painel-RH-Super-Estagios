@@ -1,5 +1,7 @@
 // Cria dados de demonstração marcados com "[DEMO]": 5 empresas, 10 vagas, 30 estudantes e 40 candidaturas
-// espalhadas por todas as colunas do Kanban, com datas variadas e vagas em alerta.
+// espalhadas por todas as colunas do Kanban, com datas variadas e vagas em alerta. Inclui os campos novos:
+// turno da vaga, turno de estudo, disponibilidade, semestre, previsão de formatura (algumas em até 6 meses),
+// nascimento (alguns estudantes com menos de 18 anos) e observações em algumas candidaturas.
 // Uso: npm run demo:criar   (para remover: npm run demo:limpar)
 // ATENÇÃO: grava no banco do DATABASE_URL. Não altera nem apaga registros que não sejam [DEMO].
 const path = require("path");
@@ -27,16 +29,16 @@ const empresas = [
 //  fechada   → vaga fechada, com contratado e dispensados
 //  suspensa  → vaga suspensa, etapas iniciais
 const vagas = [
-  { titulo: "Estágio em Desenvolvimento Web", empresa: 0, diasAtras: 2, status: "ABERTA", perfil: "nova" },
-  { titulo: "Estágio em Suporte de TI", empresa: 0, diasAtras: 5, status: "ABERTA", perfil: "nova" },
-  { titulo: "Estágio em Atendimento ao Cliente", empresa: 1, diasAtras: 8, status: "ABERTA", perfil: "nova" },
-  { titulo: "Estágio em Marketing Digital", empresa: 1, diasAtras: 12, status: "ABERTA", perfil: "ativa" },
-  { titulo: "Estágio em Psicologia Organizacional", empresa: 2, diasAtras: 15, status: "ABERTA", perfil: "ativa" },
-  { titulo: "Estágio em Enfermagem", empresa: 2, diasAtras: 20, status: "ABERTA", perfil: "parada" },
-  { titulo: "Estágio em Direito Trabalhista", empresa: 3, diasAtras: 25, status: "ABERTA", perfil: "ativa" },
-  { titulo: "Estágio em Contabilidade", empresa: 3, diasAtras: 30, status: "FECHADA", perfil: "fechada" },
-  { titulo: "Estágio em Engenharia Civil", empresa: 4, diasAtras: 40, status: "ABERTA", perfil: "parada" },
-  { titulo: "Estágio em Administração de Obras", empresa: 4, diasAtras: 3, status: "SUSPENSA", perfil: "suspensa" },
+  { titulo: "Estágio em Desenvolvimento Web", empresa: 0, diasAtras: 2, status: "ABERTA", perfil: "nova", turno: "TARDE" },
+  { titulo: "Estágio em Suporte de TI", empresa: 0, diasAtras: 5, status: "ABERTA", perfil: "nova", turno: "MANHA" },
+  { titulo: "Estágio em Atendimento ao Cliente", empresa: 1, diasAtras: 8, status: "ABERTA", perfil: "nova", turno: "INTEGRAL" },
+  { titulo: "Estágio em Marketing Digital", empresa: 1, diasAtras: 12, status: "ABERTA", perfil: "ativa", turno: "TARDE" },
+  { titulo: "Estágio em Psicologia Organizacional", empresa: 2, diasAtras: 15, status: "ABERTA", perfil: "ativa", turno: "MANHA" },
+  { titulo: "Estágio em Enfermagem", empresa: 2, diasAtras: 20, status: "ABERTA", perfil: "parada", turno: "INTEGRAL" },
+  { titulo: "Estágio em Direito Trabalhista", empresa: 3, diasAtras: 25, status: "ABERTA", perfil: "ativa", turno: "TARDE" },
+  { titulo: "Estágio em Contabilidade", empresa: 3, diasAtras: 30, status: "FECHADA", perfil: "fechada", turno: "MANHA" },
+  { titulo: "Estágio em Engenharia Civil", empresa: 4, diasAtras: 40, status: "ABERTA", perfil: "parada", turno: null },
+  { titulo: "Estágio em Administração de Obras", empresa: 4, diasAtras: 3, status: "SUSPENSA", perfil: "suspensa", turno: null },
 ];
 
 const etapasPorPerfil = {
@@ -63,7 +65,30 @@ const cursos = [
   "direito", "Administracao ", "PSICOLOGIA", "Design Gráfico", "Engenharia de Software",
 ];
 const instituicoes = ["PUC Minas", "UFMG", "Newton Paiva", "UNA", "Fumec", "Uni-BH"];
-const horarios = ["MANHA", "TARDE", "NOITE"];
+// Turno de estudo e disponibilidade combinados (quem estuda de manhã fica livre à tarde, etc.);
+// os vazios mostram cadastros sem a informação.
+const perfisDeEstudo = [
+  { turno_estudo: "NOITE", disponibilidade: ["MANHA", "TARDE"] },
+  { turno_estudo: "MANHA", disponibilidade: ["TARDE"] },
+  { turno_estudo: "TARDE", disponibilidade: ["MANHA"] },
+  { turno_estudo: "NOITE", disponibilidade: ["TARDE"] },
+  { turno_estudo: "EAD", disponibilidade: ["MANHA", "TARDE", "NOITE"] },
+  { turno_estudo: "MANHA", disponibilidade: ["TARDE", "NOITE"] },
+  { turno_estudo: "INTEGRAL", disponibilidade: ["NOITE"] },
+  { turno_estudo: "NOITE", disponibilidade: ["MANHA"] },
+  { turno_estudo: "TARDE", disponibilidade: [] },
+  { turno_estudo: null, disponibilidade: [] },
+];
+// Meses até a formatura (null = não informado); 3 e 5 meses aparecem no alerta de "forma em até 6 meses".
+const mesesParaFormatura = [18, 3, 30, 12, null, 24, 5, 36, 8, 42];
+// Idades (null = não informada); 17 e 16 aparecem no alerta de menor de 18 anos.
+const idades = [21, 19, 23, 17, 20, 25, 22, null, 19, 28, 16, 24, 20, 22, 26];
+const observacoes = [
+  "Prefere estágio perto do metrô.",
+  "Pediu retorno até sexta-feira.",
+  "Tem experiência com atendimento ao público.",
+  "Empresa pediu portfólio antes da entrevista.",
+];
 const motivos = [
   "Perfil não aderente à vaga",
   "Aceitou outra proposta",
@@ -111,6 +136,13 @@ function montarPlano(agora = new Date(), codigosEmUso = new Set()) {
     email_contato: `contato${indice + 1}@demo.superestagios.com.br`,
   }));
 
+  const primeiroDoMes = (meses) => new Date(Date.UTC(agora.getFullYear(), agora.getMonth() + meses, 1));
+  const nascimento = (idade, indice) =>
+    new Date(Date.UTC(agora.getFullYear() - idade, (indice * 5) % 12, 1 + ((indice * 7) % 27)));
+
+  const semestreAtual = (meses, indice) =>
+    meses === null ? (indice % 9 === 4 ? null : 1 + ((indice * 3) % 10)) : Math.max(1, 10 - Math.ceil(meses / 6));
+
   const planoVagas = vagas.map((vaga) => ({
     ...vaga,
     titulo: `${PREFIXO} ${vaga.titulo}`,
@@ -126,7 +158,13 @@ function montarPlano(agora = new Date(), codigosEmUso = new Set()) {
     email: indice % 7 === 6 ? null : `estudante${indice + 1}@demo.superestagios.com.br`,
     curso: cursos[indice % cursos.length],
     instituicao_ensino: instituicoes[indice % instituicoes.length],
-    horario_estudo: horarios[indice % horarios.length],
+    ...perfisDeEstudo[indice % perfisDeEstudo.length],
+    // Semestre coerente com a formatura (curso de 10 semestres); sem previsão, varia livremente.
+    semestre_atual: semestreAtual(mesesParaFormatura[indice % mesesParaFormatura.length], indice),
+    previsao_formatura: mesesParaFormatura[indice % mesesParaFormatura.length] === null
+      ? null
+      : primeiroDoMes(mesesParaFormatura[indice % mesesParaFormatura.length]),
+    data_nascimento: idades[indice % idades.length] === null ? null : nascimento(idades[indice % idades.length], indice),
     anotacoes_recrutador: anotacoes[indice % anotacoes.length],
   }));
 
@@ -159,6 +197,8 @@ function montarPlano(agora = new Date(), codigosEmUso = new Set()) {
       data_hora_entrevista: null,
       motivo_recusa: null,
       data_aprovacao: null,
+      // Uma em cada cinco candidaturas (mais ou menos) tem observação.
+      observacao: (estudante + vagaIndice) % 5 === 0 ? observacoes[ordem % observacoes.length] : null,
     };
 
     if (status === "ENTREVISTA_AGENDADA") {
@@ -204,9 +244,9 @@ async function main() {
 
     const vagaIds = [];
     for (const vaga of plano.vagas) {
-      const { codigo_vaga, titulo, descricao, valor, status, created_at } = vaga;
+      const { codigo_vaga, titulo, descricao, valor, status, turno, created_at } = vaga;
       vagaIds.push((await tx.vaga.create({
-        data: { codigo_vaga, titulo, descricao, valor, status, created_at, empresa_id: empresaIds[vaga.empresa] },
+        data: { codigo_vaga, titulo, descricao, valor, status, turno, created_at, empresa_id: empresaIds[vaga.empresa] },
         select: { id: true },
       })).id);
     }
@@ -226,10 +266,25 @@ async function main() {
   const porEtapa = plano.candidaturas.reduce((acc, c) => ({ ...acc, [c.status_kanban]: (acc[c.status_kanban] ?? 0) + 1 }), {});
   console.log(`Criados: ${plano.empresas.length} empresas, ${plano.vagas.length} vagas, ${plano.estudantes.length} estudantes e ${plano.candidaturas.length} candidaturas ${PREFIXO}.`);
   console.log("Candidaturas por etapa:", porEtapa);
+  const seisMeses = primeiroDoMesDaqui(6);
+  console.log("Formam em até 6 meses:", plano.estudantes.filter((e) => e.previsao_formatura && e.previsao_formatura <= seisMeses).length,
+    "| Menores de 18:", plano.estudantes.filter((e) => e.data_nascimento && idadeEm(e.data_nascimento) < 18).length,
+    "| Candidaturas com observação:", plano.candidaturas.filter((c) => c.observacao).length);
   console.log("Vagas que devem aparecer em alerta:", plano.vagas.filter((v) => v.perfil === "parada").map((v) => v.titulo).join(", "));
 }
 
-module.exports = { montarPlano };
+function primeiroDoMesDaqui(meses, agora = new Date()) {
+  return new Date(Date.UTC(agora.getFullYear(), agora.getMonth() + meses, 1));
+}
+
+function idadeEm(nascimento, agora = new Date()) {
+  let idade = agora.getFullYear() - nascimento.getUTCFullYear();
+  const mes = agora.getMonth() - nascimento.getUTCMonth();
+  if (mes < 0 || (mes === 0 && agora.getDate() < nascimento.getUTCDate())) idade -= 1;
+  return idade;
+}
+
+module.exports = { montarPlano, idadeEm, primeiroDoMesDaqui };
 
 if (require.main === module) {
   main()
