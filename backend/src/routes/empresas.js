@@ -7,6 +7,13 @@ const router = express.Router();
 router.get("/", async (_req, res) => {
   try {
     const empresas = await prisma.empresa.findMany({
+      // Vagas resumidas para a página "Empresas sem vaga" (empresas sem nenhuma vaga ABERTA).
+      include: {
+        vagas: {
+          select: { id: true, codigo_vaga: true, titulo: true, status: true, created_at: true },
+          orderBy: { created_at: "desc" },
+        },
+      },
       orderBy: { nome: "asc" },
     });
 

@@ -47,7 +47,9 @@ Painel interno da Super Estágios (agência de estágios) para acompanhar o fech
    | Variável | Para que serve |
    |---|---|
    | `DATABASE_URL` | Conexão com o PostgreSQL (`postgresql://usuario:senha@host:porta/banco?schema=public`) |
-   | `PORT` | Porta da API. Mantenha `3333`: o frontend chama `http://localhost:3333`. |
+   | `PORT` | Porta da API (padrão `3333`). Se mudar, ajuste também a `VITE_API_URL` do frontend. |
+
+   O frontend chama a API em `http://localhost:3333`. Se ela estiver em outro endereço, crie `frontend/.env` a partir de `frontend/.env.example` e defina `VITE_API_URL` (depois reinicie o `npm run dev` ou gere o build de novo).
 
    > O `backend/.env` tem senha e **não** deve ir para o Git (já está no `.gitignore`).
 
@@ -104,7 +106,7 @@ npm run demo:limpar   # remove tudo o que for [DEMO]
 - O `demo:criar` não roda se já houver registros `[DEMO]` e grava tudo de uma vez (se algo falhar, nada é gravado).
 - O `demo:limpar` só apaga registros `[DEMO]`. Se algum dado real estiver ligado a eles (por exemplo, um estudante real inscrito numa vaga `[DEMO]`), ele não apaga nada e mostra o que precisa ser resolvido.
 
-> ⚠️ **Cuidado com o `npm run seed`** (`backend/prisma/seed.js`): ele **apaga TODOS os dados do banco** (empresas, vagas, estudantes e candidaturas) antes de criar alguns exemplos. Use apenas num banco vazio ou descartável. Para demonstrações, prefira o `demo:criar`.
+> ⚠️ **Cuidado com o `npm run seed`** (`backend/prisma/seed.js`): ele **apaga TODOS os dados do banco** (empresas, vagas, estudantes e candidaturas) antes de criar alguns exemplos. Por isso ele só roda com a confirmação explícita `npm run seed -- --confirmar-apagar-tudo`; sem ela, avisa e não faz nada. Use apenas num banco vazio ou descartável. Para demonstrações, prefira o `demo:criar`.
 
 ## Estrutura
 

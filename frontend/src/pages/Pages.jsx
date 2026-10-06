@@ -5,14 +5,6 @@ import { statusLabels, statusStyles } from "../vagaStatus.js";
 import { kanbanStatusLabels } from "../kanbanStatus.js";
 import { csvDate, csvDecimal } from "../csv.js";
 
-function PlaceholderPage({ title }) {
-  return (
-    <section className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-slate-50 px-4">
-      <h1 className="text-center text-3xl font-semibold text-slate-900">{title}</h1>
-    </section>
-  );
-}
-
 const horarioLabels = { MANHA: "Manhã", TARDE: "Tarde", NOITE: "Noite" };
 
 const currency = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
@@ -150,8 +142,70 @@ export function EmpresasPage() {
   );
 }
 
+const dateFormat = new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium" });
+
+// Empresas sem nenhuma vaga ABERTA (inclui as que nunca tiveram vaga) — candidatas a contato comercial.
+const hasNoOpenJob = (empresa) => !(empresa.vagas ?? []).some((vaga) => vaga.status === "ABERTA");
+
+const empresaSemVagaConfig = {
+  ...empresaConfig,
+  renderItem: (empresa) => {
+    const lastJob = empresa.vagas?.[0];
+    return (
+      <>
+        <span className="mb-5 self-start rounded-full bg-sky-50 px-2.5 py-1 text-xs font-medium text-sky-800">
+          {empresa.setor}
+        </span>
+        <h2 className="pr-20 text-lg font-semibold leading-6 text-slate-900">{empresa.nome}</h2>
+        <p className="mt-2 text-sm text-slate-600">
+          {lastJob ? (
+            <>
+              Última vaga: <span className="font-medium text-slate-800">{lastJob.titulo}</span>
+              <span className="text-slate-500"> · {statusLabels[lastJob.status]} · {dateFormat.format(new Date(lastJob.created_at))}</span>
+            </>
+          ) : (
+            <span className="text-slate-500">Nunca teve vaga cadastrada</span>
+          )}
+        </p>
+        <dl className="mt-auto space-y-1 pt-6 text-sm text-slate-600">
+          <div><dt className="sr-only">Contato</dt><dd>{empresa.nome_contato}</dd></div>
+          <div><dt className="sr-only">Telefone</dt><dd>{empresa.telefone_contato}</dd></div>
+          {empresa.email_contato && (
+            <div><dt className="sr-only">E-mail</dt><dd className="break-all">{empresa.email_contato}</dd></div>
+          )}
+        </dl>
+      </>
+    );
+  },
+  csvExport: {
+    filename: "empresas-sem-vaga",
+    columns: [
+      { header: "Empresa", value: (empresa) => empresa.nome },
+      { header: "Setor", value: (empresa) => empresa.setor },
+      { header: "Contato", value: (empresa) => empresa.nome_contato },
+      { header: "Telefone", value: (empresa) => empresa.telefone_contato },
+      { header: "E-mail", value: (empresa) => empresa.email_contato },
+      { header: "Vagas anteriores", value: (empresa) => empresa.vagas?.length ?? 0 },
+      { header: "Última vaga", value: (empresa) => empresa.vagas?.[0]?.titulo },
+      { header: "Criada em", value: (empresa) => csvDate(empresa.vagas?.[0]?.created_at) },
+    ],
+  },
+};
+
 export function EmpresasSemVagaPage() {
-  return <PlaceholderPage title="Empresas sem vaga" />;
+  return (
+    <EntityList
+      title="Empresas sem vaga"
+      subtitle="Empresas parceiras sem nenhuma vaga aberta no momento — boas candidatas a um novo contato"
+      type="empresa"
+      endpoint="empresas"
+      entityLabel={{ singular: "empresa", plural: "empresas", article: "a" }}
+      searchPlaceholder="Buscar empresa por nome"
+      emptyMessage="Todas as empresas têm ao menos uma vaga aberta."
+      filterItems={hasNoOpenJob}
+      {...empresaSemVagaConfig}
+    />
+  );
 }
 
 export function EstudantesPage() {

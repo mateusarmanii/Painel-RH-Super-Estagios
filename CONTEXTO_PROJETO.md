@@ -228,6 +228,11 @@ Build OK; testes `cd backend && npm run test:etapa2d` (10/10, registros `[TESTE]
 - Menu lateral: "Estudantes" e "Banco de Talentos".
 - ⚠️ O Vite em modo dev rodando há horas na pasta do OneDrive parou de gerar classes novas do Tailwind (ex.: `sm:w-60`); o build está correto. Se algo aparecer sem estilo, reinicie o `npm run dev` do frontend.
 
+### ✅ Extras (05/10/2026)
+- **`seed.js` protegido**: `npm run seed` só apaga e recria os dados com `npm run seed -- --confirmar-apagar-tudo`; sem a flag, avisa e sai sem tocar no banco (conferido).
+- **`VITE_API_URL`**: `frontend/src/api.js` (`API_URL`, padrão `http://localhost:3333`, barra final removida) usado nos 8 arquivos que tinham o endereço fixo; `frontend/.env.example` criado e `frontend/.env` no `.gitignore`. Conferido com build usando outro endereço.
+- **Empresas sem vaga** (`/empresas-sem-vaga`): empresas **sem nenhuma vaga `ABERTA`** (inclui as que nunca tiveram vaga), com a última vaga (título, status, data) ou "Nunca teve vaga cadastrada", contato, busca, editar/excluir e CSV. `GET /empresas` passou a trazer `vagas` resumidas (id, Nº, título, status, `created_at`). `EntityList` ganhou as props `filterItems` e `subtitle`. Conferida com empresas `[TESTE]` temporárias (0 sobras). O `PlaceholderPage` foi removido (nenhuma página usa mais).
+
 ## Regras de trabalho
 
 - **Banco de dados: antes de aplicar QUALQUER alteração no banco (migrations, `migrate deploy`/`dev`/`reset`, `db push`, SQL manual, escrita em `_prisma_migrations`, criação/remoção de bancos, scripts de teste que gravam dados), mostrar o SQL/operações ao usuário e esperar aprovação explícita.**

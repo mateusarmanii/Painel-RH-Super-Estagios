@@ -7,8 +7,7 @@ import Modal from "./Modal.jsx";
 import PageHeader from "./PageHeader.jsx";
 import { downloadCsv, toCsv, todayForFilename } from "../csv.js";
 import { normalize } from "../text.js";
-
-const apiUrl = "http://localhost:3333";
+import { API_URL as apiUrl } from "../api.js";
 
 // Lista com busca, edição (PUT) e exclusão (DELETE) para empresas, vagas e estudantes.
 export default function EntityList({
@@ -23,6 +22,8 @@ export default function EntityList({
   renderItem,
   renderEditExtra,
   csvExport,
+  filterItems,
+  subtitle,
 }) {
   const [items, setItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -50,10 +51,11 @@ export default function EntityList({
   }, [loadItems]);
 
   const filteredItems = useMemo(() => {
+    const visibleItems = filterItems ? items.filter(filterItems) : items;
     const term = normalize(search.trim());
-    if (!term) return items;
-    return items.filter((item) => normalize(getSearchText(item)).includes(term));
-  }, [items, search, getSearchText]);
+    if (!term) return visibleItems;
+    return visibleItems.filter((item) => normalize(getSearchText(item)).includes(term));
+  }, [items, search, getSearchText, filterItems]);
 
   // Exporta exatamente o que está na tela (já filtrado pela busca).
   function handleExport() {
@@ -89,7 +91,7 @@ export default function EntityList({
   return (
     <section className="min-h-[calc(100vh-4rem)] bg-slate-50 px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto w-full max-w-7xl">
-        <PageHeader title={title} />
+        <PageHeader title={title} subtitle={subtitle} />
         <ListToolbar
           id={type}
           search={search}
