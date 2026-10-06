@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { Inbox, SearchX } from "lucide-react";
+import LoadError from "./LoadError.jsx";
 import ActionMenu from "./ActionMenu.jsx";
 import CreationForm from "./CreationForm.jsx";
 import EmptyState from "./EmptyState.jsx";
@@ -38,6 +39,7 @@ export default function EntityList({
 }) {
   const [items, setItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [search, setSearch] = useState("");
   const [editingItem, setEditingItem] = useState(null);
   const [deletingItem, setDeletingItem] = useState(null);
@@ -48,8 +50,10 @@ export default function EntityList({
       const response = await fetch(`${apiUrl}/${endpoint}`);
       if (!response.ok) throw new Error(`Não foi possível carregar a lista de ${entityLabel.plural}.`);
       setItems(await response.json());
-    } catch (loadError) {
-      toast.error(loadError.message);
+      setLoadError("");
+    } catch (error) {
+      // Sem a lista, mostra o erro no lugar dela (e não "nenhum cadastro").
+      setLoadError(error.message);
     } finally {
       setIsLoading(false);
     }
@@ -130,24 +134,33 @@ export default function EntityList({
   return (
     <section className="min-h-[calc(100vh-4rem)] px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto w-full max-w-7xl">
-        {renderHeader ? renderHeader({ items: visibleItems, allItems: items, isLoading }) : <PageHeader subtitle={subtitle} />}
+        {renderHeader ? renderHeader({ items: visibleItems, allItems: items, isLoading: isLoading || Boolean(loadError) }) : <PageHeader subtitle={subtitle} />}
         <ListToolbar
           id={type}
           search={search}
           onSearchChange={setSearch}
           placeholder={searchPlaceholder}
           onExport={csvExport && handleExport}
-          exportDisabled={isLoading || filteredItems.length === 0}
+          exportDisabled={isLoading || Boolean(loadError) || filteredItems.length === 0}
         >
           {toolbarExtra}
         </ListToolbar>
 
         {isLoading ? (
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3" aria-busy="true" aria-label="A carregar">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3" aria-busy="true" aria-label="Carregando">
             {Array.from({ length: 3 }, (_, index) => (
               <div key={index} className="h-56 animate-pulse rounded-lg border border-slate-200 bg-white" />
             ))}
           </div>
+        ) : loadError ? (
+          <LoadError
+            title={`Não conseguimos carregar ${entityLabel.article === "a" ? "as" : "os"} ${entityLabel.plural}`}
+            message={loadError}
+            onRetry={() => {
+              setIsLoading(true);
+              loadItems();
+            }}
+          />
         ) : filteredItems.length === 0 ? (
           <EmptyState
             icon={search.trim() ? SearchX : Inbox}
@@ -213,7 +226,7 @@ export default function EntityList({
                 disabled={isDeleting}
                 className="h-10 rounded-md bg-rose-600 px-4 text-sm font-medium text-white transition-colors hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {isDeleting ? "A excluir..." : "Excluir"}
+                {isDeleting ? "Excluindo..." : "Excluir"}
               </button>
             </div>
           </div>

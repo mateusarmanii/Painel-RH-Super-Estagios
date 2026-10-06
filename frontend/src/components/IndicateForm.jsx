@@ -77,7 +77,7 @@ export function IndicateForm({ talent, openJobs, onDone, onCancel }) {
           disabled={isSaving || availableJobs.length === 0}
           className={buttonPrimary}
         >
-          {isSaving ? "A guardar..." : "Indicar"}
+          {isSaving ? "Salvando..." : "Indicar"}
         </button>
       </div>
     </form>
@@ -109,6 +109,6 @@ export function IndicateDialog({ studentId, onDone, onCancel }) {
     };
   }, [studentId]);
 
-  if (!data) return <p className="text-sm text-slate-500">A carregar vagas abertas...</p>;
+  if (!data) return <p className="text-sm text-slate-500">Carregando vagas abertas...</p>;
   return <IndicateForm talent={data.talent} openJobs={data.openJobs} onDone={onDone} onCancel={onCancel} />;
 }

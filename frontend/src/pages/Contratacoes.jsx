@@ -5,6 +5,7 @@ import { BarChart3, CalendarCheck2, Clock, Trophy, UserRoundCheck } from "lucide
 import ListToolbar from "../components/ListToolbar.jsx";
 import CompanyAvatar from "../components/CompanyAvatar.jsx";
 import EmptyState from "../components/EmptyState.jsx";
+import LoadError from "../components/LoadError.jsx";
 import { csvDate, downloadCsv, toCsv, todayForFilename } from "../csv.js";
 import { formatPhone, getInitials, normalize, plural } from "../text.js";
 import { card } from "../ui.js";
@@ -126,6 +127,7 @@ export default function ContratacoesPage() {
   const navigate = useNavigate();
   const [hires, setHires] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [search, setSearch] = useState("");
   const [period, setPeriod] = useState("12m");
   const [companyId, setCompanyId] = useState("");
@@ -135,8 +137,9 @@ export default function ContratacoesPage() {
       const response = await fetch(`${apiUrl}/candidatos`);
       if (!response.ok) throw new Error("Não foi possível carregar as contratações.");
       setHires(toHires(await response.json()));
-    } catch (loadError) {
-      toast.error(loadError instanceof TypeError ? "O servidor não respondeu. Verifique se a API está rodando." : loadError.message);
+      setLoadError("");
+    } catch (error) {
+      setLoadError(error.message);
     } finally {
       setIsLoading(false);
     }
@@ -189,6 +192,23 @@ export default function ContratacoesPage() {
   }
 
   const openProfile = (hire) => navigate(`/estudantes/${hire.estudante.id}`);
+
+  if (loadError) {
+    return (
+      <section className="min-h-[calc(100vh-4rem)] px-4 py-6 sm:px-6 lg:px-8">
+        <div className="mx-auto w-full max-w-7xl">
+          <LoadError
+            title="Não conseguimos carregar as contratações"
+            message={loadError}
+            onRetry={() => {
+              setIsLoading(true);
+              loadHires();
+            }}
+          />
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="min-h-[calc(100vh-4rem)] px-4 py-6 sm:px-6 lg:px-8">

@@ -189,6 +189,12 @@ async function main() {
     const depois = await prisma.aplicacao.findUnique({ where: { id: v.aplicacao } });
     checar("Entrevista da vaga fechada fica Cancelada", depois.entrevista_status === "CANCELADA" && depois.status_kanban === "RECUSADO",
       `${depois.entrevista_status} / ${depois.status_kanban}`);
+
+    console.log("\n== Dashboard e Agenda contam as mesmas entrevistas");
+    const metricas = await req("GET", "/dashboard-metrics");
+    const futuras = await req("GET", "/entrevistas");
+    checar("Card de entrevistas = entrevistas futuras em aberto", metricas.body.metrics.scheduledInterviews === futuras.body.length,
+      `${metricas.body.metrics.scheduledInterviews} x ${futuras.body.length}`);
   } finally {
     await prisma.aplicacao.deleteMany({ where: { estudante_id: { in: ids.estudantes } } }).catch(() => {});
     await prisma.estudante.deleteMany({ where: { id: { in: ids.estudantes } } }).catch(() => {});

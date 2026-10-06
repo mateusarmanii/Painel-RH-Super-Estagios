@@ -76,7 +76,14 @@ app.get("/dashboard-metrics", async (_req, res) => {
           where: { status_kanban: { notIn: ["APROVADO", "RECUSADO"] } },
         }),
         prisma.empresa.count(),
-        prisma.aplicacao.count({ where: { status_kanban: "ENTREVISTA_AGENDADA" } }),
+        // Entrevistas agendadas = futuras e ainda em aberto (mesma conta do quadro "Olá, o RH tem" e da Agenda).
+        prisma.aplicacao.count({
+          where: {
+            status_kanban: "ENTREVISTA_AGENDADA",
+            data_hora_entrevista: { gt: agora },
+            OR: [{ entrevista_status: null }, { entrevista_status: { in: ["AGUARDANDO", "CONFIRMADA"] } }],
+          },
+        }),
         prisma.aplicacao.groupBy({
           by: ["status_kanban"],
           _count: { _all: true },

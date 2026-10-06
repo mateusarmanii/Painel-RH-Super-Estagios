@@ -89,7 +89,7 @@ export default function VagaStatusDialog({ vaga, status, onDone, onCancel }) {
           Cancelar
         </button>
         <button type="submit" disabled={isSaving} className={closing ? buttonDanger : buttonPrimary}>
-          {isSaving ? "A guardar..." : closing ? "Fechar vaga" : "Suspender vaga"}
+          {isSaving ? "Salvando..." : closing ? "Fechar vaga" : "Suspender vaga"}
         </button>
       </div>
     </form>

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { AlertTriangle, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Percent, X } from "lucide-react";
+import LoadError from "../components/LoadError.jsx";
 import CompanyAvatar from "../components/CompanyAvatar.jsx";
 import TimeGrid from "../agenda/TimeGrid.jsx";
 import MonthGrid from "../agenda/MonthGrid.jsx";
@@ -46,6 +47,7 @@ function SummaryCard({ children, tone = "neutral" }) {
 
 // Topo: entrevistas das próximas 24h sem confirmação, total da semana e taxa de comparecimento.
 function Summary({ summary, onOpen }) {
+  if (summary === false) return null;
   if (!summary) {
     return (
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3" aria-busy="true">
@@ -115,6 +117,7 @@ export default function AgendaPage() {
   const [anchor, setAnchor] = useState(() => new Date());
   const [interviews, setInterviews] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [summary, setSummary] = useState(null);
   const [jobs, setJobs] = useState([]);
   const [companyFilter, setCompanyFilter] = useState("");
@@ -140,10 +143,11 @@ export default function AgendaPage() {
       if (!response.ok) throw new Error("Não foi possível carregar as entrevistas.");
       const list = await response.json();
       setInterviews(list);
+      setLoadError("");
       // Mantém o painel aberto com os dados novos.
       setSelected((current) => (current ? list.find((item) => item.id === current.id) ?? current : current));
     } catch (error) {
-      toast.error(error.message);
+      setLoadError(error.message);
     } finally {
       setIsLoading(false);
     }
@@ -154,9 +158,10 @@ export default function AgendaPage() {
     const params = new URLSearchParams({ inicioSemana: weekStart.toISOString(), fimSemana: addDays(weekStart, 7).toISOString() });
     try {
       const response = await fetch(`${apiUrl}/entrevistas/resumo?${params}`);
-      if (response.ok) setSummary(await response.json());
+      setSummary(response.ok ? await response.json() : false);
     } catch {
-      // O resumo é complementar; a agenda funciona sem ele.
+      // O resumo é complementar: sem ele, os cards do topo somem e a agenda mostra o próprio erro.
+      setSummary(false);
     }
   }, []);
 
@@ -327,7 +332,19 @@ export default function AgendaPage() {
         </div>
 
         <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm" aria-busy={isLoading}>
-          {isLoading && interviews.length === 0 ? (
+          {loadError ? (
+            <div className="p-4">
+              <LoadError
+                title="Não conseguimos carregar as entrevistas"
+                message={loadError}
+                onRetry={() => {
+                  setIsLoading(true);
+                  loadInterviews();
+                  loadSummary();
+                }}
+              />
+            </div>
+          ) : isLoading && interviews.length === 0 ? (
             <div className="h-96 animate-pulse bg-slate-50" />
           ) : view === "mes" ? (
             <MonthGrid days={period.days} month={anchor.getMonth()} interviews={visible} onOpen={setSelected} onPickDay={pickDay} />

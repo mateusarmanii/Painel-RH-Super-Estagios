@@ -211,7 +211,7 @@ export default function InterviewPanel({ interview, conflicts, onClose, onUpdate
               <div className="flex justify-end gap-2">
                 <button type="button" onClick={() => setMode(null)} className={buttonSecondary}>Cancelar</button>
                 <button type="submit" disabled={busy === "reagendar"} className={buttonPrimary}>
-                  {busy === "reagendar" ? "A guardar..." : "Salvar nova data"}
+                  {busy === "reagendar" ? "Salvando..." : "Salvar nova data"}
                 </button>
               </div>
             </form>
@@ -239,7 +239,7 @@ export default function InterviewPanel({ interview, conflicts, onClose, onUpdate
                   disabled={busy === "dispensar"}
                   className="inline-flex h-10 items-center rounded-md bg-rose-600 px-4 text-sm font-bold text-white hover:bg-rose-700 disabled:opacity-50"
                 >
-                  {busy === "dispensar" ? "A guardar..." : "Dispensar"}
+                  {busy === "dispensar" ? "Salvando..." : "Dispensar"}
                 </button>
               </div>
             </form>

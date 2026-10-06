@@ -45,14 +45,14 @@ function formatInterviewDate(value) {
 }
 
 const chartFallback = (
-  <div className="grid h-full min-h-40 place-items-center text-sm text-slate-500">A carregar gráfico...</div>
+  <div className="grid h-full min-h-40 place-items-center text-sm text-slate-500">Carregando gráfico...</div>
 );
 
 function DashboardSkeleton() {
   const block = `animate-pulse ${card}`;
 
   return (
-    <div aria-busy="true" aria-label="A carregar o dashboard">
+    <div aria-busy="true" aria-label="Carregando o dashboard">
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
         <div className={`${block} h-72`} />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">

@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import toast from "react-hot-toast";
 import { Mail, MessageCircle, MessageSquareX, Phone, Send, UserRound, Users } from "lucide-react";
 import ActionMenu from "../components/ActionMenu.jsx";
 import ListToolbar from "../components/ListToolbar.jsx";
 import { IndicateForm } from "../components/IndicateForm.jsx";
 import Modal from "../components/Modal.jsx";
 import PageHeader from "../components/PageHeader.jsx";
+import LoadError from "../components/LoadError.jsx";
 import { courseOptions, formatPhone, normalize, plural, whatsappLink } from "../text.js";
 import { toTalents } from "../regras.js";
 import { API_URL as apiUrl } from "../api.js";
@@ -17,6 +17,7 @@ export default function BancoTalentosPage() {
   const [students, setStudents] = useState([]);
   const [openJobs, setOpenJobs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [search, setSearch] = useState("");
   const [course, setCourse] = useState("");
   const [indicating, setIndicating] = useState(null);
@@ -31,8 +32,9 @@ export default function BancoTalentosPage() {
       if (!studentsResponse.ok || !jobsResponse.ok) throw new Error("Não foi possível carregar o Banco de Talentos.");
       setStudents(await studentsResponse.json());
       setOpenJobs((await jobsResponse.json()).filter((job) => job.status === "ABERTA"));
-    } catch (loadError) {
-      toast.error(loadError instanceof TypeError ? "O servidor não respondeu. Verifique se a API está rodando." : loadError.message);
+      setLoadError("");
+    } catch (error) {
+      setLoadError(error.message);
     } finally {
       setIsLoading(false);
     }
@@ -87,7 +89,16 @@ export default function BancoTalentosPage() {
           </p>
         )}
 
-        {isLoading ? (
+        {loadError ? (
+          <LoadError
+            title="Não conseguimos carregar o Banco de Talentos"
+            message={loadError}
+            onRetry={() => {
+              setIsLoading(true);
+              loadData();
+            }}
+          />
+        ) : isLoading ? (
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3" aria-busy="true">
             {Array.from({ length: 3 }, (_, index) => (
               <div key={index} className="h-56 animate-pulse rounded-lg border border-slate-200 bg-white" />

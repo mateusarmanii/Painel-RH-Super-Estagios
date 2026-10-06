@@ -33,6 +33,7 @@ import { IndicateDialog } from "../components/IndicateForm.jsx";
 import Modal from "../components/Modal.jsx";
 import PageHeader from "../components/PageHeader.jsx";
 import PanelCard from "../components/PanelCard.jsx";
+import LoadError from "../components/LoadError.jsx";
 import { statusLabels, statusStyles } from "../vagaStatus.js";
 import { dateTimeFormat, kanbanStatusLabels } from "../kanbanStatus.js";
 import { API_URL as apiUrl } from "../api.js";
@@ -307,7 +308,7 @@ function MoveDetailsForm({ move, onConfirm, onCancel }) {
             isInterview ? "bg-ambar-400 text-marinho-900 hover:bg-ambar-500" : "bg-rose-600 text-white hover:bg-rose-700"
           }`}
         >
-          {isSaving ? "A guardar..." : isInterview ? "Agendar" : "Dispensar"}
+          {isSaving ? "Salvando..." : isInterview ? "Agendar" : "Dispensar"}
         </button>
       </div>
     </form>
@@ -391,7 +392,7 @@ function NoteForm({ candidate, onSaved, onCancel }) {
             disabled={isSaving || (!value.trim() && !candidate.observacao)}
             className="h-10 rounded-md bg-ambar-400 px-4 text-sm font-bold text-marinho-900 transition-colors hover:bg-ambar-500 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isSaving ? "A guardar..." : "Salvar"}
+            {isSaving ? "Salvando..." : "Salvar"}
           </button>
         </div>
       </div>
@@ -403,9 +404,12 @@ function NoteForm({ candidate, onSaved, onCancel }) {
 function VagaPicker() {
   const [vagas, setVagas] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let isCurrent = true;
+    setLoadError("");
 
     fetch(`${apiUrl}/vagas`)
       .then(async (response) => {
@@ -415,8 +419,8 @@ function VagaPicker() {
       .then((items) => {
         if (isCurrent) setVagas(items);
       })
-      .catch((loadError) => {
-        if (isCurrent) toast.error(loadError.message);
+      .catch((error) => {
+        if (isCurrent) setLoadError(error.message);
       })
       .finally(() => {
         if (isCurrent) setIsLoading(false);
@@ -425,15 +429,24 @@ function VagaPicker() {
     return () => {
       isCurrent = false;
     };
-  }, []);
+  }, [attempt]);
 
   return (
     <section className="min-h-[calc(100vh-4rem)] px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto w-full max-w-3xl">
         <PageHeader subtitle="Escolha uma vaga para abrir o quadro de candidatos" />
 
-        {isLoading ? (
-          <p className="text-sm text-slate-500">A carregar...</p>
+        {loadError ? (
+          <LoadError
+            title="Não conseguimos carregar as vagas"
+            message={loadError}
+            onRetry={() => {
+              setIsLoading(true);
+              setAttempt((current) => current + 1);
+            }}
+          />
+        ) : isLoading ? (
+          <p className="text-sm text-slate-500">Carregando...</p>
         ) : vagas.length === 0 ? (
           <p className="text-sm text-slate-500">Nenhuma vaga cadastrada.</p>
         ) : (
@@ -652,7 +665,7 @@ function KanbanBoard({ vagaId }) {
             )}
           </div>
         </div>
-        {isLoading && <span className="text-sm text-slate-500">A carregar...</span>}
+        {isLoading && <span className="text-sm text-slate-500">Carregando...</span>}
       </header>
 
       {error ? (

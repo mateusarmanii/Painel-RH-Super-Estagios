@@ -261,7 +261,7 @@ function EmpresaHeader({ empresaId, empresaNome, items, isLoading }) {
             Vagas de {empresaNome ?? "…"}
           </h2>
           <p className="mt-1 text-sm text-slate-600">
-            {isLoading ? "A carregar…" : `${plural(open, "vaga aberta", "vagas abertas")} · ${plural(items.length, "vaga", "vagas")} no total`}
+            {isLoading ? "Carregando…" : `${plural(open, "vaga aberta", "vagas abertas")} · ${plural(items.length, "vaga", "vagas")} no total`}
           </p>
         </div>
       </div>
