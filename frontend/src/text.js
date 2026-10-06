@@ -33,3 +33,24 @@ export function whatsappLink(phone, message) {
 export function plural(total, singular, pluralForm) {
   return `${total} ${total === 1 ? singular : pluralForm}`;
 }
+
+// Iniciais para avatares; ignora etiquetas como "[TESTE]" ou "[DEMO]" no início do nome.
+// Nome de uma palavra só usa as duas primeiras letras ("UniMED" → "UN").
+export function getInitials(name) {
+  const words = (name ?? "")
+    .replace(/^\s*\[[^\]]*\]\s*/, "")
+    .trim()
+    .split(/\s+/)
+    .filter((part) => /\p{L}/u.test(part));
+  const letters = words.length === 1 ? [...words[0]].slice(0, 2) : words.slice(0, 2).map((part) => part[0]);
+  return letters.join("").toUpperCase();
+}
+
+// Telefone brasileiro no padrão (31) 98888-8888 ou (31) 3222-3468. Formatos que não reconhece ficam como estão.
+export function formatPhone(phone) {
+  let digits = (phone ?? "").replace(/\D/g, "");
+  if ((digits.length === 12 || digits.length === 13) && digits.startsWith("55")) digits = digits.slice(2);
+  if (digits.length === 11) return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+  if (digits.length === 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  return (phone ?? "").trim();
+}

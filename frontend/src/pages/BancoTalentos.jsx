@@ -8,7 +8,7 @@ import { IndicateForm } from "../components/IndicateForm.jsx";
 import Modal from "../components/Modal.jsx";
 import PageHeader from "../components/PageHeader.jsx";
 import StudentQuickProfile from "../components/StudentQuickProfile.jsx";
-import { courseOptions, normalize, plural, whatsappLink } from "../text.js";
+import { courseOptions, formatPhone, normalize, plural, whatsappLink } from "../text.js";
 import { toTalents } from "../regras.js";
 import { API_URL as apiUrl } from "../api.js";
 
@@ -172,7 +172,7 @@ export default function BancoTalentosPage() {
                 </div>
 
                 <div className="mt-4 space-y-1 text-sm text-slate-600">
-                  <p className="flex items-center gap-1.5"><Phone size={14} className="shrink-0 text-slate-400" /> {talent.telefone}</p>
+                  <p className="flex items-center gap-1.5"><Phone size={14} className="shrink-0 text-slate-400" /> {formatPhone(talent.telefone)}</p>
                   {talent.email && (
                     <p className="flex items-center gap-1.5 break-all"><Mail size={14} className="shrink-0 text-slate-400" /> {talent.email}</p>
                   )}

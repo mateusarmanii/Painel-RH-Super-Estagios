@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import { Mail, Phone } from "lucide-react";
 import CandidaturaHistory from "./CandidaturaHistory.jsx";
 import { API_URL as apiUrl } from "../api.js";
+import { formatPhone } from "../text.js";
 
 const horarioTexto = { MANHA: "estuda de manhã", TARDE: "estuda à tarde", NOITE: "estuda à noite" };
 
@@ -41,7 +42,7 @@ export default function StudentQuickProfile({ studentId, onClose }) {
         {student.curso} · {student.instituicao_ensino} · {horarioTexto[student.horario_estudo]}
       </p>
       <div className="mt-3 space-y-1 text-sm text-slate-700">
-        <p className="flex items-center gap-2"><Phone size={14} className="text-slate-400" /> {student.telefone}</p>
+        <p className="flex items-center gap-2"><Phone size={14} className="text-slate-400" /> {formatPhone(student.telefone)}</p>
         {student.email && <p className="flex items-center gap-2 break-all"><Mail size={14} className="text-slate-400" /> {student.email}</p>}
       </div>
       {student.anotacoes_recrutador && (

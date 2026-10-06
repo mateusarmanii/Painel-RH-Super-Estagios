@@ -27,3 +27,12 @@ export function toDateTimeInputValue(date = new Date()) {
 }
 
 export const dateTimeFormat = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" });
+
+// Cores da barra do mini funil nos cards de vaga (mesmos tons das etiquetas acima).
+export const kanbanStatusBar = {
+  ENVIADO_EMPRESA: "bg-sky-500",
+  ENTREVISTA_AGENDADA: "bg-violet-500",
+  AGUARDANDO_RETORNO: "bg-amber-400",
+  APROVADO: "bg-emerald-500",
+  RECUSADO: "bg-rose-400",
+};

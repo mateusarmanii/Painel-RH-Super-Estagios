@@ -7,6 +7,7 @@ import PageHeader from "../components/PageHeader.jsx";
 import PanelCard from "../components/PanelCard.jsx";
 import { toDateTimeInputValue } from "../kanbanStatus.js";
 import { API_URL as apiUrl } from "../api.js";
+import { formatPhone } from "../text.js";
 
 const timeFormat = new Intl.DateTimeFormat("pt-BR", { timeStyle: "short" });
 const dayFormat = new Intl.DateTimeFormat("pt-BR", { weekday: "long", day: "numeric", month: "long" });
@@ -199,7 +200,7 @@ export default function AgendaPage() {
                       </div>
                       <div className="flex shrink-0 flex-wrap items-center gap-2">
                         <span className="inline-flex items-center gap-1 text-xs text-slate-500">
-                          <Phone size={13} /> {interview.estudante.telefone}
+                          <Phone size={13} /> {formatPhone(interview.estudante.telefone)}
                         </span>
                         <button
                           type="button"

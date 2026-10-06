@@ -6,12 +6,9 @@ import DashboardPage from "./pages/Dashboard.jsx";
 import AgendaPage from "./pages/Agenda.jsx";
 import ContratacoesPage from "./pages/Contratacoes.jsx";
 import BancoTalentosPage from "./pages/BancoTalentos.jsx";
-import {
-  EstudantesPage,
-  EmpresasPage,
-  EmpresasSemVagaPage,
-  VagasPage,
-} from "./pages/Pages.jsx";
+import VagasPage from "./pages/Vagas.jsx";
+import { EmpresasPage, EmpresasSemVagaPage } from "./pages/Empresas.jsx";
+import { EstudantesPage } from "./pages/Pages.jsx";
 
 export default function App() {
   return (

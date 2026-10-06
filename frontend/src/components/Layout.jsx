@@ -181,9 +181,11 @@ export default function Layout({ children }) {
         </div>
 
         {/* No celular a busca por Nº fica dentro do menu. */}
-        <div className="px-4 pb-4 md:hidden">
-          <VagaSearch id="buscar-vaga-menu" onDone={() => setIsSidebarOpen(false)} />
-        </div>
+        {pathname !== "/vagas" && (
+          <div className="px-4 pb-4 md:hidden">
+            <VagaSearch id="buscar-vaga-menu" onDone={() => setIsSidebarOpen(false)} />
+          </div>
+        )}
 
         <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 pb-6">
           {navigationItems.map((item) => {
@@ -235,8 +237,9 @@ export default function Layout({ children }) {
           {pageTitle(pathname)}
         </h1>
 
+        {/* Na tela de Vagas a busca da própria página já procura por título e Nº. */}
         <div className="mx-auto hidden w-full max-w-sm md:flex">
-          <VagaSearch id="buscar-vaga" />
+          {pathname !== "/vagas" && <VagaSearch id="buscar-vaga" />}
         </div>
 
         <div className="relative shrink-0">

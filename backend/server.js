@@ -7,11 +7,10 @@ const empresasRoutes = require("./src/routes/empresas");
 const vagasRoutes = require("./src/routes/vagas");
 const candidatosRoutes = require("./src/routes/candidatos");
 const entrevistasRoutes = require("./src/routes/entrevistas");
+const { DIA_MS, DIAS_PARA_ALERTA } = require("./src/utils");
 
 const app = express();
 const port = Number(process.env.PORT) || 3333;
-const DIA_MS = 24 * 60 * 60 * 1000;
-const DIAS_PARA_ALERTA = 10;
 
 app.use(cors());
 app.use(express.json());

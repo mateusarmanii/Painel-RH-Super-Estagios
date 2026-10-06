@@ -27,6 +27,12 @@ export default function EntityList({
   subtitle,
   // Itens do menu "⋯" de cada card (recebe o item e as ações edit/remove).
   getMenuItems,
+  // Opcionais: ordem dos cards, cabeçalho próprio (recebe os itens já filtrados, antes da busca),
+  // controles extras na barra e agrupamento em blocos ([{ key, title, items }]).
+  sortItems,
+  renderHeader,
+  toolbarExtra,
+  groupItems,
 }) {
   const [items, setItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -53,12 +59,35 @@ export default function EntityList({
     return () => window.removeEventListener("dashboard:refresh", loadItems);
   }, [loadItems]);
 
+  const visibleItems = useMemo(() => (filterItems ? items.filter(filterItems) : items), [items, filterItems]);
+
   const filteredItems = useMemo(() => {
-    const visibleItems = filterItems ? items.filter(filterItems) : items;
     const term = normalize(search.trim());
-    if (!term) return visibleItems;
-    return visibleItems.filter((item) => normalize(getSearchText(item)).includes(term));
-  }, [items, search, getSearchText, filterItems]);
+    const found = term ? visibleItems.filter((item) => normalize(getSearchText(item)).includes(term)) : visibleItems;
+    return sortItems ? [...found].sort(sortItems) : found;
+  }, [visibleItems, search, getSearchText, sortItems]);
+
+  const groups = groupItems ? groupItems(filteredItems) : null;
+
+  function renderCard(item) {
+    return (
+      <article
+        key={item.id}
+        className="relative flex min-h-56 flex-col rounded-lg border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
+      >
+        <div className="absolute right-3 top-3">
+          <ActionMenu
+            label={`Ações para ${getName(item)}`}
+            title={getName(item)}
+            items={getMenuItems(item, { edit: () => setEditingItem(item), remove: () => setDeletingItem(item) })}
+          />
+        </div>
+        {renderItem(item)}
+      </article>
+    );
+  }
+
+  const gridClass = "grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3";
 
   // Exporta exatamente o que está na tela (já filtrado pela busca).
   function handleExport() {
@@ -94,7 +123,7 @@ export default function EntityList({
   return (
     <section className="min-h-[calc(100vh-4rem)] px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto w-full max-w-7xl">
-        <PageHeader subtitle={subtitle} />
+        {renderHeader ? renderHeader({ items: visibleItems, isLoading }) : <PageHeader subtitle={subtitle} />}
         <ListToolbar
           id={type}
           search={search}
@@ -102,7 +131,9 @@ export default function EntityList({
           placeholder={searchPlaceholder}
           onExport={csvExport && handleExport}
           exportDisabled={isLoading || filteredItems.length === 0}
-        />
+        >
+          {toolbarExtra}
+        </ListToolbar>
 
         {isLoading ? (
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3" aria-busy="true" aria-label="A carregar">
@@ -116,24 +147,17 @@ export default function EntityList({
             title={search.trim() ? `Nenhum resultado para "${search.trim()}"` : emptyMessage}
             description={search.trim() ? "Confira a grafia ou busque por outro termo." : undefined}
           />
-        ) : (
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredItems.map((item) => (
-              <article
-                key={item.id}
-                className="relative flex min-h-56 flex-col rounded-lg border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
-              >
-                <div className="absolute right-3 top-3">
-                  <ActionMenu
-                    label={`Ações para ${getName(item)}`}
-                    title={getName(item)}
-                    items={getMenuItems(item, { edit: () => setEditingItem(item), remove: () => setDeletingItem(item) })}
-                  />
-                </div>
-                {renderItem(item)}
-              </article>
+        ) : groups ? (
+          <div className="space-y-8">
+            {groups.map((group) => (
+              <section key={group.key} aria-label={group.label}>
+                <div className="mb-3 flex items-center gap-3 border-b border-slate-200 pb-2">{group.title}</div>
+                <div className={gridClass}>{group.items.map(renderCard)}</div>
+              </section>
             ))}
           </div>
+        ) : (
+          <div className={gridClass}>{filteredItems.map(renderCard)}</div>
         )}
       </div>
 

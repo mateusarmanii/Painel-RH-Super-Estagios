@@ -36,6 +36,7 @@ import PanelCard from "../components/PanelCard.jsx";
 import { statusLabels, statusStyles } from "../vagaStatus.js";
 import { dateTimeFormat, kanbanStatusLabels, toDateTimeInputValue } from "../kanbanStatus.js";
 import { API_URL as apiUrl } from "../api.js";
+import { getInitials } from "../text.js";
 
 const columns = [
   {
@@ -82,19 +83,6 @@ const avatarStyles = [
   "bg-violet-100 text-violet-700",
   "bg-emerald-100 text-emerald-700",
 ];
-
-// Ignora etiquetas como "[TESTE]" ou "[DEMO]" no início do nome.
-function getInitials(name) {
-  return name
-    .replace(/^\s*\[[^\]]*\]\s*/, "")
-    .trim()
-    .split(/\s+/)
-    .filter((part) => /\p{L}/u.test(part))
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join("")
-    .toUpperCase();
-}
 
 // Evita que cliques e teclas nos botões do cartão iniciem o arrastar.
 const stopDrag = {

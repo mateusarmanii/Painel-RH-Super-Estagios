@@ -1,6 +1,6 @@
 const express = require("express");
 const prisma = require("../prisma");
-const { uuidValido, pluralizar } = require("../utils");
+const { uuidValido, pluralizar, resumirCandidaturas } = require("../utils");
 
 const router = express.Router();
 
@@ -10,14 +10,35 @@ router.get("/", async (_req, res) => {
       // Vagas resumidas para a página "Empresas sem vaga" (empresas sem nenhuma vaga ABERTA).
       include: {
         vagas: {
-          select: { id: true, codigo_vaga: true, titulo: true, status: true, created_at: true },
+          select: {
+            id: true,
+            codigo_vaga: true,
+            titulo: true,
+            status: true,
+            created_at: true,
+            aplicacoes: { select: { status_kanban: true } },
+          },
           orderBy: { created_at: "desc" },
         },
       },
       orderBy: { nome: "asc" },
     });
 
-    return res.json(empresas);
+    // Números dos cards: vagas abertas, candidatos em processo e contratados (somando todas as vagas da empresa).
+    return res.json(
+      empresas.map((empresa) => {
+        const resumo = resumirCandidaturas(empresa.vagas.flatMap((vaga) => vaga.aplicacoes));
+        return {
+          ...empresa,
+          vagas: empresa.vagas.map(({ aplicacoes: _aplicacoes, ...vaga }) => vaga),
+          resumo: {
+            vagas_abertas: empresa.vagas.filter((vaga) => vaga.status === "ABERTA").length,
+            em_processo: resumo.em_processo,
+            contratados: resumo.por_etapa.APROVADO,
+          },
+        };
+      }),
+    );
   } catch (error) {
     console.error("Erro ao listar empresas:", error);
     return res.status(500).json({ erro: "Não foi possível listar as empresas." });

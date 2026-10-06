@@ -1,6 +1,6 @@
 const express = require("express");
 const prisma = require("../prisma");
-const { uuidValido, pluralizar } = require("../utils");
+const { uuidValido, pluralizar, resumirVaga } = require("../utils");
 
 const router = express.Router();
 const statusVagaValidos = new Set(["ABERTA", "FECHADA", "SUSPENSA"]);
@@ -8,11 +8,13 @@ const statusVagaValidos = new Set(["ABERTA", "FECHADA", "SUSPENSA"]);
 router.get("/", async (_req, res) => {
   try {
     const vagas = await prisma.vaga.findMany({
-      include: { empresa: true },
+      include: { empresa: true, aplicacoes: { select: { status_kanban: true } } },
       orderBy: { codigo_vaga: "asc" },
     });
 
-    return res.json(vagas);
+    // Resumo para os cards: candidatos por etapa, dias em aberto e alerta.
+    const agora = new Date();
+    return res.json(vagas.map(({ aplicacoes, ...vaga }) => ({ ...vaga, resumo: resumirVaga(vaga, aplicacoes, agora) })));
   } catch (error) {
     console.error("Erro ao listar vagas:", error);
     return res.status(500).json({ erro: "Não foi possível listar as vagas." });
