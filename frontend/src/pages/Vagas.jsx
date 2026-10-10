@@ -23,7 +23,7 @@ import { kanbanStatusBar, kanbanStatusOrder } from "../kanbanStatus.js";
 import { csvDate, csvDecimal } from "../csv.js";
 import { normalize, plural } from "../text.js";
 import { buttonDanger, buttonPrimary, buttonSecondary } from "../ui.js";
-import { API_URL as apiUrl } from "../api.js";
+import { apiFetch } from "../api.js";
 import { turnoVagaLabels } from "../estudante.js";
 
 const currency = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
@@ -304,7 +304,7 @@ export default function VagasPage() {
   // Link aberto direto (sem o nome no estado da navegação): busca o nome da empresa.
   useEffect(() => {
     if (!empresaId || empresaNome) return;
-    fetch(`${apiUrl}/empresas`)
+    apiFetch("/empresas")
       .then((response) => (response.ok ? response.json() : []))
       .then((empresas) => {
         const empresa = empresas.find((item) => item.id === empresaId);

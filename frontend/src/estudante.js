@@ -4,14 +4,6 @@ export const turnoEstudoLabels = { MANHA: "Manhã", TARDE: "Tarde", NOITE: "Noit
 export const periodoLabels = { MANHA: "Manhã", TARDE: "Tarde", NOITE: "Noite" };
 export const turnoVagaLabels = { MANHA: "Manhã", TARDE: "Tarde", INTEGRAL: "Integral" };
 
-const turnoFrase = {
-  MANHA: "estuda de manhã",
-  TARDE: "estuda à tarde",
-  NOITE: "estuda à noite",
-  INTEGRAL: "estuda em período integral",
-  EAD: "estuda a distância (EAD)",
-};
-
 // Turno de estudo; cadastros antigos ainda podem ter só o horário de estudo.
 export function studyShift(estudante) {
   return estudante?.turno_estudo ?? estudante?.horario_estudo ?? null;
@@ -19,10 +11,6 @@ export function studyShift(estudante) {
 
 export function studyShiftLabel(estudante) {
   return turnoEstudoLabels[studyShift(estudante)] ?? "";
-}
-
-export function studyShiftPhrase(estudante) {
-  return turnoFrase[studyShift(estudante)] ?? "";
 }
 
 // ["MANHA", "NOITE"] → "Manhã e Noite"

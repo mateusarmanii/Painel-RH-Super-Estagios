@@ -4,3 +4,6 @@ frontend/dist
 frontend/.env
 # Logos enviadas pelas telas (entram no backup, não no git)
 backend/uploads/
+# Backups do banco (guardar fora do projeto)
+*.dump
+*.sql.gz

@@ -11,7 +11,5 @@ export const buttonDanger =
 export const inputBase =
   "w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-marinho-600 focus:ring-2 focus:ring-ambar-400/40";
 
-export const linkText = "font-semibold text-marinho-700 transition-colors hover:text-marinho-900 hover:underline";
-
 // Card branco de bordas suaves.
 export const card = "rounded-lg border border-slate-200 bg-white shadow-sm";

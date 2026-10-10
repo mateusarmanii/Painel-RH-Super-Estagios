@@ -7,36 +7,15 @@ const BACKEND = path.resolve(__dirname, "..");
 process.chdir(BACKEND);
 require("dotenv").config();
 const prisma = require("../src/prisma");
+const { criarTeste } = require("./lib/teste");
 
 const PORT = 3399;
-const BASE = `http://localhost:${PORT}`;
 const DIA_MS = 24 * 60 * 60 * 1000;
 const UUID_INEXISTENTE = "00000000-0000-4000-8000-000000000000";
 const CURSO_TESTE = "[TESTE] Curso 2A";
 const ids = { empresa: null, vagas: [], estudantes: [] };
-let falhas = 0;
-
-async function req(method, url, body) {
-  const res = await fetch(BASE + url, {
-    method,
-    headers: { "Content-Type": "application/json" },
-    body: body && JSON.stringify(body),
-  });
-  const text = await res.text();
-  return { status: res.status, body: text ? JSON.parse(text) : null };
-}
-
-function checar(nome, condicao, detalhe = "") {
-  if (!condicao) falhas++;
-  console.log(`${condicao ? "PASS" : "FAIL"} ${nome}${detalhe ? ` — ${detalhe}` : ""}`);
-}
-
-async function esperarServidor() {
-  for (let i = 0; i < 50; i++) {
-    try { await fetch(BASE + "/"); return; } catch { await new Promise((r) => setTimeout(r, 200)); }
-  }
-  throw new Error("API não subiu");
-}
+const teste = criarTeste(PORT);
+const { req, checar, esperarServidor } = teste;
 
 const diasAtras = (dias) => new Date(Date.now() - dias * DIA_MS);
 const diasAFrente = (dias) => new Date(Date.now() + dias * DIA_MS);
@@ -194,8 +173,8 @@ async function main() {
     await prisma.$disconnect();
     server.kill();
   }
-  console.log(falhas ? `\n${falhas} FALHA(S)` : "\nTodos os testes passaram.");
-  process.exitCode = falhas ? 1 : 0;
+  console.log(teste.falhas ? `\n${teste.falhas} FALHA(S)` : "\nTodos os testes passaram.");
+  process.exitCode = teste.falhas ? 1 : 0;
 }
 
 main().catch((e) => { console.error(e); process.exitCode = 1; });

@@ -10,13 +10,14 @@ const BACKEND = path.resolve(__dirname, "..");
 process.chdir(BACKEND);
 require("dotenv").config();
 const prisma = require("../src/prisma");
+const { criarTeste } = require("./lib/teste");
 const { PASTA_LOGOS } = require("../src/logos");
 
 const PORT = 3395;
-const BASE = `http://localhost:${PORT}`;
 const UUID_INEXISTENTE = "00000000-0000-4000-8000-000000000000";
 const ids = { empresas: [] };
-let falhas = 0;
+const teste = criarTeste(PORT);
+const { BASE, req: json, checar, esperarServidor } = teste;
 
 // Imagens 1x1 de verdade.
 const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==", "base64");
@@ -28,33 +29,11 @@ const JPG = Buffer.from(
 const WEBP = Buffer.from("UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA==", "base64");
 const SVG = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>');
 
-function checar(nome, condicao, detalhe = "") {
-  if (!condicao) falhas++;
-  console.log(`${condicao ? "PASS" : "FAIL"} ${nome}${detalhe ? ` — ${detalhe}` : ""}`);
-}
-
-async function esperarServidor() {
-  for (let i = 0; i < 50; i++) {
-    try { await fetch(BASE + "/"); return; } catch { await new Promise((r) => setTimeout(r, 200)); }
-  }
-  throw new Error("API não subiu");
-}
-
 async function enviarLogo(empresaId, buffer, nome, tipo) {
   const form = new FormData();
   form.append("logo", new Blob([buffer], { type: tipo }), nome);
   const res = await fetch(`${BASE}/empresas/${empresaId}/logo`, { method: "POST", body: form });
   return { status: res.status, body: await res.json().catch(() => null) };
-}
-
-async function json(method, url, body) {
-  const res = await fetch(BASE + url, {
-    method,
-    headers: { "Content-Type": "application/json" },
-    ...(body !== undefined && { body: JSON.stringify(body) }),
-  });
-  const text = await res.text();
-  return { status: res.status, body: text ? JSON.parse(text) : null };
 }
 
 const arquivoDe = (logoUrl) => path.join(PASTA_LOGOS, path.basename(logoUrl ?? "nada"));
@@ -161,12 +140,12 @@ async function main() {
     }
     const sobras = await prisma.empresa.count({ where: { nome: { startsWith: "[TESTE]" } } });
     console.log(`\nRegistros [TESTE] restantes: ${sobras} | arquivos de logo a mais na pasta: ${arquivosNaPasta() - arquivosAntes}`);
-    if (sobras || arquivosNaPasta() !== arquivosAntes) falhas++;
+    if (sobras || arquivosNaPasta() !== arquivosAntes) teste.falhas++;
     await prisma.$disconnect();
     server.kill();
   }
-  console.log(falhas ? `\n${falhas} FALHA(S)` : "\nTodos os testes passaram.");
-  process.exitCode = falhas ? 1 : 0;
+  console.log(teste.falhas ? `\n${teste.falhas} FALHA(S)` : "\nTodos os testes passaram.");
+  process.exitCode = teste.falhas ? 1 : 0;
 }
 
 main().catch((e) => { console.error(e); process.exitCode = 1; });

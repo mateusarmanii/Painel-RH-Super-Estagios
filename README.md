@@ -99,20 +99,9 @@ npm run test:status-vaga   # suspender, fechar (motivo, dispensas, entrevistas c
 npm run test:perfil    # perfil do estudante: dados, candidaturas, entrevistas, observações e dispensas
 ```
 
-## Dados de demonstração
+## Dados de exemplo
 
-Para mostrar o sistema funcionando com dados realistas:
-
-```bash
-cd backend
-npm run demo:criar    # 5 empresas, 10 vagas, 30 estudantes e 40 candidaturas marcados com [DEMO]
-npm run demo:limpar   # remove tudo o que for [DEMO]
-```
-
-- O `demo:criar` não roda se já houver registros `[DEMO]` e grava tudo de uma vez (se algo falhar, nada é gravado).
-- O `demo:limpar` só apaga registros `[DEMO]`. Se algum dado real estiver ligado a eles (por exemplo, um estudante real inscrito numa vaga `[DEMO]`), ele não apaga nada e mostra o que precisa ser resolvido.
-
-> ⚠️ **Cuidado com o `npm run seed`** (`backend/prisma/seed.js`): ele **apaga TODOS os dados do banco** (empresas, vagas, estudantes e candidaturas) antes de criar alguns exemplos. Por isso ele só roda com a confirmação explícita `npm run seed -- --confirmar-apagar-tudo`; sem ela, avisa e não faz nada. Use apenas num banco vazio ou descartável. Para demonstrações, prefira o `demo:criar`.
+> ⚠️ **Cuidado com o `npm run seed`** (`backend/prisma/seed.js`): ele **apaga TODOS os dados do banco** (empresas, vagas, estudantes e candidaturas) antes de criar alguns exemplos. Por isso ele só roda com a confirmação explícita `npm run seed -- --confirmar-apagar-tudo`; sem ela, avisa e não faz nada. Use apenas num banco vazio ou descartável.
 
 ## Backup
 
@@ -122,6 +111,7 @@ O backup precisa de **duas partes**:
    ```bash
    docker exec superestagios-db pg_dump -U <usuário> -d superestagios -Fc > backup.dump
    ```
+   Os arquivos `*.dump` e `*.sql.gz` estão no `.gitignore`, mas guarde o backup fora da pasta do projeto.
 2. **A pasta `backend/uploads/logos`**, com as logos das empresas. Os arquivos ficam nessa pasta e o banco guarda só o caminho (`logo_url`). Ela está no `.gitignore`, então **não vai para o GitHub**: sem copiar essa pasta, as empresas voltam sem logo (e aparecem com as iniciais).
 
 ## Estrutura
@@ -133,7 +123,7 @@ backend/
   uploads/logos/          logos das empresas (fora do git; precisa entrar no backup)
   prisma/schema.prisma    modelo de dados (Empresa, Vaga, Estudante, Aplicacao)
   prisma/migrations/      histórico de alterações do banco
-  scripts/                testes e dados de demonstração
+  scripts/                testes (funções comuns em scripts/lib/teste.js)
 frontend/src/
   pages/                  Dashboard, Kanban, Agenda, Vagas, Empresas, Estudantes, Perfil do estudante, Banco de Talentos, Contratações
   components/             lista com busca/edição/exclusão, formulários, modais e gráficos

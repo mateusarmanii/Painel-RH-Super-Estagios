@@ -36,7 +36,7 @@ import PanelCard from "../components/PanelCard.jsx";
 import LoadError from "../components/LoadError.jsx";
 import { statusLabels, statusStyles } from "../vagaStatus.js";
 import { dateTimeFormat, kanbanStatusLabels } from "../kanbanStatus.js";
-import { API_URL as apiUrl } from "../api.js";
+import { apiFetch, apiJson } from "../api.js";
 import { getInitials } from "../text.js";
 import CompanyAvatar from "../components/CompanyAvatar.jsx";
 import InterviewFields, { interviewFormValues, interviewPayload } from "../components/InterviewFields.jsx";
@@ -323,12 +323,11 @@ function NoteForm({ candidate, onSaved, onCancel }) {
   async function save(observacao) {
     setIsSaving(true);
     try {
-      const response = await fetch(
-        `${apiUrl}/candidatos/${candidate.id}/candidaturas/${candidate.applicationId}/observacao`,
-        { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ observacao }) },
+      const result = await apiJson(
+        `/candidatos/${candidate.id}/candidaturas/${candidate.applicationId}/observacao`,
+        { method: "PUT", body: { observacao } },
+        "Não foi possível salvar a observação.",
       );
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(result.erro ?? "Não foi possível salvar a observação.");
       toast.success(result.observacao ? "Observação salva." : "Observação removida.");
       onSaved(result.observacao);
     } catch (saveError) {
@@ -411,7 +410,7 @@ function VagaPicker() {
     let isCurrent = true;
     setLoadError("");
 
-    fetch(`${apiUrl}/vagas`)
+    apiFetch("/vagas")
       .then(async (response) => {
         if (!response.ok) throw new Error("Não foi possível carregar as vagas.");
         return response.json();
@@ -515,8 +514,8 @@ function KanbanBoard({ vagaId }) {
     setError("");
 
     Promise.all([
-      fetch(`${apiUrl}/vagas`),
-      fetch(`${apiUrl}/vagas/${vagaId}/candidatos`),
+      apiFetch("/vagas"),
+      apiFetch(`/vagas/${vagaId}/candidatos`),
     ])
       .then(async ([vagasResponse, applicationsResponse]) => {
         if (!applicationsResponse.ok) {
@@ -554,18 +553,14 @@ function KanbanBoard({ vagaId }) {
   // Envia o PATCH; em caso de erro, devolve o cartão à coluna de origem. Retorna true se salvou.
   async function saveMove({ candidate, destination }, details = {}) {
     try {
-      const response = await fetch(`${apiUrl}/candidatos/${candidate.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          aplicacao_id: candidate.applicationId,
-          status_kanban: destination.status,
-          ...details,
-        }),
-      });
-
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(result.erro ?? "Não foi possível atualizar a candidatura.");
+      const result = await apiJson(
+        `/candidatos/${candidate.id}`,
+        {
+          method: "PATCH",
+          body: { aplicacao_id: candidate.applicationId, status_kanban: destination.status, ...details },
+        },
+        "Não foi possível atualizar a candidatura.",
+      );
 
       placeCandidate(candidate.applicationId, {
         status: result.status_kanban,

@@ -9,7 +9,7 @@ import LoadError from "../components/LoadError.jsx";
 import { csvDate, downloadCsv, toCsv, todayForFilename } from "../csv.js";
 import { formatPhone, getInitials, normalize, plural } from "../text.js";
 import { card } from "../ui.js";
-import { API_URL as apiUrl } from "../api.js";
+import { apiFetch } from "../api.js";
 
 const HiresChart = lazy(() => import("../components/HiresChart.jsx"));
 
@@ -134,7 +134,7 @@ export default function ContratacoesPage() {
 
   const loadHires = useCallback(async () => {
     try {
-      const response = await fetch(`${apiUrl}/candidatos`);
+      const response = await apiFetch("/candidatos");
       if (!response.ok) throw new Error("Não foi possível carregar as contratações.");
       setHires(toHires(await response.json()));
       setLoadError("");

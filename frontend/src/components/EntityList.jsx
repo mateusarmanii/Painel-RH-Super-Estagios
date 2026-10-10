@@ -10,7 +10,7 @@ import Modal from "./Modal.jsx";
 import PageHeader from "./PageHeader.jsx";
 import { downloadCsv, toCsv, todayForFilename } from "../csv.js";
 import { normalize } from "../text.js";
-import { API_URL as apiUrl } from "../api.js";
+import { apiFetch } from "../api.js";
 
 // Lista com busca, edição (PUT) e exclusão (DELETE) para empresas, vagas e estudantes.
 export default function EntityList({
@@ -47,7 +47,7 @@ export default function EntityList({
 
   const loadItems = useCallback(async () => {
     try {
-      const response = await fetch(`${apiUrl}/${endpoint}`);
+      const response = await apiFetch(`/${endpoint}`);
       if (!response.ok) throw new Error(`Não foi possível carregar a lista de ${entityLabel.plural}.`);
       setItems(await response.json());
       setLoadError("");
@@ -107,7 +107,7 @@ export default function EntityList({
     setIsDeleting(true);
 
     try {
-      const response = await fetch(`${apiUrl}/${endpoint}/${deletingItem.id}`, { method: "DELETE" });
+      const response = await apiFetch(`/${endpoint}/${deletingItem.id}`, { method: "DELETE" });
 
       if (!response.ok) {
         const result = await response.json().catch(() => ({}));

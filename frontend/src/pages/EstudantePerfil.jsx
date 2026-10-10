@@ -29,7 +29,7 @@ import { ageFrom, availabilityText, formatMonthYear, studyShiftLabel, turnoVagaL
 import { compatibleJobs, IN_PROCESS, nextInterview, profileAlerts, situationLabels, studentSituation, timeline } from "../perfil.js";
 import { formatPhone, getInitials, plural, whatsappLink } from "../text.js";
 import { buttonPrimary, buttonSecondary, card } from "../ui.js";
-import { API_URL as apiUrl } from "../api.js";
+import { apiFetch, apiJson } from "../api.js";
 
 const dateFormat = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
 const dateTimeFormat = new Intl.DateTimeFormat("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
@@ -145,7 +145,7 @@ export default function EstudantePerfilPage() {
 
   const load = useCallback(async () => {
     try {
-      const [studentResponse, jobsResponse] = await Promise.all([fetch(`${apiUrl}/candidatos/${id}`), fetch(`${apiUrl}/vagas`)]);
+      const [studentResponse, jobsResponse] = await Promise.all([apiFetch(`/candidatos/${id}`), apiFetch("/vagas")]);
       if (studentResponse.status === 404 || studentResponse.status === 400) {
         setError("Estudante não encontrado. Ele pode ter sido excluído.");
         return;
@@ -167,13 +167,11 @@ export default function EstudantePerfilPage() {
   async function indicate(job) {
     setIndicatingJob(job.id);
     try {
-      const response = await fetch(`${apiUrl}/candidatos/${student.id}/candidaturas`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ vaga_id: job.id }),
-      });
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(result.erro ?? "Não foi possível indicar o estudante.");
+      await apiJson(
+        `/candidatos/${student.id}/candidaturas`,
+        { method: "POST", body: { vaga_id: job.id } },
+        "Não foi possível indicar o estudante.",
+      );
       toast.success(`${student.nome_completo} foi indicado para "${job.titulo}".`);
       window.dispatchEvent(new Event("dashboard:refresh"));
     } catch (indicateError) {

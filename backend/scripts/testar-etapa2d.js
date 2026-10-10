@@ -8,34 +8,13 @@ const BACKEND = path.resolve(__dirname, "..");
 process.chdir(BACKEND);
 require("dotenv").config();
 const prisma = require("../src/prisma");
+const { criarTeste } = require("./lib/teste");
 
 const PORT = 3399;
-const BASE = `http://localhost:${PORT}`;
 const DIA_MS = 24 * 60 * 60 * 1000;
 const ids = { empresa: null, vagas: [], estudante: null };
-let falhas = 0;
-
-async function req(method, url, body) {
-  const res = await fetch(BASE + url, {
-    method,
-    headers: { "Content-Type": "application/json" },
-    body: body && JSON.stringify(body),
-  });
-  const text = await res.text();
-  return { status: res.status, body: text ? JSON.parse(text) : null };
-}
-
-function checar(nome, condicao, detalhe = "") {
-  if (!condicao) falhas++;
-  console.log(`${condicao ? "PASS" : "FAIL"} ${nome}${detalhe ? ` — ${detalhe}` : ""}`);
-}
-
-async function esperarServidor() {
-  for (let i = 0; i < 50; i++) {
-    try { await fetch(BASE + "/"); return; } catch { await new Promise((r) => setTimeout(r, 200)); }
-  }
-  throw new Error("API não subiu");
-}
+const teste = criarTeste(PORT);
+const { req, checar, esperarServidor } = teste;
 
 async function main() {
   const server = spawn(process.execPath, ["server.js"], { env: { ...process.env, PORT }, stdio: "ignore" });
@@ -106,12 +85,12 @@ async function main() {
       + await prisma.vaga.count({ where: { titulo: { startsWith: "[TESTE]" } } })
       + await prisma.empresa.count({ where: { nome: { startsWith: "[TESTE]" } } });
     console.log(`\nRegistros [TESTE] restantes: ${sobras}`);
-    if (sobras) falhas++;
+    if (sobras) teste.falhas++;
     await prisma.$disconnect();
     server.kill();
   }
-  console.log(falhas ? `\n${falhas} FALHA(S)` : "\nTodos os testes passaram.");
-  process.exitCode = falhas ? 1 : 0;
+  console.log(teste.falhas ? `\n${teste.falhas} FALHA(S)` : "\nTodos os testes passaram.");
+  process.exitCode = teste.falhas ? 1 : 0;
 }
 
 main().catch((e) => { console.error(e); process.exitCode = 1; });

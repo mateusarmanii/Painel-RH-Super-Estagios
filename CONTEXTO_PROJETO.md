@@ -10,7 +10,7 @@ Regras seguidas: nenhuma migration, nenhuma alteração de schema e nenhuma escr
 |---|---|---|
 | 1 — 2D | `2ecbbdd` | Agenda `/agenda` (por dia, com Reagendar), histórico de candidaturas no modal Editar do estudante, "Próximas entrevistas" via `/entrevistas`, funil com os nomes do Kanban. Teste `npm run test:etapa2d`: 10/10. |
 | 2 — CSV | `d13f5e1` | Botão "Exportar CSV" em Vagas e Banco de Talentos, respeitando a busca (`;`, UTF-8 com BOM, CRLF, proteção contra fórmula). |
-| 3 — Demo | `8ce2a83` | `npm run demo:criar` / `npm run demo:limpar`. **Não executados**, como pedido; lógica validada sem banco. |
+| 3 — Demo | `8ce2a83` | Scripts de dados de demonstração (removidos depois, de propósito, no commit `5b8e481`). |
 | 4 — README | `240a240` | `README.md` e `backend/.env.example` (sem senha real). |
 | 5 — Revisão | `93a3dc0` | Busca do topo passou a funcionar, cabeçalho padrão nas listas, iniciais do Kanban corrigidas, variáveis sem uso removidas do seed. |
 
@@ -22,7 +22,6 @@ O que a revisão (Etapa 5) verificou:
 - **Prints em notebook e celular de todas as telas**, com dados `[TESTE]` temporários: nenhuma tela vaza para os lados no celular.
 
 ### O que foi pulado ou ficou parcial
-- **Scripts de demonstração:** não foram executados, por instrução. A lógica foi testada sem tocar no banco.
 - **Interações que o navegador headless não consegue fazer:** não testei por clique o modal de histórico, o Reagendar, o download do CSV (nem a abertura no Excel), a busca do topo e o arraste no Kanban. A lógica por trás de cada um foi testada (API, geração do CSV), mas a interação precisa do roteiro abaixo.
 - **Nenhuma etapa precisou ser desfeita.**
 
@@ -41,12 +40,11 @@ O que a revisão (Etapa 5) verificou:
 
 ### O que precisa da sua aprovação ou ação
 1. **Trocar a senha do banco.** O `.env` antigo continua no histórico do GitHub.
-2. **Rodar `cd backend && npm run demo:criar`** quando quiser dados de demonstração, e `npm run demo:limpar` para removê-los.
-3. **Confirmar a mudança de código no `GET /candidatos`** (Etapa 1).
-4. **Decidir sobre os itens 1 e 3 da lista acima:** o `seed.js` destrutivo e a `VITE_API_URL`.
+2. **Confirmar a mudança de código no `GET /candidatos`** (Etapa 1).
+3. **Decidir sobre os itens 1 e 3 da lista acima:** o `seed.js` destrutivo e a `VITE_API_URL`.
 
 ### Roteiro único de testes no navegador
-Suba a API e o frontend (`npm run dev` em `backend/` e `frontend/`). Para ter dados, rode antes `npm run demo:criar`.
+Suba a API e o frontend (`npm run dev` em `backend/` e `frontend/`).
 
 **Agenda e histórico (2D)**
 1. No menu lateral (☰), clique em **Agenda de Entrevistas**. As entrevistas devem aparecer agrupadas por dia ("Amanhã · …"), com hora, estudante, vaga, empresa e telefone.
@@ -74,17 +72,11 @@ Suba a API e o frontend (`npm run dev` em `backend/` e `frontend/`). Para ter da
 10. No Kanban, as iniciais dos cartões `[DEMO]` devem mostrar as letras do nome (ex.: "AB"), e não "[D".
 11. Vagas, Empresas, Banco de Talentos e `/kanban` devem ter o cabeçalho "Super Estágios / título".
 
-**Dados de demonstração**
-12. Depois do `demo:criar`, confira:
-    - o Dashboard mostra 2 vagas em alerta (Enfermagem e Engenharia Civil), a rosca tem 6 cursos mais "Outros", e "Direito"/"direito" e "Psicologia"/"PSICOLOGIA" aparecem agrupados;
-    - há 6 entrevistas na Agenda;
-    - o tempo médio de contratação está preenchido.
-13. Rode `npm run demo:limpar`: ele deve informar "Registros [DEMO] restantes: 0", e os seus dados reais devem continuar intactos.
 
 **Regressão (etapas anteriores, ainda não validadas no navegador)**
-14. **Etapa 1:** busca, edição e exclusão (com 409) em Vagas, Empresas e Banco de Talentos.
-15. **2B:** modais de "Entrevista" e "Dispensado" ao arrastar no Kanban, e o cartão volta se você cancelar.
-16. **2C:** estados de carregamento e de "API fora do ar" no Dashboard.
+12. **Etapa 1:** busca, edição e exclusão (com 409) em Vagas, Empresas e Banco de Talentos.
+13. **2B:** modais de "Entrevista" e "Dispensado" ao arrastar no Kanban, e o cartão volta se você cancelar.
+14. **2C:** estados de carregamento e de "API fora do ar" no Dashboard.
 
 ---
 
@@ -123,7 +115,7 @@ O que JÁ existia: CRUD de criação (POST), Dashboard com KPIs + funil (`/dashb
 ### 🧯 Incidente de migrations (05/10/2026)
 A IA da Etapa 2 travada aplicou no banco duas migrations que **nunca foram salvas no disco** (`20261002000000_add_recruiter_notes_and_application_cascade` e `20261002010000_add_hiring_analytics_dates`). Ao gerar a migration da Etapa 1 a partir do banco, o SQL **apagou** `Aplicacao.created_at`, `Aplicacao.data_aprovacao` e `Vaga.created_at` (2 vagas e 2 aplicações afetadas; valores perdidos) e trocou as FKs de CASCADE de volta para RESTRICT. Correção feita com aprovação do usuário: migration reescrita para apenas `ADD COLUMN IF NOT EXISTS "anotacoes_recrutador"`, registros órfãos removidos de `_prisma_migrations` e checksum ajustado. A sequência das 3 migrations foi validada num banco temporário (`No difference detected`). As datas voltam na 2A (`createdAt`, `data_contratacao`).
 
-Documentação: `README.md` na raiz (instalação, `.env`, migrations, como rodar, testes e demo) e `backend/.env.example` (sem senha real). ⚠️ `npm run seed` (`prisma/seed.js`, anterior a estas sessões) **apaga todos os dados** antes de criar exemplos — documentado no README, não alterado.
+Documentação: `README.md` na raiz (instalação, `.env`, migrations, como rodar e testes) e `backend/.env.example` (sem senha real). ⚠️ `npm run seed` (`prisma/seed.js`, anterior a estas sessões) **apaga todos os dados** antes de criar exemplos — documentado no README, não alterado.
 
 Observações de ambiente:
 - `backend/node_modules` não vem no repositório: rodar `npm ci` em `backend/` antes de qualquer `npx prisma` (senão o `npx` baixa outra versão do Prisma). Versão fixada: 5.22.0.
@@ -209,23 +201,20 @@ Build OK; testes `cd backend && npm run test:etapa2d` (10/10, registros `[TESTE]
 - `frontend/src/csv.js`: separador `;`, UTF-8 com BOM, CRLF; células com `;`, aspas ou quebra de linha vão entre aspas; valores com 2 casas e vírgula ("1500,50"); datas dd/mm/aaaa. Proteção contra fórmula: conteúdo que começa com `=`, `@`, tab, ou `+`/`-` seguido de não-dígito recebe `'` na frente (telefones "+55…" ficam intactos).
 - Colunas — Vagas: Nº, Título, Empresa, Status, Bolsa-auxílio (R$), Criada em, Descrição. Banco de Talentos: Nome, Curso, Instituição, Telefone, E-mail, Horário, Endereço, Currículo, Candidaturas, Vagas e etapas, Anotações.
 
-### 🟡 Dados de demonstração — SCRIPTS PRONTOS, NÃO EXECUTADOS (05/10/2026)
-- `cd backend && npm run demo:criar` (`scripts/seed-demo.js`): cria **5 empresas, 10 vagas, 30 estudantes e 40 candidaturas `[DEMO]`** numa única transação (ou cria tudo, ou nada). Recusa rodar se já houver `[DEMO]`. Dados fixos (semente), cobrindo as 5 etapas (12 enviados, 10 em análise, 6 entrevistas futuras, 5 contratados com `data_aprovacao`, 7 dispensados com motivo), vagas de 2 a 40 dias, 1 fechada e 1 suspensa, **2 vagas em alerta** (Enfermagem e Engenharia Civil) e 11 cursos (com grafias variadas de propósito: "direito", "PSICOLOGIA"…). Códigos de vaga a partir de 700001, pulando os que já existem.
-- `cd backend && npm run demo:limpar` (`scripts/limpar-demo.js`): remove empresas, vagas e estudantes `[DEMO]` e as candidaturas deles, numa transação, e confirma que não sobrou nenhum. **Não apaga nada** se algum dado real estiver ligado a um `[DEMO]` (vaga real numa empresa `[DEMO]` ou estudante real inscrito numa vaga `[DEMO]`) — lista o conflito.
-- A lógica do seed foi validada sem tocar no banco (função `montarPlano`, exportada): quantidades, etapas, duplicatas, datas coerentes, vagas em alerta e campos existentes no schema.
+### Dados de demonstração — REMOVIDOS (07/10/2026)
+- Os scripts `seed-demo.js` e `limpar-demo.js` (`demo:criar` / `demo:limpar`) foram removidos de propósito no commit `5b8e481`. Registros `[DEMO]` que ainda existam no banco não têm mais limpeza automática.
 
 ### ✅ Contratações efetivas — IMPLEMENTADA (05/10/2026)
 - Causa do "não mostra nada": `/contratacoes` apontava para um `PlaceholderPage` (só o título). Agora é `pages/Contratacoes.jsx`.
 - Lista as candidaturas em `APROVADO` (via `GET /candidatos`, sem mudança no backend) com estudante, curso, vaga (link para o Kanban), Nº, empresa, data de contratação e "N dias após a candidatura", da mais recente para a mais antiga. Busca por estudante/curso/vaga/empresa e "Exportar CSV". Celular: cartões; telas `md+`: tabela.
-- Conferida com os dados `[DEMO]` (5 contratados), criados com aprovação do usuário via `npm run demo:criar`.
+- Conferida com os dados `[DEMO]` (5 contratados), criados com aprovação do usuário pelos scripts de demonstração (hoje removidos).
 - Componentes compartilhados novos: `components/ListToolbar.jsx` (busca + filtros + CSV, usado também pelo `EntityList`) e `text.js` (`normalize`, `plural`).
 
 ### ✅ Estudantes × Banco de Talentos — IMPLEMENTADO (05/10/2026)
 - **Estudantes** (`/estudantes`, `EstudantesPage` em `pages/Pages.jsx`): é a antiga lista "Banco de Talentos", renomeada — todos os cadastrados, com busca, editar, excluir, histórico e CSV (`estudantes-AAAA-MM-DD.csv`).
 - **Banco de Talentos** (`/banco-de-talentos`, `pages/BancoTalentos.jsx`): quem tem ao menos uma candidatura `RECUSADO` **e nenhuma** `APROVADO`. Mostra a última vaga/empresa da dispensa, motivo, data, curso e contato; etiqueta **"Em processo"** se houver candidatura em `ENVIADO_EMPRESA`/`AGUARDANDO_RETORNO`/`ENTREVISTA_AGENDADA` (o título das vagas aparece ao passar o mouse). Ordenado pela dispensa mais recente. Busca por nome e filtro por curso (grafias agrupadas, `courseOptions` em `text.js`).
 - **Indicar para vaga**: modal com as vagas `ABERTA` em que o estudante ainda não está inscrito → `POST /candidatos/:id/candidaturas { vaga_id }` (novo) cria a candidatura em `ENVIADO_EMPRESA`. Respostas: 201; 400 ids inválidos; 404 estudante/vaga; 409 vaga não aberta ou candidatura duplicada (inclusive na vaga em que foi dispensado). Testes: `npm run test:banco-talentos` (11/11, `[TESTE]`, 0 sobras).
-- **Data da dispensa = `updated_at` da candidatura** (incluído no `GET /candidatos`). Não existe coluna própria; enquanto a candidatura está `RECUSADO`, a última alteração é a dispensa. Para uma data exata e imutável seria preciso uma migration (`data_recusa`) — **aguardando aprovação**. O `seed-demo.js` passou a gravar `updated_at` realista; os `[DEMO]` já criados mostram a data de hoje até serem recriados.
-- Menu lateral: "Estudantes" e "Banco de Talentos".
+- **Data da dispensa = `updated_at` da candidatura** (incluído no `GET /candidatos`). Não existe coluna própria; enquanto a candidatura está `RECUSADO`, a última alteração é a dispensa. Para uma data exata e imutável seria preciso uma migration (`data_recusa`) — **aguardando aprovação**.- Menu lateral: "Estudantes" e "Banco de Talentos".
 - ⚠️ O Vite em modo dev rodando há horas na pasta do OneDrive parou de gerar classes novas do Tailwind (ex.: `sm:w-60`); o build está correto. Se algo aparecer sem estilo, reinicie o `npm run dev` do frontend.
 
 ### ✅ Extras (05/10/2026)
@@ -237,6 +226,15 @@ Build OK; testes `cd backend && npm run test:etapa2d` (10/10, registros `[TESTE]
 Sem migration.
 - **Local/link da entrevista** (`entrevista_local`) é opcional no Presencial e no Online (modal do Kanban e Reagendar da Agenda, `InterviewFields.jsx`); o backend já aceitava vazio. Sem local: o painel da Agenda mostra "Local a definir", o WhatsApp diz só "Entrevista presencial/online." e o link do Google Agenda vai sem `location`. Testes em `npm run test:agenda`.
 - **Vaga no cadastro do estudante** é opcional (`CreationForm`, opção "Sem vaga — indicar depois"; `POST /candidatos` sem `vaga_id` cria o estudante sem candidatura). Vaga informada continua validada (400 id inválido, 404, 409 não aberta). Testes em `npm run test:banco-talentos` (18/18).
+
+### ✅ Parte 0 — Preparação para o login (10/10/2026)
+Sem migration e sem mudança de comportamento nas telas.
+- **Pasta única:** o projeto passou a ser só `Painel-RH-Super-Estagios` (remote `Painel-RH-Super-Estagios`). O `.env` e `backend/uploads/` foram copiados da cópia antiga (`solucaoSuperEstagios-1`, remote antigo), que será renomeada para `_antigo` pelo usuário.
+- **Produção (Neon):** criado vazio em 06/10/2026 e recebeu as 5 migrations via `migrate deploy`; não usa a senha do banco local.
+- **`apiFetch` central** (`frontend/src/api.js`): toda chamada à API passa por `apiFetch(path, { method, body })` (URL base, corpo em JSON — `FormData` vai como está — e falha de conexão como `OfflineError`, um `TypeError` com `OFFLINE_MESSAGE`) ou `apiJson(path, options, mensagemPadrão)` (devolve o JSON; erro → `ApiError` com o `erro` da API ou a mensagem padrão). Não há mais `fetch` direto nas telas; o `offline.js` (que substituía o `window.fetch`) foi removido. **O login deve entrar aqui** (credenciais/cookie e tratamento de 401).
+- **Helper dos testes** (`backend/scripts/lib/teste.js`): `criarTeste(PORT)` → `req`, `checar`, `checarStatus` (status HTTP esperado), `esperarServidor` e o contador `teste.falhas`, usado nos 10 scripts.
+- **Limpeza:** referências aos scripts de demo removidas; `*.dump` e `*.sql.gz` no `.gitignore`; removidos `studyShiftPhrase`/`turnoFrase`, `linkText`, o `recentInterviews` do `/dashboard-metrics` e o `package.json` da raiz.
+- **Conferência no banco local:** 32 estudantes, nenhum telefone repetido comparando só os dígitos; 30 no formato `(99) 99999-9999`, 1 com 10 dígitos e 1 com 11 dígitos sem máscara.
 
 ## Regras de trabalho
 

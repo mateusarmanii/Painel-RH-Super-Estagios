@@ -14,7 +14,7 @@ import { addDays, dayTitle, periodFor, periodLabel, shiftAnchor, startOfWeek, ti
 import { interviewStatusDot, interviewStatusLabels } from "../interviewStatus.js";
 import { plural } from "../text.js";
 import { buttonSecondary } from "../ui.js";
-import { API_URL as apiUrl } from "../api.js";
+import { apiFetch } from "../api.js";
 
 const views = [
   { value: "dia", label: "Dia" },
@@ -139,7 +139,7 @@ export default function AgendaPage() {
 
   const loadInterviews = useCallback(async () => {
     try {
-      const response = await fetch(`${apiUrl}/entrevistas?inicio=${encodeURIComponent(startIso)}&fim=${encodeURIComponent(endIso)}`);
+      const response = await apiFetch(`/entrevistas?inicio=${encodeURIComponent(startIso)}&fim=${encodeURIComponent(endIso)}`);
       if (!response.ok) throw new Error("Não foi possível carregar as entrevistas.");
       const list = await response.json();
       setInterviews(list);
@@ -157,7 +157,7 @@ export default function AgendaPage() {
     const weekStart = startOfWeek(new Date());
     const params = new URLSearchParams({ inicioSemana: weekStart.toISOString(), fimSemana: addDays(weekStart, 7).toISOString() });
     try {
-      const response = await fetch(`${apiUrl}/entrevistas/resumo?${params}`);
+      const response = await apiFetch(`/entrevistas/resumo?${params}`);
       setSummary(response.ok ? await response.json() : false);
     } catch {
       // O resumo é complementar: sem ele, os cards do topo somem e a agenda mostra o próprio erro.
@@ -172,7 +172,7 @@ export default function AgendaPage() {
 
   useEffect(() => {
     loadSummary();
-    fetch(`${apiUrl}/vagas`)
+    apiFetch("/vagas")
       .then((response) => (response.ok ? response.json() : []))
       .then(setJobs)
       .catch(() => {});

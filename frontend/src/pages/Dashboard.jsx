@@ -20,7 +20,7 @@ import { kanbanStatusLabels, kanbanStatusOrder } from "../kanbanStatus.js";
 import { hasNoOpenJob, toTalents } from "../regras.js";
 import { plural } from "../text.js";
 import { buttonPrimary, card } from "../ui.js";
-import { API_URL as apiUrl } from "../api.js";
+import { apiFetch, OFFLINE_MESSAGE } from "../api.js";
 
 const FunnelChart = lazy(() => import("../components/FunnelChart.jsx"));
 const CourseDonutChart = lazy(() => import("../components/CourseDonutChart.jsx"));
@@ -189,7 +189,7 @@ export default function DashboardPage() {
 
     try {
       const responses = await Promise.all(
-        ["dashboard-metrics", "entrevistas", "candidatos", "empresas"].map((endpoint) => fetch(`${apiUrl}/${endpoint}`)),
+        ["dashboard-metrics", "entrevistas", "candidatos", "empresas"].map((endpoint) => apiFetch(`/${endpoint}`)),
       );
       const [result, interviews, students, companies] = await Promise.all(
         responses.map((response) => response.json().catch(() => ({}))),
@@ -212,12 +212,8 @@ export default function DashboardPage() {
       });
       setError("");
     } catch (loadError) {
-      // fetch lança TypeError quando a API está fora do ar.
-      setError(
-        loadError instanceof TypeError
-          ? "O servidor não respondeu. Verifique se a API está rodando e tente novamente."
-          : loadError.message,
-      );
+      // apiFetch lança OfflineError (um TypeError) quando a API está fora do ar.
+      setError(loadError instanceof TypeError ? OFFLINE_MESSAGE : loadError.message);
     } finally {
       setIsLoading(false);
     }

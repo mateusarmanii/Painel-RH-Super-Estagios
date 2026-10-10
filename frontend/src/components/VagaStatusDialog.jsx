@@ -2,19 +2,17 @@ import { useState } from "react";
 import toast from "react-hot-toast";
 import { plural } from "../text.js";
 import { buttonDanger, buttonPrimary, buttonSecondary, inputBase } from "../ui.js";
-import { API_URL as apiUrl } from "../api.js";
+import { apiJson } from "../api.js";
 
 export const MOTIVO_PADRAO_FECHAMENTO = "Vaga encerrada pela empresa";
 
 // Muda o status da vaga na API. Devolve a vaga atualizada (com o total de dispensados, ao fechar).
 export async function changeVagaStatus(vaga, status, motivo) {
-  const response = await fetch(`${apiUrl}/vagas/${vaga.id}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ status, ...(motivo !== undefined && { motivo }) }),
-  });
-  const result = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(result.erro ?? "Não foi possível mudar o status da vaga.");
+  const result = await apiJson(
+    `/vagas/${vaga.id}`,
+    { method: "PATCH", body: { status, ...(motivo !== undefined && { motivo }) } },
+    "Não foi possível mudar o status da vaga.",
+  );
   window.dispatchEvent(new Event("dashboard:refresh"));
   return result;
 }

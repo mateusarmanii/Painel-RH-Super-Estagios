@@ -19,7 +19,7 @@ import {
   UserRoundCheck,
   X,
 } from "lucide-react";
-import { API_URL as apiUrl } from "../api.js";
+import { apiFetch, OFFLINE_MESSAGE } from "../api.js";
 import { buttonPrimary } from "../ui.js";
 
 const navigationItems = [
@@ -67,7 +67,7 @@ function VagaSearch({ id, onDone }) {
     if (!codigo) return;
 
     try {
-      const response = await fetch(`${apiUrl}/vagas`);
+      const response = await apiFetch("/vagas");
       if (!response.ok) throw new Error("Não foi possível buscar as vagas.");
       const vaga = (await response.json()).find((item) => item.codigo_vaga === codigo);
       if (!vaga) {
@@ -79,9 +79,7 @@ function VagaSearch({ id, onDone }) {
       navigate(`/kanban/${vaga.id}`);
     } catch (searchError) {
       toast.error(
-        searchError instanceof TypeError
-          ? "O servidor não respondeu. Verifique se a API está rodando."
-          : searchError.message,
+        searchError instanceof TypeError ? OFFLINE_MESSAGE : searchError.message,
       );
     }
   }

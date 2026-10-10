@@ -12,7 +12,6 @@ async function main() {
   if (!process.argv.includes(CONFIRMACAO)) {
     console.log("ATENÇÃO: este seed apaga TODOS os dados do banco (empresas, vagas, estudantes e candidaturas).");
     console.log(`Nada foi feito. Para confirmar, rode: npm run seed -- ${CONFIRMACAO}`);
-    console.log("Para dados de exemplo sem apagar nada, use: npm run demo:criar");
     process.exitCode = 1;
     return;
   }

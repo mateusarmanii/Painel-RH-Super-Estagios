@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import { API_URL as apiUrl } from "../api.js";
+import { apiFetch, apiJson } from "../api.js";
 import LogoField, { saveLogoChange } from "./LogoField.jsx";
 import { periodoLabels, toDateInput, toMonthInput, turnoEstudoLabels, turnoVagaLabels } from "../estudante.js";
 
@@ -101,7 +101,7 @@ export default function CreationForm({ type, initialData, onSuccess }) {
     let isCurrent = true;
     setIsLoadingOptions(true);
 
-    fetch(`${apiUrl}/${optionType}`)
+    apiFetch(`/${optionType}`)
       .then(async (response) => {
         if (!response.ok) throw new Error("Não foi possível carregar as opções.");
         return response.json();
@@ -143,17 +143,11 @@ export default function CreationForm({ type, initialData, onSuccess }) {
     const payload = Object.fromEntries(fields.map((field) => [field.name, toPayloadValue(field, form[field.name])]));
 
     try {
-      const response = await fetch(
-        `${apiUrl}/${endpoints[type]}${isEditing ? `/${initialData.id}` : ""}`,
-        {
-          method: isEditing ? "PUT" : "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        },
+      const result = await apiJson(
+        `/${endpoints[type]}${isEditing ? `/${initialData.id}` : ""}`,
+        { method: isEditing ? "PUT" : "POST", body: payload },
+        "Não foi possível salvar o cadastro.",
       );
-
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(result.erro ?? "Não foi possível salvar o cadastro.");
 
       if (logoChange) {
         try {

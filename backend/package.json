@@ -16,9 +16,7 @@
     "test:logos": "node scripts/testar-logos.js",
     "test:agenda": "node scripts/testar-agenda.js",
     "test:status-vaga": "node scripts/testar-status-vaga.js",
-    "test:perfil": "node scripts/testar-perfil.js",
-    "demo:criar": "node scripts/seed-demo.js",
-    "demo:limpar": "node scripts/limpar-demo.js"
+    "test:perfil": "node scripts/testar-perfil.js"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

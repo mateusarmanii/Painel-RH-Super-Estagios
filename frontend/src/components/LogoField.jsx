@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ImageUp, Trash2 } from "lucide-react";
 import CompanyAvatar from "./CompanyAvatar.jsx";
-import { API_URL as apiUrl } from "../api.js";
+import { apiFetch, apiJson } from "../api.js";
 
 export const TIPOS_DE_LOGO = ["image/png", "image/jpeg", "image/webp"];
 export const TAMANHO_MAXIMO_LOGO = 2 * 1024 * 1024;
@@ -20,11 +20,9 @@ export async function saveLogoChange(empresaId, change) {
   if (change?.file) {
     const body = new FormData();
     body.append("logo", change.file);
-    const response = await fetch(`${apiUrl}/empresas/${empresaId}/logo`, { method: "POST", body });
-    const result = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(result.erro ?? "Não foi possível enviar a logo.");
+    await apiJson(`/empresas/${empresaId}/logo`, { method: "POST", body }, "Não foi possível enviar a logo.");
   } else if (change?.remove) {
-    const response = await fetch(`${apiUrl}/empresas/${empresaId}/logo`, { method: "DELETE" });
+    const response = await apiFetch(`/empresas/${empresaId}/logo`, { method: "DELETE" });
     if (!response.ok) throw new Error("Não foi possível remover a logo.");
   }
 }

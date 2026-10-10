@@ -65,7 +65,6 @@ app.get("/dashboard-metrics", async (_req, res) => {
       partnerCompanies,
       scheduledInterviews,
       grouped,
-      interviews,
       contratacoes,
       vagasEmAlerta,
       cursos,
@@ -87,18 +86,6 @@ app.get("/dashboard-metrics", async (_req, res) => {
         prisma.aplicacao.groupBy({
           by: ["status_kanban"],
           _count: { _all: true },
-        }),
-        prisma.aplicacao.findMany({
-          where: {
-            status_kanban: "ENTREVISTA_AGENDADA",
-            data_hora_entrevista: { not: null },
-          },
-          orderBy: { data_hora_entrevista: "asc" },
-          take: 5,
-          include: {
-            estudante: { select: { nome_completo: true } },
-            vaga: { select: { titulo: true } },
-          },
         }),
         prisma.aplicacao.findMany({
           where: { status_kanban: "APROVADO", data_aprovacao: { not: null } },
@@ -162,12 +149,6 @@ app.get("/dashboard-metrics", async (_req, res) => {
         { status: "ENTREVISTA_AGENDADA", label: "Entrevista", total: countsByStatus.get("ENTREVISTA_AGENDADA") ?? 0 },
         { status: "APROVADO", label: "Contratados", total: countsByStatus.get("APROVADO") ?? 0 },
       ],
-      recentInterviews: interviews.map((interview) => ({
-        id: interview.id,
-        estudante: interview.estudante.nome_completo,
-        vaga: interview.vaga.titulo,
-        data_hora: interview.data_hora_entrevista,
-      })),
     });
   } catch (error) {
     console.error("Erro ao carregar métricas do dashboard:", error);

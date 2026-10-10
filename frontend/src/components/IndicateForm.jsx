@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
-import { API_URL as apiUrl } from "../api.js";
+import { apiFetch, apiJson, OFFLINE_MESSAGE } from "../api.js";
 import { buttonPrimary, buttonSecondary, inputBase } from "../ui.js";
 
 // Indica um estudante para uma vaga aberta em que ele ainda não está inscrito (POST /candidatos/:id/candidaturas).
@@ -15,13 +15,11 @@ export function IndicateForm({ talent, openJobs, onDone, onCancel }) {
     setIsSaving(true);
 
     try {
-      const response = await fetch(`${apiUrl}/candidatos/${talent.id}/candidaturas`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ vaga_id: jobId }),
-      });
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(result.erro ?? "Não foi possível indicar o candidato.");
+      const result = await apiJson(
+        `/candidatos/${talent.id}/candidaturas`,
+        { method: "POST", body: { vaga_id: jobId } },
+        "Não foi possível indicar o candidato.",
+      );
 
       toast.success(`${talent.nome_completo} foi indicado para "${result.vaga?.titulo}".`);
       window.dispatchEvent(new Event("dashboard:refresh"));
@@ -92,7 +90,7 @@ export function IndicateDialog({ studentId, onDone, onCancel }) {
 
   useEffect(() => {
     let isCurrent = true;
-    Promise.all([fetch(`${apiUrl}/candidatos`), fetch(`${apiUrl}/vagas`)])
+    Promise.all([apiFetch("/candidatos"), apiFetch("/vagas")])
       .then(async ([studentsResponse, jobsResponse]) => {
         if (!studentsResponse.ok || !jobsResponse.ok) throw new Error("Não foi possível carregar as vagas abertas.");
         const [students, jobs] = await Promise.all([studentsResponse.json(), jobsResponse.json()]);
@@ -101,7 +99,7 @@ export function IndicateDialog({ studentId, onDone, onCancel }) {
         if (isCurrent) setData({ talent, openJobs: jobs.filter((job) => job.status === "ABERTA") });
       })
       .catch((loadError) => {
-        toast.error(loadError instanceof TypeError ? "O servidor não respondeu. Verifique se a API está rodando." : loadError.message);
+        toast.error(loadError instanceof TypeError ? OFFLINE_MESSAGE : loadError.message);
         onCancelRef.current();
       });
     return () => {

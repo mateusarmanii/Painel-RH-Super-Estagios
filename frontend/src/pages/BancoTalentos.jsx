@@ -9,7 +9,7 @@ import PageHeader from "../components/PageHeader.jsx";
 import LoadError from "../components/LoadError.jsx";
 import { courseOptions, formatPhone, normalize, plural, whatsappLink } from "../text.js";
 import { toTalents } from "../regras.js";
-import { API_URL as apiUrl } from "../api.js";
+import { apiFetch } from "../api.js";
 
 const dateFormat = new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium" });
 
@@ -26,8 +26,8 @@ export default function BancoTalentosPage() {
   const loadData = useCallback(async () => {
     try {
       const [studentsResponse, jobsResponse] = await Promise.all([
-        fetch(`${apiUrl}/candidatos`),
-        fetch(`${apiUrl}/vagas`),
+        apiFetch("/candidatos"),
+        apiFetch("/vagas"),
       ]);
       if (!studentsResponse.ok || !jobsResponse.ok) throw new Error("Não foi possível carregar o Banco de Talentos.");
       setStudents(await studentsResponse.json());
