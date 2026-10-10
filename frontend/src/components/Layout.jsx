@@ -10,6 +10,7 @@ import {
   ChevronDown,
   GraduationCap,
   LayoutDashboard,
+  LogOut,
   Menu,
   PanelLeftClose,
   PanelLeftOpen,
@@ -102,7 +103,7 @@ function VagaSearch({ id, onDone }) {
   );
 }
 
-export default function Layout({ children }) {
+export default function Layout({ children, user, onLogout }) {
   const { pathname } = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   // No notebook o menu fica recolhido (só ícones) e expande ao passar o mouse; "fixar" o mantém aberto.
@@ -208,6 +209,23 @@ export default function Layout({ children }) {
             );
           })}
         </nav>
+
+        <div className="mx-3 mb-4 border-t border-white/10 pt-3 lg:mb-1">
+          {user && (
+            <p className={`truncate px-4 pb-1 text-xs text-slate-400 ${whenExpandedBlock}`} title={user.email}>
+              Logado como <span className="font-bold text-slate-200">{user.nome}</span>
+            </p>
+          )}
+          <button
+            type="button"
+            onClick={onLogout}
+            title="Sair"
+            className="flex w-full items-center gap-3 whitespace-nowrap rounded-md border-l-4 border-transparent px-3 py-2.5 text-left text-xs font-bold uppercase tracking-wide text-slate-300 transition-colors hover:bg-white/5 hover:text-white"
+          >
+            <LogOut size={17} className="shrink-0" />
+            <span className={whenExpanded}>Sair</span>
+          </button>
+        </div>
 
         <button
           type="button"

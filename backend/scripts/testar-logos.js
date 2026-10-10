@@ -32,7 +32,7 @@ const SVG = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1
 async function enviarLogo(empresaId, buffer, nome, tipo) {
   const form = new FormData();
   form.append("logo", new Blob([buffer], { type: tipo }), nome);
-  const res = await fetch(`${BASE}/empresas/${empresaId}/logo`, { method: "POST", body: form });
+  const res = await fetch(`${BASE}/empresas/${empresaId}/logo`, { method: "POST", body: form, headers: teste.cabecalhos() });
   return { status: res.status, body: await res.json().catch(() => null) };
 }
 
@@ -101,7 +101,7 @@ async function main() {
       `${arquivosNaPasta() - arquivosAntes} arquivo(s) novo(s)`);
 
     const form = new FormData();
-    let res = await fetch(`${BASE}/empresas/${empresa.id}/logo`, { method: "POST", body: form });
+    let res = await fetch(`${BASE}/empresas/${empresa.id}/logo`, { method: "POST", body: form, headers: teste.cabecalhos() });
     checar("Sem arquivo → 400", res.status === 400, `[${res.status}]`);
     r = await enviarLogo(UUID_INEXISTENTE, PNG, "logo.png", "image/png");
     checar("Empresa inexistente → 404", r.status === 404, `[${r.status}]`);
@@ -141,6 +141,7 @@ async function main() {
     const sobras = await prisma.empresa.count({ where: { nome: { startsWith: "[TESTE]" } } });
     console.log(`\nRegistros [TESTE] restantes: ${sobras} | arquivos de logo a mais na pasta: ${arquivosNaPasta() - arquivosAntes}`);
     if (sobras || arquivosNaPasta() !== arquivosAntes) teste.falhas++;
+    await teste.removerUsuario();
     await prisma.$disconnect();
     server.kill();
   }

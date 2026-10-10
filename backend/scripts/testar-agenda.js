@@ -204,6 +204,7 @@ async function main() {
       + await prisma.empresa.count({ where: { nome: { startsWith: "[TESTE]" } } });
     console.log(`\nRegistros [TESTE] restantes: ${sobras}`);
     if (sobras) teste.falhas++;
+    await teste.removerUsuario();
     await prisma.$disconnect();
     server.kill();
   }

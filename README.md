@@ -48,6 +48,9 @@ Painel interno da Super Estágios (agência de estágios) para acompanhar o fech
    |---|---|
    | `DATABASE_URL` | Conexão com o PostgreSQL (`postgresql://usuario:senha@host:porta/banco?schema=public`) |
    | `PORT` | Porta da API (padrão `3333`). Se mudar, ajuste também a `VITE_API_URL` do frontend. |
+   | `JWT_SECRET` | Segredo que assina os tokens de login. **Obrigatório** (a API não sobe sem ele), com pelo menos 32 caracteres aleatórios. Gere com `node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"`. |
+   | `FRONTEND_URL` | Endereço do frontend liberado no CORS (vários separados por vírgula). Fora de produção, `localhost` já é liberado. |
+   | `NODE_ENV` | `production` no servidor: bloqueia o `localhost` no CORS e confia no proxy do Render para saber o IP real (limite de tentativas de login). |
 
    O frontend chama a API em `http://localhost:3333`. Se ela estiver em outro endereço, crie `frontend/.env` a partir de `frontend/.env.example` e defina `VITE_API_URL` (depois reinicie o `npm run dev` ou gere o build de novo).
 
@@ -62,6 +65,19 @@ Painel interno da Super Estágios (agência de estágios) para acompanhar o fech
    ```
 
    > Rode os comandos `npx prisma` **depois** do `npm ci`; sem as dependências instaladas o `npx` baixa outra versão do Prisma.
+
+## Usuários e login
+
+Todo o painel exige login (e-mail e senha). A API só responde sem login a `POST /auth/login`, `GET /` e às logos (`/uploads/logos/...`); o resto devolve **401**. O login devolve um token que vale **8 horas**, enviado pelo frontend no cabeçalho `Authorization: Bearer`. Depois de 8 erros de senha num mesmo e-mail (ou 20 num mesmo IP) em 15 minutos, o login fica bloqueado por 15 minutos.
+
+Não existe cadastro público: os usuários são criados pelo terminal, que pergunta nome, e-mail, senha (mínimo 10 caracteres, não aparece na tela) e papel (`admin` ou `recrutador`):
+
+```bash
+cd backend
+npm run usuario:criar
+```
+
+O script usa o banco do `DATABASE_URL` e mostra qual é (servidor e nome do banco, sem a senha) antes de pedir a confirmação. Para desativar alguém, marque `ativo = false` na tabela `Usuario`: os tokens dessa pessoa deixam de valer na hora.
 
 ## Como rodar
 
@@ -83,7 +99,7 @@ Para gerar a versão de produção do frontend: `cd frontend && npm run build` (
 
 ## Scripts de teste
 
-Os testes sobem a API numa porta separada (3399), criam registros marcados com **`[TESTE]`**, verificam as rotas e apagam tudo no final, informando quantos registros `[TESTE]` restaram (deve ser 0). Eles **gravam no banco do `DATABASE_URL`**, então use um banco de desenvolvimento.
+Os testes sobem a API numa porta separada (3399), criam registros marcados com **`[TESTE]`**, verificam as rotas e apagam tudo no final, informando quantos registros `[TESTE]` restaram (deve ser 0). Cada script cria um usuário `[TESTE]` temporário (e-mail `@teste.local`), entra com ele e o apaga no final. Eles **gravam no banco do `DATABASE_URL`**, então use um banco de desenvolvimento.
 
 ```bash
 cd backend
@@ -97,6 +113,7 @@ npm run test:logos     # envio, troca e remoção da logo; recusa de SVG, de arq
 npm run test:agenda    # agendamento com detalhes, conflito de horário, resumo da agenda e ações do painel
 npm run test:status-vaga   # suspender, fechar (motivo, dispensas, entrevistas canceladas) e reabrir vagas
 npm run test:perfil    # perfil do estudante: dados, candidaturas, entrevistas, observações e dispensas
+npm run test:login     # login, token inválido/expirado, rotas sem token, usuário inativo, CORS e limite de tentativas
 ```
 
 ## Dados de exemplo

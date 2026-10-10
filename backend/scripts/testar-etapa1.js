@@ -81,6 +81,7 @@ async function main() {
     if (criados.empresa) await prisma.empresa.delete({ where: { id: criados.empresa } }).catch(() => {});
     const sobras = await prisma.empresa.count({ where: { nome: { startsWith: "[TESTE]" } } });
     console.log(`\nRegistros [TESTE] restantes: ${sobras}`);
+    await teste.removerUsuario();
     await prisma.$disconnect();
     server.kill();
   }

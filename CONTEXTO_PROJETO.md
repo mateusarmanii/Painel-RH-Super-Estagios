@@ -236,6 +236,17 @@ Sem migration e sem mudança de comportamento nas telas.
 - **Limpeza:** referências aos scripts de demo removidas; `*.dump` e `*.sql.gz` no `.gitignore`; removidos `studyShiftPhrase`/`turnoFrase`, `linkText`, o `recentInterviews` do `/dashboard-metrics` e o `package.json` da raiz.
 - **Conferência no banco local:** 32 estudantes, nenhum telefone repetido comparando só os dígitos; 30 no formato `(99) 99999-9999`, 1 com 10 dígitos e 1 com 11 dígitos sem máscara.
 
+### 🟡 Parte 1 — Login — IMPLEMENTADA (10/10/2026); commit local, push e configuração do Render pendentes
+Migration `20261010120000_add_usuarios` (só adições, aprovada pelo usuário; aplicada no banco local, **não no Neon**): enum `PapelUsuario` (`ADMIN`, `RECRUTADOR`) e tabela `Usuario` (`nome`, `email` único e sempre minúsculo, `senha_hash` bcrypt custo 12, `papel`, `ativo`, `created_at`, `updated_at`).
+- **Backend** (`src/auth.js`, `src/routes/auth.js`): `POST /auth/login { email, senha }` → `{ token, usuario }`; JWT HS256 de 8h assinado com `JWT_SECRET` (obrigatório, ≥ 32 caracteres; a API não sobe sem ele). Mesma mensagem para e-mail inexistente, senha errada e usuário inativo (com tempo de resposta igual). `GET /auth/me` → usuário logado.
+- **Todas as rotas exigem `Authorization: Bearer`** (middleware `exigirLogin` em `server.js`), exceto `POST /auth/login`, `GET /` e `/uploads/logos/*` (públicas; arquivo inexistente é 404, não 401). A cada requisição o usuário precisa existir e estar `ativo` — desativar tem efeito imediato.
+- **Limite de tentativas** (`express-rate-limit`): só falhas contam; 8 por e-mail e 20 por IP a cada 15 min → 429. Em produção `trust proxy = 1` (Render).
+- **CORS:** só `FRONTEND_URL` (vários separados por vírgula); fora de produção (`NODE_ENV` ≠ `production`) também `localhost`/`127.0.0.1`.
+- Tratador de erros no fim do `server.js`: JSON curto (`{ erro }`) em vez da página HTML do Express. `aparaTextos` não mexe mais no campo `senha`.
+- **Frontend:** `session.js` (token e usuário no `localStorage`, com cópia em memória), `apiFetch` envia o token; ao receber 401 (fora do `/auth/login`) apaga a sessão e dispara `auth:expired` → `App.jsx` mostra a tela de login (`pages/Login.jsx`) com o toast "Sua sessão expirou". Sem login, qualquer endereço mostra o login e, ao entrar, abre o endereço pedido. "Sair" e "Logado como …" no menu lateral.
+- **Usuários:** `npm run usuario:criar` (`scripts/criar-usuario.js`) pergunta nome, e-mail, senha (oculta, mínimo 10, repetida) e papel; mostra o banco (host/nome, sem senha) e pede confirmação. Sem cadastro público. Os papéis ainda não restringem nada (admin e recrutador veem o mesmo).
+- **Testes:** o helper (`scripts/lib/teste.js`) cria um usuário `[TESTE]` temporário (`teste-<porta>-…@teste.local`) no `esperarServidor()` e o apaga com `teste.removerUsuario()`. Novo `npm run test:login` (36 casos). Total: 11 scripts, 262 casos.
+
 ## Regras de trabalho
 
 - **Banco de dados: antes de aplicar QUALQUER alteração no banco (migrations, `migrate deploy`/`dev`/`reset`, `db push`, SQL manual, escrita em `_prisma_migrations`, criação/remoção de bancos, scripts de teste que gravam dados), mostrar o SQL/operações ao usuário e esperar aprovação explícita.**

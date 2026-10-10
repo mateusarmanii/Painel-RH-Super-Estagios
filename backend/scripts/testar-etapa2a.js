@@ -170,6 +170,7 @@ async function main() {
       + await prisma.vaga.count({ where: { titulo: { startsWith: "[TESTE]" } } })
       + await prisma.empresa.count({ where: { nome: { startsWith: "[TESTE]" } } });
     console.log(`\nRegistros [TESTE] restantes: ${sobras}`);
+    await teste.removerUsuario();
     await prisma.$disconnect();
     server.kill();
   }

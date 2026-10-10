@@ -1,7 +1,9 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
-import { Toaster } from "react-hot-toast";
+import toast, { Toaster } from "react-hot-toast";
 import Layout from "./components/Layout.jsx";
+import LoginPage from "./pages/Login.jsx";
+import { clearSession, getUser, SESSION_EXPIRED_EVENT } from "./session.js";
 // Cada tela é carregada só quando é aberta (o primeiro carregamento fica menor).
 const DashboardPage = lazy(() => import("./pages/Dashboard.jsx"));
 const KanbanPage = lazy(() => import("./pages/Kanban.jsx"));
@@ -21,10 +23,40 @@ const pageFallback = (
 );
 
 export default function App() {
+  const [user, setUser] = useState(getUser);
+
+  // A API respondeu 401 (token vencido, inválido ou usuário desativado): volta para o login.
+  useEffect(() => {
+    const expire = () => {
+      setUser(null);
+      toast.error("Sua sessão expirou. Entre novamente.", { id: "sessao-expirada" });
+    };
+    window.addEventListener(SESSION_EXPIRED_EVENT, expire);
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, expire);
+  }, []);
+
+  function logout() {
+    clearSession();
+    setUser(null);
+  }
+
   return (
     <BrowserRouter>
-      <Layout>
-        <Suspense fallback={pageFallback}>
+      {user ? <AppRoutes user={user} onLogout={logout} /> : <LoginPage onLogin={setUser} />}
+      <Toaster
+        position="top-right"
+        containerStyle={{ top: 76 }}
+        toastOptions={{ className: "text-sm", duration: 4000, error: { duration: 6000 } }}
+      />
+    </BrowserRouter>
+  );
+}
+
+// Telas do painel (só com login). Sem login, qualquer endereço mostra a tela de login e, ao entrar, abre o endereço pedido.
+function AppRoutes({ user, onLogout }) {
+  return (
+    <Layout user={user} onLogout={onLogout}>
+      <Suspense fallback={pageFallback}>
         <Routes>
           <Route path="/" element={<DashboardPage />} />
           <Route path="/vagas" element={<VagasPage />} />
@@ -39,13 +71,7 @@ export default function App() {
           <Route path="/contratacoes" element={<ContratacoesPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-        </Suspense>
-      </Layout>
-      <Toaster
-        position="top-right"
-        containerStyle={{ top: 76 }}
-        toastOptions={{ className: "text-sm", duration: 4000, error: { duration: 6000 } }}
-      />
-    </BrowserRouter>
+      </Suspense>
+    </Layout>
   );
 }

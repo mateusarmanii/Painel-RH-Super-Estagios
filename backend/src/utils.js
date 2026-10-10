@@ -33,11 +33,11 @@ function resumirVaga(vaga, aplicacoes, agora = new Date()) {
 }
 
 // Tira os espaços do começo e do fim de todos os textos enviados ao salvar (empresas, vagas, estudantes...).
-// Um campo só com espaços vira "" e cai na validação de campo obrigatório.
+// Um campo só com espaços vira "" e cai na validação de campo obrigatório. A senha fica como foi digitada.
 function aparaTextos(req, _res, next) {
   if (["POST", "PUT", "PATCH"].includes(req.method) && req.body && typeof req.body === "object" && !Array.isArray(req.body)) {
     for (const [campo, valor] of Object.entries(req.body)) {
-      if (typeof valor === "string") req.body[campo] = valor.trim();
+      if (typeof valor === "string" && campo !== "senha") req.body[campo] = valor.trim();
     }
   }
   next();

@@ -7,6 +7,7 @@
     "dev": "node --watch server.js",
     "prisma:generate": "prisma generate",
     "seed": "node prisma/seed.js",
+    "usuario:criar": "node scripts/criar-usuario.js",
     "test:etapa1": "node scripts/testar-etapa1.js",
     "test:etapa2a": "node scripts/testar-etapa2a.js",
     "test:etapa2d": "node scripts/testar-etapa2d.js",
@@ -16,13 +17,17 @@
     "test:logos": "node scripts/testar-logos.js",
     "test:agenda": "node scripts/testar-agenda.js",
     "test:status-vaga": "node scripts/testar-status-vaga.js",
-    "test:perfil": "node scripts/testar-perfil.js"
+    "test:perfil": "node scripts/testar-perfil.js",
+    "test:login": "node scripts/testar-login.js"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
+    "bcryptjs": "3.0.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.21.2",
+    "express-rate-limit": "8.7.0",
+    "jsonwebtoken": "9.0.3",
     "multer": "^2.4.0"
   },
   "devDependencies": {

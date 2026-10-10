@@ -7,21 +7,45 @@ const empresasRoutes = require("./src/routes/empresas");
 const vagasRoutes = require("./src/routes/vagas");
 const candidatosRoutes = require("./src/routes/candidatos");
 const entrevistasRoutes = require("./src/routes/entrevistas");
+const authRoutes = require("./src/routes/auth");
 const { DIA_MS, DIAS_PARA_ALERTA, aparaTextos } = require("./src/utils");
 const { PASTA_LOGOS, URL_LOGOS } = require("./src/logos");
+const { exigirLogin, segredoJwt } = require("./src/auth");
+
+// Confere o JWT_SECRET já na subida (sem ele a API não sobe).
+segredoJwt();
 
 const app = express();
 const port = Number(process.env.PORT) || 3333;
+const producao = process.env.NODE_ENV === "production";
 
-app.use(cors());
+// No Render a API fica atrás de um proxy: o IP real (usado no limite de tentativas de login) vem dele.
+if (producao) app.set("trust proxy", 1);
+
+// CORS: só o endereço do frontend (FRONTEND_URL; vários separados por vírgula). Fora de produção, localhost também.
+const origensPermitidas = (process.env.FRONTEND_URL ?? "")
+  .split(",")
+  .map((origem) => origem.trim().replace(/\/+$/, ""))
+  .filter(Boolean);
+const localhost = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
+if (producao && !origensPermitidas.length) {
+  console.warn("Aviso: FRONTEND_URL não configurada; o navegador não vai conseguir chamar a API.");
+}
+
+app.use(cors({
+  origin: (origem, callback) =>
+    callback(null, !origem || origensPermitidas.includes(origem) || (!producao && localhost.test(origem))),
+}));
 app.use(express.json());
 app.use(aparaTextos);
 
-// Logos das empresas como arquivos estáticos (nomes únicos, então podem ficar em cache).
-// nosniff e CSP restrita: o navegador só trata o arquivo como imagem.
+// Logos das empresas como arquivos estáticos e públicos (nomes únicos, então podem ficar em cache).
+// nosniff e CSP restrita: o navegador só trata o arquivo como imagem. fallthrough: false → arquivo
+// inexistente é 404 aqui mesmo, sem passar pelo login.
 app.use(URL_LOGOS, express.static(PASTA_LOGOS, {
   index: false,
   dotfiles: "deny",
+  fallthrough: false,
   maxAge: "30d",
   immutable: true,
   setHeaders: (res) => {
@@ -33,6 +57,10 @@ app.use(URL_LOGOS, express.static(PASTA_LOGOS, {
 app.get("/", (_req, res) => {
   res.json({ status: "ok", mensagem: "API Super Estágios" });
 });
+
+// Login é público; daqui para baixo, toda rota exige o token (401 sem token ou com token inválido).
+app.use("/auth", authRoutes);
+app.use(exigirLogin);
 
 // Agrupa ignorando maiúsculas, acentos e espaços extras; exibe a grafia mais usada (empate: ordem alfabética).
 function agruparPorCurso(cursos) {
@@ -160,6 +188,14 @@ app.use("/empresas", empresasRoutes);
 app.use("/vagas", vagasRoutes);
 app.use("/candidatos", candidatosRoutes);
 app.use("/entrevistas", entrevistasRoutes);
+
+// Erros que escapam das rotas (JSON malformado, logo inexistente...): resposta curta em JSON, sem detalhes internos.
+app.use((error, _req, res, _next) => {
+  const status = error.status ?? error.statusCode ?? 500;
+  if (status >= 500) console.error("Erro não tratado:", error);
+  const mensagens = { 400: "Requisição inválida.", 403: "Acesso negado.", 404: "Não encontrado." };
+  res.status(status).json({ erro: mensagens[status] ?? "Erro interno." });
+});
 
 const server = app.listen(port, () => {
   console.log(`API disponível em http://localhost:${port}`);

@@ -60,6 +60,24 @@ enum StatusKanban {
   RECUSADO
 }
 
+enum PapelUsuario {
+  ADMIN
+  RECRUTADOR
+}
+
+// Quem entra no painel. Sem cadastro público: usuários são criados com "npm run usuario:criar".
+// E-mail guardado sempre em minúsculas; a senha só como hash bcrypt.
+model Usuario {
+  id         String       @id @default(uuid()) @db.Uuid
+  nome       String
+  email      String       @unique
+  senha_hash String
+  papel      PapelUsuario @default(RECRUTADOR)
+  ativo      Boolean      @default(true)
+  created_at DateTime     @default(now())
+  updated_at DateTime     @default(now()) @updatedAt
+}
+
 model Empresa {
   id               String  @id @default(uuid()) @db.Uuid
   nome             String
