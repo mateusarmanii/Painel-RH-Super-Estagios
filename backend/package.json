@@ -8,6 +8,7 @@
     "prisma:generate": "prisma generate",
     "seed": "node prisma/seed.js",
     "usuario:criar": "node scripts/criar-usuario.js",
+    "usuario:senha": "node scripts/alterar-usuario.js",
     "test:etapa1": "node scripts/testar-etapa1.js",
     "test:etapa2a": "node scripts/testar-etapa2a.js",
     "test:etapa2d": "node scripts/testar-etapa2d.js",

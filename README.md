@@ -77,7 +77,9 @@ cd backend
 npm run usuario:criar
 ```
 
-O script usa o banco do `DATABASE_URL` e mostra qual é (servidor e nome do banco, sem a senha) antes de pedir a confirmação. Para desativar alguém, marque `ativo = false` na tabela `Usuario`: os tokens dessa pessoa deixam de valer na hora.
+O script usa o banco do `DATABASE_URL` e mostra qual é (servidor e nome do banco, sem a senha) antes de pedir a confirmação.
+
+Para trocar a senha de alguém, ou ativar/desativar o usuário, use `npm run usuario:senha` (pede o e-mail, mostra o banco e pede confirmação antes de gravar). Desativar tem efeito na hora: os tokens dessa pessoa deixam de valer.
 
 ## Como rodar
 
