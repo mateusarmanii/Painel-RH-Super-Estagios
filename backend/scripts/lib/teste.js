@@ -38,6 +38,10 @@ function criarTeste(port) {
     console.log(`${ok ? "PASS" : "FAIL"} [${r.status}] ${nome}${msg}`);
   };
 
+  // Telefone único para estudantes [TESTE] (a API recusa telefone repetido). DDD "00" não existe, então nunca
+  // coincide com o de um estudante real: "00" + porta + 7 dígitos aleatórios.
+  teste.telefone = () => `00${port}${String(crypto.randomInt(1e7)).padStart(7, "0")}`;
+
   // Cria um usuário [TESTE] direto no banco (e-mail único por execução) e devolve { id, email, senha }.
   teste.criarUsuario = async function criarUsuario({ papel = "RECRUTADOR", ativo = true } = {}) {
     const email = `teste-${port}-${crypto.randomUUID()}@teste.local`;

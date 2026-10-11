@@ -31,7 +31,7 @@ async function criarVaga(titulo) {
 
 // Estudante [TESTE] inscrito na vaga; devolve { id, aplicacao }.
 async function estudante(nome, vagaId) {
-  const r = await req("POST", "/candidatos", { nome_completo: `[TESTE] ${nome}`, telefone: "31988887777", curso: "Teste",
+  const r = await req("POST", "/candidatos", { nome_completo: `[TESTE] ${nome}`, telefone: teste.telefone(), curso: "Teste",
     instituicao_ensino: "Teste", turno_estudo: "NOITE", vaga_id: vagaId });
   ids.estudantes.push(r.body.id);
   return { id: r.body.id, aplicacao: r.body.aplicacoes[0].id };

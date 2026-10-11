@@ -29,7 +29,7 @@ async function criarVaga(titulo) {
 }
 
 async function criarEstudante(nome, vagaId, curso = CURSO_TESTE) {
-  const r = await req("POST", "/candidatos", { nome_completo: nome, telefone: "000", curso,
+  const r = await req("POST", "/candidatos", { nome_completo: nome, telefone: teste.telefone(), curso,
     instituicao_ensino: "Teste", horario_estudo: "MANHA", vaga_id: vagaId });
   if (r.status !== 201) throw new Error(`Falha ao criar estudante: ${r.body?.erro}`);
   ids.estudantes.push(r.body.id);

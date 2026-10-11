@@ -248,6 +248,19 @@ Migration `20261010120000_add_usuarios` (só adições, aprovada pelo usuário; 
 - **Trocar senha / ativar / desativar:** `npm run usuario:senha` (`scripts/alterar-usuario.js`, 11/10/2026) pede o e-mail (inexistente → avisa e sai sem alterar), mostra o banco e o usuário, oferece trocar a senha (oculta, mínimo 10, repetida, bcrypt custo 12 via `gerarHash`) ou ativar/desativar, e pede confirmação antes de gravar. As perguntas do terminal ficam em `scripts/lib/terminal.js`, compartilhado com o `usuario:criar`. Testado no banco local com usuário `[TESTE]` (19 casos, 0 sobras). Trocar a senha **não** invalida tokens já emitidos (valem até expirar, 8h); desativar bloqueia na hora.
 - **Testes:** o helper (`scripts/lib/teste.js`) cria um usuário `[TESTE]` temporário (`teste-<porta>-…@teste.local`) no `esperarServidor()` e o apaga com `teste.removerUsuario()`. Novo `npm run test:login` (36 casos). Total: 11 scripts, 262 casos.
 
+### ✅ Ajustes rápidos (11/10/2026)
+Sem migration. Testes: `npm run test:cadastros` (27 casos, `[TESTE]`, 0 sobras); os 12 scripts passam (289 casos).
+- **"Agenda" virou "Calendário"** em todo o sistema (menu, título, Dashboard, mensagem de erro do resumo). Rota nova `/calendario`; `/agenda` redireciona para ela (links antigos). Os nomes internos (`pages/Agenda.jsx`, pasta `agenda/`, chave `agendaVisao` do `localStorage`) foram mantidos.
+- **Calendário mostra a empresa antes do estudante** ("08:30 · Empresa · Estudante") em Dia, Semana, Mês, Lista, nos pendentes de 24h e nas dicas do mouse: `interviewWho`/`interviewLine` em `agenda/dates.js`. Na grade e na lista, a linha de baixo passou a mostrar o título da vaga (a empresa já está em cima).
+- **Busca em Estudantes pelo final do telefone:** busca só com dígitos (4 ou mais) também acha pelo final do telefone, ignorando a formatação (`EntityList` ganhou a prop `matchSearch`; `phoneDigits` em `text.js`).
+- **Telefone repetido bloqueado** (comparando só os dígitos, sem restrição no banco): `POST` e `PUT /candidatos` devolvem **409** `{ erro: "Já existe um estudante com este telefone: <nome>.", estudante_existente: { id, nome_completo } }`. O formulário mostra o aviso com o link "Ver perfil". Não compara com/sem o 55 do país (`5531…` ≠ `31…`). Conferência do banco local em 11/10/2026: nenhum repetido (32 estudantes). **Produção (Neon) não foi conferida.**
+  - Os testes passaram a usar `teste.telefone()` (DDD `00`, único por chamada) em vez de `"000"`.
+  - Ao trocar de tela, o "Novo cadastro" fecha; o perfil do estudante é remontado ao trocar de `:id` (nenhum modal fica aberto com dados de outro estudante).
+- **Código da vaga com 5 ou 6 dígitos** (`/^\d{5,6}$/`; a coluna já era `VarChar(6)`). `GET /vagas` ordena pelo valor numérico do Nº (antes era ordem de texto).
+- **Instituição de ensino opcional** no cadastro e na edição. A coluna continua `NOT NULL`: "não informada" é gravada como **texto vazio** (`""`) e as telas a escondem. Para usar `NULL` de verdade seria preciso uma migration.
+- **Contratado → "Deseja encerrar a vaga?"**: depois de salvar a mudança para Contratado (arrastando ou pelo "⋯") no Kanban, se a vaga não estiver fechada, abre o modal "Candidato contratado!" com **Encerrar vaga** (mesmo `PATCH /vagas/:id` do "Fechar vaga", com o motivo "Vaga preenchida": quem estava em andamento é dispensado, entrevistas em aberto são canceladas) e **Manter aberta**. Após encerrar, o quadro recarrega.
+- Falta validar no navegador: o modal de contratação, o aviso com link do telefone repetido e o Calendário nas 4 visões.
+
 ## Regras de trabalho
 
 - **Banco de dados: antes de aplicar QUALQUER alteração no banco (migrations, `migrate deploy`/`dev`/`reset`, `db push`, SQL manual, escrita em `_prisma_migrations`, criação/remoção de bancos, scripts de teste que gravam dados), mostrar o SQL/operações ao usuário e esperar aprovação explícita.**

@@ -37,7 +37,9 @@ import LoadError from "../components/LoadError.jsx";
 import { statusLabels, statusStyles } from "../vagaStatus.js";
 import { dateTimeFormat, kanbanStatusLabels } from "../kanbanStatus.js";
 import { apiFetch, apiJson } from "../api.js";
-import { getInitials } from "../text.js";
+import { getInitials, plural } from "../text.js";
+import { buttonDanger, buttonSecondary } from "../ui.js";
+import { changeVagaStatus, closedVagaMessage, MOTIVO_VAGA_PREENCHIDA } from "../components/VagaStatusDialog.jsx";
 import CompanyAvatar from "../components/CompanyAvatar.jsx";
 import InterviewFields, { interviewFormValues, interviewPayload } from "../components/InterviewFields.jsx";
 import { interviewStatus, interviewStatusBadge, interviewStatusLabels } from "../interviewStatus.js";
@@ -79,6 +81,9 @@ const columns = [
     background: "bg-rose-50/40",
   },
 ];
+
+// Etapas "em andamento": são dispensadas quando a vaga é fechada.
+const IN_PROCESS_STATUSES = ["ENVIADO_EMPRESA", "ENTREVISTA_AGENDADA", "AGUARDANDO_RETORNO"];
 
 const columnByStatus = Object.fromEntries(
   columns.map((column) => [column.status, column.id]),
@@ -399,6 +404,47 @@ function NoteForm({ candidate, onSaved, onCancel }) {
   );
 }
 
+// Depois de mover alguém para "Contratado": oferece encerrar a vaga (mesmo fluxo de "Fechar vaga", com o motivo
+// "Vaga preenchida" para quem ainda estava em andamento).
+function HiredDialog({ candidate, vaga, inProcess, onKeepOpen, onClosed }) {
+  const [isSaving, setIsSaving] = useState(false);
+
+  async function closeVaga() {
+    setIsSaving(true);
+    try {
+      const result = await changeVagaStatus(vaga, "FECHADA", MOTIVO_VAGA_PREENCHIDA);
+      toast.success(closedVagaMessage(result));
+      onClosed();
+    } catch (closeError) {
+      toast.error(closeError.message);
+      setIsSaving(false);
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-slate-700">
+        <strong className="font-semibold text-marinho-900">{candidate.nome}</strong> foi contratado para a vaga{" "}
+        <strong className="font-semibold text-marinho-900">{vaga.titulo}</strong>. Deseja encerrar a vaga?
+      </p>
+      <p className="rounded-md bg-slate-50 p-3 text-sm text-slate-700">
+        {inProcess
+          ? `Ao encerrar, ${plural(inProcess, "candidato em andamento será dispensado", "candidatos em andamento serão dispensados")} com o motivo "${MOTIVO_VAGA_PREENCHIDA}".`
+          : "Não há outros candidatos em andamento."}{" "}
+        Os contratados continuam como estão, e dá para reabrir a vaga depois.
+      </p>
+      <div className="flex justify-end gap-2 pt-1">
+        <button type="button" onClick={onKeepOpen} disabled={isSaving} className={buttonSecondary}>
+          Manter aberta
+        </button>
+        <button type="button" onClick={closeVaga} disabled={isSaving} className={buttonDanger}>
+          {isSaving ? "Encerrando..." : "Encerrar vaga"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // /kanban sem ID: escolher de qual vaga abrir o quadro.
 function VagaPicker() {
   const [vagas, setVagas] = useState([]);
@@ -503,6 +549,8 @@ function KanbanBoard({ vagaId }) {
   const navigate = useNavigate();
   const [indicating, setIndicating] = useState(null);
   const [noting, setNoting] = useState(null);
+  const [hired, setHired] = useState(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
@@ -540,7 +588,7 @@ function KanbanBoard({ vagaId }) {
     return () => {
       isCurrent = false;
     };
-  }, [vagaId]);
+  }, [vagaId, reloadKey]);
 
   function placeCandidate(applicationId, changes) {
     setCandidates((current) =>
@@ -572,6 +620,8 @@ function KanbanBoard({ vagaId }) {
       toast.success(`Candidatura de ${candidate.nome} movida para "${destination.title}".`);
       if (result.conflitos?.length) toast(conflictWarning(candidate.nome, result.conflitos), { icon: "⚠️", duration: 8000 });
       window.dispatchEvent(new Event("dashboard:refresh"));
+      // Contratou (arrastando ou pelo "⋯"): pergunta se a vaga deve ser encerrada.
+      if (result.status_kanban === "APROVADO" && vaga && vaga.status !== "FECHADA") setHired(candidate);
       return true;
     } catch (updateError) {
       placeCandidate(candidate.applicationId, { status: candidate.status, coluna: candidate.coluna });
@@ -706,6 +756,23 @@ function KanbanBoard({ vagaId }) {
         )}
       </Modal>
 
+
+      <Modal isOpen={Boolean(hired)} title="Candidato contratado!" onClose={() => setHired(null)}>
+        {hired && vaga && (
+          <HiredDialog
+            key={hired.applicationId}
+            candidate={hired}
+            vaga={vaga}
+            inProcess={candidates.filter((candidate) => IN_PROCESS_STATUSES.includes(candidate.status)).length}
+            onKeepOpen={() => setHired(null)}
+            onClosed={() => {
+              setHired(null);
+              // Os outros candidatos foram dispensados no servidor: recarrega o quadro.
+              setReloadKey((current) => current + 1);
+            }}
+          />
+        )}
+      </Modal>
 
       <Modal isOpen={Boolean(noting)} title={noting?.observacao ? "Editar observação" : "Adicionar observação"} onClose={() => setNoting(null)}>
         {noting && (

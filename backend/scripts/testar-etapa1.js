@@ -40,7 +40,7 @@ async function main() {
     criados.vaga = r.body.id;
     checar("POST vaga de teste → 201", r, 201);
 
-    r = await req("POST", "/candidatos", { nome_completo: "[TESTE] Estudante", telefone: "000", curso: "Teste",
+    r = await req("POST", "/candidatos", { nome_completo: "[TESTE] Estudante", telefone: teste.telefone(), curso: "Teste",
       instituicao_ensino: "Teste", horario_estudo: "MANHA", vaga_id: criados.vaga,
       anotacoes_recrutador: "Anotação criada no POST" });
     criados.estudante = r.body.id;
@@ -54,7 +54,7 @@ async function main() {
     r = await req("PUT", `/vagas/${criados.vaga}`, { codigo_vaga: codigo, titulo: "[TESTE] Vaga editada",
       descricao: "Teste", valor: 1500.5, empresa_id: criados.empresa });
     checar(`PUT vaga → 200 (valor=${r.body?.valor})`, r, 200);
-    r = await req("PUT", `/candidatos/${criados.estudante}`, { nome_completo: "[TESTE] Estudante", telefone: "000",
+    r = await req("PUT", `/candidatos/${criados.estudante}`, { nome_completo: "[TESTE] Estudante", telefone: teste.telefone(),
       curso: "Teste", instituicao_ensino: "Teste", horario_estudo: "NOITE",
       anotacoes_recrutador: "Texto longo ".repeat(500).trim() });
     checar(`PUT candidato → 200 (anotacoes=${r.body?.anotacoes_recrutador?.length} chars)`, r, 200);

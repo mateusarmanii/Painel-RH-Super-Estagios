@@ -5,6 +5,8 @@ const { camposEstudante, observacao } = require("../campos");
 const { camposEntrevista, conflitosDoEstudante, statusAoSairDaEntrevista } = require("../agenda");
 
 const router = express.Router();
+// A coluna instituicao_ensino é obrigatória no banco; sem migration, "não informada" é gravada como texto vazio.
+const SEM_INSTITUICAO = "";
 const statusKanbanValidos = new Set([
   "ENVIADO_EMPRESA",
   "ENTREVISTA_AGENDADA",
@@ -12,6 +14,26 @@ const statusKanbanValidos = new Set([
   "APROVADO",
   "RECUSADO",
 ]);
+
+// Outro estudante com o mesmo telefone, comparando só os dígitos ("(31) 98888-7777" = "31988887777").
+// Na edição, ignora o próprio estudante. Não há restrição no banco: a checagem é só aqui.
+async function estudanteComTelefone(telefone, ignorarId = null) {
+  const digitos = String(telefone).replace(/\D/g, "");
+  if (!digitos) return null;
+  const [existente] = await prisma.$queryRaw`
+    SELECT id, nome_completo FROM "Estudante"
+    WHERE regexp_replace(telefone, '\\D', '', 'g') = ${digitos}
+      AND (${ignorarId}::uuid IS NULL OR id <> ${ignorarId}::uuid)
+    ORDER BY nome_completo
+    LIMIT 1`;
+  return existente ?? null;
+}
+
+const telefoneDuplicado = (res, existente) =>
+  res.status(409).json({
+    erro: `Já existe um estudante com este telefone: ${existente.nome_completo}.`,
+    estudante_existente: existente,
+  });
 
 router.get("/", async (_req, res) => {
   try {
@@ -253,10 +275,8 @@ router.post("/", async (req, res) => {
     vaga_id,
   } = req.body ?? {};
 
-  if (!nome_completo || !telefone || !curso || !instituicao_ensino) {
-    return res.status(400).json({
-      erro: "Informe nome, telefone, curso e instituição de ensino.",
-    });
+  if (!nome_completo || !telefone || !curso) {
+    return res.status(400).json({ erro: "Informe nome, telefone e curso." });
   }
 
   const extras = camposEstudante(req.body);
@@ -268,6 +288,9 @@ router.post("/", async (req, res) => {
   }
 
   try {
+    const existente = await estudanteComTelefone(telefone);
+    if (existente) return telefoneDuplicado(res, existente);
+
     const candidato = await prisma.$transaction(async (transaction) => {
       if (vaga_id) {
         const vaga = await transaction.vaga.findUnique({
@@ -294,7 +317,7 @@ router.post("/", async (req, res) => {
           telefone,
           email,
           curso,
-          instituicao_ensino,
+          instituicao_ensino: instituicao_ensino || SEM_INSTITUICAO,
           link_curriculo,
           endereco,
           anotacoes_recrutador,
@@ -334,16 +357,17 @@ router.put("/:id", async (req, res) => {
     return res.status(400).json({ erro: "ID de candidato inválido." });
   }
 
-  if (!nome_completo || !telefone || !curso || !instituicao_ensino) {
-    return res.status(400).json({
-      erro: "Informe nome, telefone, curso e instituição de ensino.",
-    });
+  if (!nome_completo || !telefone || !curso) {
+    return res.status(400).json({ erro: "Informe nome, telefone e curso." });
   }
 
   const extras = camposEstudante(req.body);
   if (extras.erro) return res.status(400).json({ erro: extras.erro });
 
   try {
+    const existente = await estudanteComTelefone(telefone, id);
+    if (existente) return telefoneDuplicado(res, existente);
+
     const candidato = await prisma.estudante.update({
       where: { id },
       data: {
@@ -351,7 +375,7 @@ router.put("/:id", async (req, res) => {
         telefone,
         email,
         curso,
-        instituicao_ensino,
+        instituicao_ensino: instituicao_ensino || SEM_INSTITUICAO,
         link_curriculo,
         endereco,
         anotacoes_recrutador,

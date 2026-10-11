@@ -21,10 +21,13 @@ export function courseOptions(courses) {
     .sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
 }
 
+// Só os dígitos do telefone ("(31) 98888-7504" → "31988887504").
+export const phoneDigits = (phone) => (phone ?? "").replace(/\D/g, "");
+
 // Link wa.me a partir de um telefone brasileiro em qualquer formato ("(31) 98888-7504" → 5531988887504).
 // Devolve null se o número não tiver ao menos DDD + telefone.
 export function whatsappLink(phone, message) {
-  let digits = (phone ?? "").replace(/\D/g, "");
+  let digits = phoneDigits(phone);
   if (digits.length === 10 || digits.length === 11) digits = `55${digits}`;
   if (digits.length < 12) return null;
   return `https://wa.me/${digits}${message ? `?text=${encodeURIComponent(message)}` : ""}`;
@@ -48,7 +51,7 @@ export function getInitials(name) {
 
 // Telefone brasileiro no padrão (31) 98888-8888 ou (31) 3222-3468. Formatos que não reconhece ficam como estão.
 export function formatPhone(phone) {
-  let digits = (phone ?? "").replace(/\D/g, "");
+  let digits = phoneDigits(phone);
   if ((digits.length === 12 || digits.length === 13) && digits.startsWith("55")) digits = digits.slice(2);
   if (digits.length === 11) return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
   if (digits.length === 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;

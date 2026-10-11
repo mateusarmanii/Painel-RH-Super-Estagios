@@ -19,7 +19,8 @@
     "test:agenda": "node scripts/testar-agenda.js",
     "test:status-vaga": "node scripts/testar-status-vaga.js",
     "test:perfil": "node scripts/testar-perfil.js",
-    "test:login": "node scripts/testar-login.js"
+    "test:login": "node scripts/testar-login.js",
+    "test:cadastros": "node scripts/testar-cadastros.js"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

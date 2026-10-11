@@ -93,6 +93,16 @@ export function interviewTimeRange(interview) {
   return `${timeFormat.format(new Date(interview.data_hora_entrevista))} – ${timeFormat.format(interviewEnd(interview))}`;
 }
 
+// Como cada entrevista é identificada no Calendário: empresa antes do estudante.
+export function interviewWho(interview) {
+  return `${interview.vaga.empresa.nome} · ${interview.estudante.nome_completo}`;
+}
+
+// "08:30 · Empresa · Estudante" (dicas ao passar o mouse e textos de uma linha).
+export function interviewLine(interview, date = new Date(interview.data_hora_entrevista)) {
+  return `${timeFormat.format(date)} · ${interviewWho(interview)}`;
+}
+
 // Valor para <input type="datetime-local">.
 export function toLocalInput(date) {
   const value = new Date(date);

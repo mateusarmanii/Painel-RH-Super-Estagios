@@ -116,7 +116,7 @@ router.get("/resumo", async (req, res) => {
     });
   } catch (error) {
     console.error("Erro ao montar o resumo da agenda:", error);
-    return res.status(500).json({ erro: "Não foi possível carregar o resumo da agenda." });
+    return res.status(500).json({ erro: "Não foi possível carregar o resumo do calendário." });
   }
 });
 

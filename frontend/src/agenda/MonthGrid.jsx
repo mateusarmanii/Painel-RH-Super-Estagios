@@ -1,6 +1,6 @@
 import { AlertTriangle } from "lucide-react";
 import { interviewStatusDot, interviewStatusLabels } from "../interviewStatus.js";
-import { dayKey, sameDay, timeFormat } from "./dates.js";
+import { dayKey, interviewLine, interviewWho, sameDay, timeFormat } from "./dates.js";
 
 const weekdays = ["seg", "ter", "qua", "qui", "sex", "sáb", "dom"];
 const MAX_PER_DAY = 3;
@@ -63,14 +63,14 @@ export default function MonthGrid({ days, month, interviews, onOpen, onPickDay }
                     <button
                       type="button"
                       onClick={() => onOpen(interview)}
-                      title={`${interviewStatusLabels[interview.status_exibido]} · ${interview.estudante.nome_completo} · ${interview.vaga.empresa.nome}`}
+                      title={`${interviewLine(interview)} · ${interviewStatusLabels[interview.status_exibido]}`}
                       className={`flex w-full items-center gap-1 rounded px-1 py-0.5 text-left text-[11px] transition-colors hover:bg-marinho-50 ${
                         interview.status_exibido === "CANCELADA" ? "text-slate-400 line-through" : "text-slate-700"
                       }`}
                     >
                       <span className={`size-1.5 shrink-0 rounded-full ${interviewStatusDot[interview.status_exibido]}`} />
                       <span className="shrink-0 font-bold tabular-nums">{timeFormat.format(new Date(interview.data_hora_entrevista))}</span>
-                      <span className="truncate">{interview.estudante.nome_completo}</span>
+                      <span className="truncate">· {interviewWho(interview)}</span>
                       {interview.conflito_com?.length > 0 && <AlertTriangle size={11} className="shrink-0 text-rose-600" />}
                     </button>
                   </li>

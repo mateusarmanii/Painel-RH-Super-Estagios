@@ -3,7 +3,7 @@ import { DndContext, PointerSensor, useDraggable, useSensor, useSensors } from "
 import { AlertTriangle, MapPin, Video } from "lucide-react";
 import CompanyAvatar from "../components/CompanyAvatar.jsx";
 import { interviewStatusBlock } from "../interviewStatus.js";
-import { addDays, dayKey, interviewEnd, MINUTE_MS, sameDay, timeFormat, weekdayShort } from "./dates.js";
+import { addDays, dayKey, interviewEnd, interviewLine, interviewWho, MINUTE_MS, sameDay, timeFormat, weekdayShort } from "./dates.js";
 
 const HOUR_HEIGHT = 56;
 const GUTTER = 56;
@@ -63,7 +63,7 @@ function Block({ entry, top, height, preview, onOpen }) {
       {...listeners}
       {...attributes}
       onClick={() => onOpen(interview)}
-      title={`${timeFormat.format(start)} · ${interview.estudante.nome_completo} · ${interview.vaga.empresa.nome}${draggable ? " (arraste para reagendar)" : ""}`}
+      title={`${interviewLine(interview, start)}${draggable ? " (arraste para reagendar)" : ""}`}
       style={{
         top,
         height,
@@ -81,7 +81,7 @@ function Block({ entry, top, height, preview, onOpen }) {
       )}
       {compact ? (
         <p className="truncate pr-4 font-semibold">
-          <span className="tabular-nums">{timeFormat.format(preview ?? start)}</span> {interview.estudante.nome_completo}
+          <span className="tabular-nums">{timeFormat.format(preview ?? start)}</span> · {interviewWho(interview)}
         </p>
       ) : (
         <>
@@ -89,11 +89,11 @@ function Block({ entry, top, height, preview, onOpen }) {
             {timeFormat.format(preview ?? start)}
             <FormatIcon size={11} className="shrink-0 opacity-60" />
           </p>
-          <p className="truncate font-semibold">{interview.estudante.nome_completo}</p>
+          <p className="truncate font-semibold">{interviewWho(interview)}</p>
           {height >= 64 && (
             <p className="mt-0.5 flex min-w-0 items-center gap-1 opacity-80">
               <CompanyAvatar id={interview.vaga.empresa.id} name={interview.vaga.empresa.nome} logoUrl={interview.vaga.empresa.logo_url} size="xs" />
-              <span className="truncate">{interview.vaga.empresa.nome}</span>
+              <span className="truncate">{interview.vaga.titulo}</span>
             </p>
           )}
         </>

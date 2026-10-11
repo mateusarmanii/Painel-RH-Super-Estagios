@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from "react";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useParams } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
 import Layout from "./components/Layout.jsx";
 import LoginPage from "./pages/Login.jsx";
@@ -52,6 +52,13 @@ export default function App() {
   );
 }
 
+// Perfil novo a cada estudante: ir de um perfil para outro (ex.: "Ver perfil" do aviso de telefone repetido)
+// não deixa modais abertos com os dados do anterior.
+function EstudantePerfilRoute() {
+  const { id } = useParams();
+  return <EstudantePerfilPage key={id} />;
+}
+
 // Telas do painel (só com login). Sem login, qualquer endereço mostra a tela de login e, ao entrar, abre o endereço pedido.
 function AppRoutes({ user, onLogout }) {
   return (
@@ -62,11 +69,13 @@ function AppRoutes({ user, onLogout }) {
           <Route path="/vagas" element={<VagasPage />} />
           <Route path="/kanban" element={<KanbanPage />} />
           <Route path="/kanban/:vagaId" element={<KanbanPage />} />
-          <Route path="/agenda" element={<AgendaPage />} />
+          <Route path="/calendario" element={<AgendaPage />} />
+          {/* Endereço antigo (antes "Agenda de Entrevistas"), para links salvos. */}
+          <Route path="/agenda" element={<Navigate to="/calendario" replace />} />
           <Route path="/empresas" element={<EmpresasPage />} />
           <Route path="/empresas-sem-vaga" element={<EmpresasSemVagaPage />} />
           <Route path="/estudantes" element={<EstudantesPage />} />
-          <Route path="/estudantes/:id" element={<EstudantePerfilPage />} />
+          <Route path="/estudantes/:id" element={<EstudantePerfilRoute />} />
           <Route path="/banco-de-talentos" element={<BancoTalentosPage />} />
           <Route path="/contratacoes" element={<ContratacoesPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />

@@ -247,7 +247,8 @@ export default function EstudantePerfilPage() {
                 <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${situationStyles[situation]}`}>{situationLabels[situation]}</span>
               </div>
               <p className="mt-1 text-sm text-slate-600">
-                {student.curso} · {student.instituicao_ensino}
+                {student.curso}
+                {student.instituicao_ensino && ` · ${student.instituicao_ensino}`}
               </p>
               <div className="mt-3 flex flex-wrap gap-1.5">
                 {student.semestre_atual && <Chip>{student.semestre_atual}º semestre</Chip>}

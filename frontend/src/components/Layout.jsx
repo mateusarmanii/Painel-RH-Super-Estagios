@@ -26,7 +26,7 @@ import { buttonPrimary } from "../ui.js";
 const navigationItems = [
   { label: "Dashboard", path: "/", icon: LayoutDashboard },
   { label: "Vagas", path: "/vagas", icon: BriefcaseBusiness, also: ["/kanban"] },
-  { label: "Agenda de Entrevistas", path: "/agenda", icon: CalendarDays },
+  { label: "Calendário", path: "/calendario", icon: CalendarDays },
   { label: "Empresas", path: "/empresas", icon: Building2 },
   { label: "Empresas sem vaga", path: "/empresas-sem-vaga", icon: Building2 },
   { label: "Estudantes", path: "/estudantes", icon: GraduationCap },
@@ -38,7 +38,7 @@ const navigationItems = [
 const pageTitles = [
   ["/kanban", "Kanban da vaga"],
   ["/vagas", "Vagas"],
-  ["/agenda", "Agenda de entrevistas"],
+  ["/calendario", "Calendário"],
   ["/empresas-sem-vaga", "Empresas sem vaga"],
   ["/empresas", "Empresas"],
   ["/estudantes/", "Perfil do estudante"],
@@ -129,9 +129,10 @@ export default function Layout({ children, user, onLogout }) {
   const [isNewMenuOpen, setIsNewMenuOpen] = useState(false);
   const [creating, setCreating] = useState(null);
 
-  // Fecha a gaveta do menu ao trocar de tela.
+  // Fecha a gaveta do menu e o "Novo cadastro" ao trocar de tela (ex.: "Ver perfil" no aviso de telefone repetido).
   useEffect(() => {
     setIsSidebarOpen(false);
+    setCreating(null);
   }, [pathname]);
 
   const creationTypes = [

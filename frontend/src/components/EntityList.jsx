@@ -36,6 +36,8 @@ export default function EntityList({
   groupItems,
   // Opcional: exclusão bloqueada pela API (409) — a tela mostra a explicação do jeito dela, em vez do aviso padrão.
   onDeleteBlocked,
+  // Opcional: outra forma de um item bater com a busca (recebe o item e o texto digitado, sem espaços nas pontas).
+  matchSearch,
 }) {
   const [items, setItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -69,9 +71,11 @@ export default function EntityList({
 
   const filteredItems = useMemo(() => {
     const term = normalize(search.trim());
-    const found = term ? visibleItems.filter((item) => normalize(getSearchText(item)).includes(term)) : visibleItems;
+    const found = term
+      ? visibleItems.filter((item) => normalize(getSearchText(item)).includes(term) || matchSearch?.(item, search.trim()))
+      : visibleItems;
     return sortItems ? [...found].sort(sortItems) : found;
-  }, [visibleItems, search, getSearchText, sortItems]);
+  }, [visibleItems, search, getSearchText, sortItems, matchSearch]);
 
   const groups = groupItems ? groupItems(filteredItems) : null;
 

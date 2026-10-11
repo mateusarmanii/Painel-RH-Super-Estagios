@@ -5,13 +5,15 @@ const { turnoVaga } = require("../campos");
 
 const router = express.Router();
 const statusVagaValidos = new Set(["ABERTA", "FECHADA", "SUSPENSA"]);
+const codigoVagaValido = /^\d{5,6}$/;
 
 router.get("/", async (_req, res) => {
   try {
     const vagas = await prisma.vaga.findMany({
       include: { empresa: true, aplicacoes: { select: { status_kanban: true } } },
-      orderBy: { codigo_vaga: "asc" },
     });
+    // Ordem numérica do Nº: com códigos de 5 e 6 dígitos, a ordem de texto poria "100001" antes de "12345".
+    vagas.sort((a, b) => Number(a.codigo_vaga) - Number(b.codigo_vaga));
 
     // Resumo para os cards: candidatos por etapa, dias em aberto e alerta.
     const agora = new Date();
@@ -66,8 +68,8 @@ router.get("/:vagaId/candidatos", async (req, res) => {
 router.post("/", async (req, res) => {
   const { codigo_vaga, titulo, descricao, valor, empresa_id, status } = req.body ?? {};
 
-  if (!codigo_vaga || !/^\d{6}$/.test(codigo_vaga)) {
-    return res.status(400).json({ erro: "O código da vaga deve conter 6 dígitos." });
+  if (!codigo_vaga || !codigoVagaValido.test(codigo_vaga)) {
+    return res.status(400).json({ erro: "O código da vaga deve ter 5 ou 6 dígitos." });
   }
 
   if (!titulo || !descricao || !empresa_id || typeof valor !== "number" || !Number.isFinite(valor)) {
@@ -166,8 +168,8 @@ router.put("/:id", async (req, res) => {
     return res.status(400).json({ erro: "ID de vaga inválido." });
   }
 
-  if (!codigo_vaga || !/^\d{6}$/.test(codigo_vaga)) {
-    return res.status(400).json({ erro: "O código da vaga deve conter 6 dígitos." });
+  if (!codigo_vaga || !codigoVagaValido.test(codigo_vaga)) {
+    return res.status(400).json({ erro: "O código da vaga deve ter 5 ou 6 dígitos." });
   }
 
   if (!titulo || !descricao || !empresa_id || typeof valor !== "number" || !Number.isFinite(valor)) {

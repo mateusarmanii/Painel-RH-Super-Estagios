@@ -51,7 +51,7 @@ async function main() {
     checar("GET /vagas traz o turno", r.body.some((v) => v.id === vaga.id && "turno" in v));
 
     console.log("\n== Campos novos do estudante");
-    const estudante = { nome_completo: "[TESTE] Estudante Frente 2", telefone: "31988887777", curso: "Teste",
+    const estudante = { nome_completo: "[TESTE] Estudante Frente 2", telefone: teste.telefone(), curso: "Teste",
       instituicao_ensino: "Teste", vaga_id: vaga.id };
     r = await req("POST", "/candidatos", { ...estudante, turno_estudo: "EAD", disponibilidade: ["NOITE", "MANHA", "MANHA"],
       semestre_atual: 5, previsao_formatura: "2027-06", data_nascimento: "2004-03-15" });
@@ -66,7 +66,7 @@ async function main() {
     checar("Data de nascimento", dia(e?.data_nascimento) === "2004-03-15", e?.data_nascimento);
     checar("Horário antigo fica vazio quando não é enviado", e?.horario_estudo === null, `${e?.horario_estudo}`);
 
-    r = await req("POST", "/candidatos", { ...estudante, horario_estudo: "TARDE" });
+    r = await req("POST", "/candidatos", { ...estudante, telefone: teste.telefone(), horario_estudo: "TARDE" });
     if (r.body?.id) ids.estudantes.push(r.body.id);
     checar("Compatibilidade: só o horário antigo preenche o turno de estudo",
       r.status === 201 && r.body.turno_estudo === "TARDE" && r.body.disponibilidade.length === 0,

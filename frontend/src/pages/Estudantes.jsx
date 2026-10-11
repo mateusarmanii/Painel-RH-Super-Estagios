@@ -6,7 +6,7 @@ import EntityList from "../components/EntityList.jsx";
 import { IndicateDialog } from "../components/IndicateForm.jsx";
 import Modal from "../components/Modal.jsx";
 import { kanbanStatusLabels } from "../kanbanStatus.js";
-import { courseOptions, formatPhone, normalize } from "../text.js";
+import { courseOptions, formatPhone, normalize, phoneDigits } from "../text.js";
 import { availabilityText, formatDate, formatMonthYear, periodoLabels, studyShift, studyShiftLabel, turnoEstudoLabels } from "../estudante.js";
 import { situationLabels, studentSituation } from "../perfil.js";
 
@@ -46,6 +46,8 @@ const csvExport = {
 };
 
 const getSearchText = (estudante) => `${estudante.nome_completo} ${estudante.curso} ${estudante.instituicao_ensino}`;
+// Busca só com dígitos (4 ou mais): também procura pelo final do telefone, ignorando a formatação ("7777" acha "(31) 98888-7777").
+const matchPhoneEnd = (estudante, term) => /^\d{4,}$/.test(term) && phoneDigits(estudante.telefone).endsWith(term);
 const getName = (estudante) => estudante.nome_completo;
 const renderEditExtra = (estudante) => <CandidaturaHistory aplicacoes={estudante.aplicacoes} />;
 
@@ -88,7 +90,7 @@ function renderEstudante(estudante) {
         </Link>
       </h2>
       <p className="mt-2 text-sm text-slate-600">{estudante.curso}</p>
-      <p className="text-sm text-slate-500">{estudante.instituicao_ensino}</p>
+      {estudante.instituicao_ensino && <p className="text-sm text-slate-500">{estudante.instituicao_ensino}</p>}
       {(estudante.disponibilidade?.length > 0 || estudante.previsao_formatura) && (
         <p className="mt-2 text-xs text-slate-500">
           {estudante.disponibilidade?.length > 0 && (
@@ -279,9 +281,10 @@ export default function EstudantesPage() {
         type="estudante"
         endpoint="candidatos"
         entityLabel={{ singular: "estudante", plural: "estudantes", article: "o" }}
-        searchPlaceholder="Buscar por nome, curso ou instituição"
+        searchPlaceholder="Buscar por nome, curso, instituição ou final do telefone"
         emptyMessage={hasFilters ? "Nenhum estudante com esses filtros." : "Nenhum estudante cadastrado."}
         getSearchText={getSearchText}
+        matchSearch={matchPhoneEnd}
         getName={getName}
         renderEditExtra={renderEditExtra}
         csvExport={csvExport}

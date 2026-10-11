@@ -10,7 +10,7 @@ import InterviewList from "../agenda/InterviewList.jsx";
 import InterviewPanel from "../agenda/InterviewPanel.jsx";
 import { runInterviewAction } from "../agenda/api.js";
 import { conflictWarning } from "../agenda/conflicts.js";
-import { addDays, dayTitle, periodFor, periodLabel, shiftAnchor, startOfWeek, timeFormat } from "../agenda/dates.js";
+import { addDays, dayTitle, interviewWho, periodFor, periodLabel, shiftAnchor, startOfWeek, timeFormat } from "../agenda/dates.js";
 import { interviewStatusDot, interviewStatusLabels } from "../interviewStatus.js";
 import { plural } from "../text.js";
 import { buttonSecondary } from "../ui.js";
@@ -75,7 +75,7 @@ function Summary({ summary, onOpen }) {
                   className="flex w-full min-w-0 items-center gap-1.5 text-left text-sm text-orange-950 hover:underline"
                 >
                   <span className="shrink-0 font-bold tabular-nums">{timeFormat.format(new Date(interview.data_hora_entrevista))}</span>
-                  <span className="truncate">{interview.estudante.nome_completo}</span>
+                  <span className="truncate">· {interviewWho(interview)}</span>
                 </button>
               </li>
             ))}

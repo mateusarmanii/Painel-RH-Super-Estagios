@@ -31,7 +31,7 @@ async function main() {
       if (vaga.status !== 201) throw new Error(`Falha ao criar vaga: ${vaga.body?.erro}`);
       ids.vagas.push(vaga.body);
     }
-    const estudante = await req("POST", "/candidatos", { nome_completo: "[TESTE] Estudante 2D", telefone: "000",
+    const estudante = await req("POST", "/candidatos", { nome_completo: "[TESTE] Estudante 2D", telefone: teste.telefone(),
       curso: "Teste", instituicao_ensino: "Teste", horario_estudo: "TARDE", vaga_id: ids.vagas[0].id });
     ids.estudante = estudante.body.id;
     const aplicacaoA = estudante.body.aplicacoes[0];
@@ -73,7 +73,7 @@ async function main() {
       naAgenda.length === 1 && new Date(naAgenda[0].data_hora_entrevista).getTime() === nova.getTime(),
       naAgenda.map((e) => e.data_hora_entrevista).join(", "));
     checar("/entrevistas traz o id da vaga e o telefone (usados pela Agenda)",
-      naAgenda[0]?.vaga?.id === ids.vagas[1].id && naAgenda[0]?.estudante?.telefone === "000");
+      naAgenda[0]?.vaga?.id === ids.vagas[1].id && naAgenda[0]?.estudante?.telefone === estudante.body.telefone);
   } finally {
     if (ids.estudante) {
       await prisma.aplicacao.deleteMany({ where: { estudante_id: ids.estudante } }).catch(() => {});

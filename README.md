@@ -6,7 +6,7 @@ Painel interno da Super Estágios (agência de estágios) para acompanhar o fech
 - **Banco de Talentos**: candidatos dispensados (e não contratados), com filtro por curso e "Indicar para vaga".
 - **Contratações efetivas**: todos os estudantes contratados, com data e vaga.
 - **Kanban por vaga**: cada candidato passa por *Enviado à empresa → Em análise → Entrevista → Contratado* ou *Dispensado*. Ao mover para "Entrevista" o sistema pede data e hora; para "Dispensado", o motivo.
-- **Agenda de entrevistas**, agrupada por dia, com reagendamento.
+- **Calendário** de entrevistas (dia, semana, mês e lista), com reagendamento.
 - **Dashboard** com vagas abertas, tempo médio de contratação, vagas paradas há mais de 10 dias, funil de contratação e distribuição dos estudantes por curso.
 - **Histórico de candidaturas** de cada estudante.
 
@@ -116,6 +116,7 @@ npm run test:agenda    # agendamento com detalhes, conflito de horário, resumo 
 npm run test:status-vaga   # suspender, fechar (motivo, dispensas, entrevistas canceladas) e reabrir vagas
 npm run test:perfil    # perfil do estudante: dados, candidaturas, entrevistas, observações e dispensas
 npm run test:login     # login, token inválido/expirado, rotas sem token, usuário inativo, CORS e limite de tentativas
+npm run test:cadastros # telefone repetido (409), instituição opcional, código da vaga com 5 ou 6 dígitos e encerrar vaga após contratar
 ```
 
 ## Dados de exemplo
@@ -144,7 +145,7 @@ backend/
   prisma/migrations/      histórico de alterações do banco
   scripts/                testes (funções comuns em scripts/lib/teste.js)
 frontend/src/
-  pages/                  Dashboard, Kanban, Agenda, Vagas, Empresas, Estudantes, Perfil do estudante, Banco de Talentos, Contratações
+  pages/                  Dashboard, Kanban, Calendário (Agenda.jsx), Vagas, Empresas, Estudantes, Perfil do estudante, Banco de Talentos, Contratações
   components/             lista com busca/edição/exclusão, formulários, modais e gráficos
 ```
 

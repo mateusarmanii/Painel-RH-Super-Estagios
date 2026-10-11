@@ -37,7 +37,7 @@ async function main() {
     const vagaNova = await criarVaga("[TESTE] Vaga nova");
     const vagaFechada = await criarVaga("[TESTE] Vaga fechada");
     await req("PATCH", `/vagas/${vagaFechada.id}`, { status: "FECHADA" });
-    const estudante = await req("POST", "/candidatos", { nome_completo: "[TESTE] Estudante Banco", telefone: "000",
+    const estudante = await req("POST", "/candidatos", { nome_completo: "[TESTE] Estudante Banco", telefone: teste.telefone(),
       curso: "Teste", instituicao_ensino: "Teste", horario_estudo: "NOITE", vaga_id: vagaOrigem.id });
     ids.estudante = estudante.body.id;
     const aplicacaoOrigem = estudante.body.aplicacoes[0];
@@ -77,24 +77,25 @@ async function main() {
     checar("Indicação aparece no Kanban da vaga nova", r.body.some((a) => a.estudante.id === ids.estudante));
 
     console.log("\n== Cadastro de estudante sem vaga");
-    const semVaga = { telefone: "000", curso: "Teste", instituicao_ensino: "Teste" };
-    r = await req("POST", "/candidatos", { ...semVaga, nome_completo: "[TESTE] Sem vaga" });
+    const semVaga = () => ({ telefone: teste.telefone(), curso: "Teste", instituicao_ensino: "Teste" });
+    r = await req("POST", "/candidatos", { ...semVaga(), nome_completo: "[TESTE] Sem vaga" });
     if (r.body?.id) ids.semVaga.push(r.body.id);
     checar("Sem vaga_id → 201, sem nenhuma candidatura",
       r.status === 201 && r.body.aplicacoes.length === 0, `[${r.status}] ${r.body?.erro ?? r.body?.aplicacoes?.length}`);
     const idSemVaga = r.body?.id;
-    r = await req("POST", "/candidatos", { ...semVaga, nome_completo: "[TESTE] Sem vaga (vazio)", vaga_id: "" });
+    r = await req("POST", "/candidatos", { ...semVaga(), nome_completo: "[TESTE] Sem vaga (vazio)", vaga_id: "" });
     if (r.body?.id) ids.semVaga.push(r.body.id);
     checar("vaga_id vazio → 201, sem candidatura", r.status === 201 && r.body.aplicacoes.length === 0, `[${r.status}] ${r.body?.erro ?? ""}`);
-    r = await req("POST", "/candidatos", { ...semVaga, nome_completo: "[TESTE] Vaga inválida", vaga_id: "abc" });
+    r = await req("POST", "/candidatos", { ...semVaga(), nome_completo: "[TESTE] Vaga inválida", vaga_id: "abc" });
     if (r.body?.id) ids.semVaga.push(r.body.id);
     checar("vaga_id inválido → 400", r.status === 400, `[${r.status}] ${r.body?.erro}`);
-    r = await req("POST", "/candidatos", { ...semVaga, nome_completo: "[TESTE] Vaga fechada", vaga_id: vagaFechada.id });
+    r = await req("POST", "/candidatos", { ...semVaga(), nome_completo: "[TESTE] Vaga fechada", vaga_id: vagaFechada.id });
     if (r.body?.id) ids.semVaga.push(r.body.id);
     checar("Cadastro em vaga fechada continua → 409", r.status === 409, `[${r.status}] ${r.body?.erro}`);
-    r = await req("POST", "/candidatos", { telefone: "000", curso: "Teste", nome_completo: "[TESTE] Sem instituição" });
+    r = await req("POST", "/candidatos", { telefone: teste.telefone(), curso: "Teste", nome_completo: "[TESTE] Sem instituição" });
     if (r.body?.id) ids.semVaga.push(r.body.id);
-    checar("Sem instituição continua → 400", r.status === 400, `[${r.status}] ${r.body?.erro}`);
+    checar("Sem instituição → 201 (instituição é opcional; gravada vazia)",
+      r.status === 201 && r.body.instituicao_ensino === "", `[${r.status}] ${r.body?.erro ?? JSON.stringify(r.body?.instituicao_ensino)}`);
     r = await req("GET", "/candidatos");
     checar("Aparece em Estudantes com 0 candidaturas",
       r.body.some((e) => e.id === idSemVaga && e.aplicacoes.length === 0));

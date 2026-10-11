@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import { apiFetch, apiJson } from "../api.js";
 import LogoField, { saveLogoChange } from "./LogoField.jsx";
@@ -23,7 +24,14 @@ const fieldSets = {
   ],
   vaga: [
     { name: "titulo", label: "Título", placeholder: "Título da vaga" },
-    { name: "codigo_vaga", label: "Código da vaga", placeholder: "6 dígitos", pattern: "[0-9]{6}", maxLength: 6 },
+    {
+      name: "codigo_vaga",
+      label: "Código da vaga",
+      placeholder: "5 ou 6 dígitos",
+      pattern: "[0-9]{5,6}",
+      title: "Use 5 ou 6 dígitos.",
+      maxLength: 6,
+    },
     { name: "descricao", label: "Descrição", type: "textarea", placeholder: "Descreva as responsabilidades" },
     { name: "valor", label: "Bolsa-auxílio", type: "number", placeholder: "0,00", min: "0", step: "0.01" },
     { name: "empresa_id", label: "Empresa", type: "select", optionsKey: "empresas" },
@@ -34,7 +42,7 @@ const fieldSets = {
     { name: "curso", label: "Curso", placeholder: "Curso do estudante" },
     { name: "email", label: "E-mail", type: "email", placeholder: "estudante@email.com", optional: true },
     { name: "telefone", label: "Telefone", type: "tel", placeholder: "(00) 00000-0000" },
-    { name: "instituicao_ensino", label: "Instituição de ensino", placeholder: "Nome da instituição" },
+    { name: "instituicao_ensino", label: "Instituição de ensino", placeholder: "Nome da instituição", optional: true },
     { name: "turno_estudo", label: "Turno de estudo", type: "select", options: toOptions(turnoEstudoLabels), optional: true, half: true },
     { name: "semestre_atual", label: "Semestre atual", type: "integer", min: "1", max: "12", placeholder: "Ex.: 5", optional: true, half: true },
     {
@@ -162,7 +170,27 @@ export default function CreationForm({ type, initialData, onSuccess }) {
       window.dispatchEvent(new Event("dashboard:refresh"));
       onSuccess();
     } catch (submitError) {
-      toast.error(submitError.message);
+      const existing = submitError.body?.estudante_existente;
+      if (existing) {
+        // Telefone de outro estudante: mostra quem é, com link para o perfil.
+        toast.error(
+          (current) => (
+            <span>
+              {submitError.message}{" "}
+              <Link
+                to={`/estudantes/${existing.id}`}
+                onClick={() => toast.dismiss(current.id)}
+                className="font-bold text-marinho-800 underline underline-offset-2"
+              >
+                Ver perfil
+              </Link>
+            </span>
+          ),
+          { duration: 10000 },
+        );
+      } else {
+        toast.error(submitError.message);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -268,6 +296,7 @@ export default function CreationForm({ type, initialData, onSuccess }) {
                 type={field.type === "integer" ? "number" : field.type ?? "text"}
                 placeholder={field.placeholder}
                 pattern={field.pattern}
+                title={field.title}
                 maxLength={field.maxLength}
                 min={field.min}
                 max={field.type === "date" ? toDateInput(new Date().toISOString()) : field.max}

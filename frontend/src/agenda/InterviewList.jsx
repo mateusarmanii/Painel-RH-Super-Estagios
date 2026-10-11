@@ -3,7 +3,7 @@ import { AlertTriangle, CalendarX2, ChevronDown, MapPin, Video } from "lucide-re
 import CompanyAvatar from "../components/CompanyAvatar.jsx";
 import EmptyState from "../components/EmptyState.jsx";
 import { interviewStatusBadge, interviewStatusDot, interviewStatusLabels } from "../interviewStatus.js";
-import { dayKey, dayTitle, interviewTimeRange, sameDay, startOfDay } from "./dates.js";
+import { dayKey, dayTitle, interviewTimeRange, interviewWho, sameDay, startOfDay } from "./dates.js";
 
 // Visão Lista: entrevistas do mês, separadas por dia. No mês atual, começa em hoje; os dias anteriores ficam
 // recolhidos num botão.
@@ -73,16 +73,14 @@ export default function InterviewList({ interviews, onOpen }) {
                       </span>
                       <span className="min-w-0 flex-1 basis-48">
                         <span className={`block truncate text-sm font-semibold ${cancelled ? "text-slate-400 line-through" : "text-marinho-900"}`}>
-                          {interview.estudante.nome_completo}
+                          {interviewWho(interview)}
                           {interview.conflito_com?.length > 0 && (
                             <AlertTriangle size={13} className="ml-1.5 inline text-rose-600" aria-label="Conflito de horário" />
                           )}
                         </span>
                         <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-slate-500">
                           <CompanyAvatar id={interview.vaga.empresa.id} name={interview.vaga.empresa.nome} logoUrl={interview.vaga.empresa.logo_url} size="xs" />
-                          <span className="truncate">
-                            {interview.vaga.titulo} · {interview.vaga.empresa.nome}
-                          </span>
+                          <span className="truncate">{interview.vaga.titulo}</span>
                         </span>
                       </span>
                       <span className="flex shrink-0 items-center gap-3">

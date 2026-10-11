@@ -254,7 +254,7 @@ export default function DashboardPage() {
               <GreetingSummary
                 items={[
                   { key: "alertas", total: dashboard.vagasEmAlerta?.length ?? 0, singular: "vaga em alerta", pluralLabel: "vagas em alerta", href: "#vagas-em-alerta", icon: AlertTriangle },
-                  { key: "entrevistas", total: dashboard.totalUpcomingInterviews, singular: "entrevista agendada", pluralLabel: "entrevistas agendadas", to: "/agenda", icon: CalendarDays },
+                  { key: "entrevistas", total: dashboard.totalUpcomingInterviews, singular: "entrevista agendada", pluralLabel: "entrevistas agendadas", to: "/calendario", icon: CalendarDays },
                   { key: "talentos", total: dashboard.talentsCount, singular: "talento para reaproveitar", pluralLabel: "talentos para reaproveitar", to: "/banco-de-talentos", icon: GraduationCap },
                   { key: "empresas", total: dashboard.companiesWithoutJobsCount, singular: "empresa sem vaga aberta", pluralLabel: "empresas sem vaga aberta", to: "/empresas-sem-vaga", icon: TrendingDown },
                 ]}
@@ -306,8 +306,8 @@ export default function DashboardPage() {
                 icon={CalendarDays}
                 bodyClassName="p-0"
                 action={
-                  <Link to="/agenda" className="shrink-0 text-xs font-extrabold uppercase tracking-wide text-marinho-900 underline-offset-2 hover:underline">
-                    Ver agenda
+                  <Link to="/calendario" className="shrink-0 text-xs font-extrabold uppercase tracking-wide text-marinho-900 underline-offset-2 hover:underline">
+                    Ver calendário
                   </Link>
                 }
               >

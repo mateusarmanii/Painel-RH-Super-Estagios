@@ -25,7 +25,7 @@ async function criarVaga(titulo) {
 
 // Cria um estudante já candidato à vaga e move a candidatura para a etapa pedida.
 async function candidato(vagaId, n, etapa, extra = {}) {
-  const r = await req("POST", "/candidatos", { nome_completo: `[TESTE] Estudante ${n}`, telefone: "000",
+  const r = await req("POST", "/candidatos", { nome_completo: `[TESTE] Estudante ${n}`, telefone: teste.telefone(),
     curso: "Teste", instituicao_ensino: "Teste", horario_estudo: "NOITE", vaga_id: vagaId });
   if (r.status !== 201) throw new Error(`Falha ao criar estudante: ${r.body?.erro}`);
   ids.estudantes.push(r.body.id);
@@ -105,7 +105,7 @@ async function main() {
       descricao: " Teste ", valor: 1000, empresa_id: ids.empresa });
     checar("Vaga: título e descrição aparados", r.body?.titulo === "[TESTE] Vaga nova" && r.body?.descricao === "Teste",
       `"${r.body?.titulo}"`);
-    r = await req("POST", "/candidatos", { nome_completo: "   [TESTE] Estudante espaços  ", telefone: " 000 ",
+    r = await req("POST", "/candidatos", { nome_completo: "   [TESTE] Estudante espaços  ", telefone: ` ${teste.telefone()} `,
       curso: " Direito ", instituicao_ensino: " UFMG ", horario_estudo: "NOITE", vaga_id: vagaNova.id });
     if (r.body?.id) ids.estudantes.push(r.body.id);
     checar("Estudante: nome, curso e instituição aparados",

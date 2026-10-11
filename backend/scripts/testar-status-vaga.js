@@ -25,7 +25,7 @@ async function criarVaga(titulo) {
 }
 
 async function candidato(nome, vagaId, etapa, extra = {}) {
-  const r = await req("POST", "/candidatos", { nome_completo: `[TESTE] ${nome}`, telefone: "31988887777", curso: "Teste",
+  const r = await req("POST", "/candidatos", { nome_completo: `[TESTE] ${nome}`, telefone: teste.telefone(), curso: "Teste",
     instituicao_ensino: "Teste", vaga_id: vagaId });
   ids.estudantes.push(r.body.id);
   const aplicacao = r.body.aplicacoes[0].id;
@@ -61,7 +61,7 @@ async function main() {
     checar("Candidatos continuam onde estavam",
       (await aplicacao(enviado.aplicacao)).status_kanban === "ENVIADO_EMPRESA"
         && (await aplicacao(entrevista.aplicacao)).entrevista_status === "AGUARDANDO");
-    const extra = await req("POST", "/candidatos", { nome_completo: "[TESTE] Novo", telefone: "000", curso: "Teste",
+    const extra = await req("POST", "/candidatos", { nome_completo: "[TESTE] Novo", telefone: teste.telefone(), curso: "Teste",
       instituicao_ensino: "Teste", vaga_id: vaga.id });
     if (extra.body?.id) ids.estudantes.push(extra.body.id);
     checar("Vaga suspensa não recebe novos candidatos (409)", extra.status === 409, `[${extra.status}]`);

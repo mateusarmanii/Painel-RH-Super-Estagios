@@ -34,7 +34,7 @@ async function main() {
     ids.empresa = empresa.body.id;
     const vagaA = await criarVaga("[TESTE] Vaga Perfil A", "TARDE");
     const vagaB = await criarVaga("[TESTE] Vaga Perfil B", "MANHA");
-    const criado = await req("POST", "/candidatos", { nome_completo: "[TESTE] Estudante Perfil", telefone: "31988887777",
+    const criado = await req("POST", "/candidatos", { nome_completo: "[TESTE] Estudante Perfil", telefone: teste.telefone(),
       curso: "Direito", instituicao_ensino: "UFMG", turno_estudo: "NOITE", disponibilidade: ["MANHA", "TARDE"], semestre_atual: 8,
       previsao_formatura: "2027-03", data_nascimento: "2009-01-10", vaga_id: vagaA.id });
     ids.estudantes.push(criado.body.id);

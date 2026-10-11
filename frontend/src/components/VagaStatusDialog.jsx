@@ -5,6 +5,12 @@ import { buttonDanger, buttonPrimary, buttonSecondary, inputBase } from "../ui.j
 import { apiJson } from "../api.js";
 
 export const MOTIVO_PADRAO_FECHAMENTO = "Vaga encerrada pela empresa";
+// Usado ao encerrar a vaga logo depois de uma contratação (Kanban).
+export const MOTIVO_VAGA_PREENCHIDA = "Vaga preenchida";
+
+// Aviso depois de fechar: quantos candidatos em andamento foram dispensados.
+export const closedVagaMessage = (result) =>
+  `Vaga fechada.${result.dispensados ? ` ${plural(result.dispensados, "candidato dispensado", "candidatos dispensados")}.` : ""}`;
 
 // Muda o status da vaga na API. Devolve a vaga atualizada (com o total de dispensados, ao fechar).
 export async function changeVagaStatus(vaga, status, motivo) {
@@ -33,7 +39,7 @@ export default function VagaStatusDialog({ vaga, status, onDone, onCancel }) {
       const result = await changeVagaStatus(vaga, status, closing ? motivo.trim() || MOTIVO_PADRAO_FECHAMENTO : undefined);
       toast.success(
         closing
-          ? `Vaga fechada.${result.dispensados ? ` ${plural(result.dispensados, "candidato dispensado", "candidatos dispensados")}.` : ""}`
+          ? closedVagaMessage(result)
           : "Vaga suspensa. Reabra quando a empresa retomar o processo.",
       );
       onDone();
