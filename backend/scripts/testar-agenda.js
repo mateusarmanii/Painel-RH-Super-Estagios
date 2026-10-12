@@ -87,9 +87,9 @@ async function main() {
     const doX = r.body.filter((e) => e.estudante.id === x.id);
     checar("Período traz as duas entrevistas do X, marcadas como conflito",
       doX.length === 2 && doX.every((e) => e.conflito_com.length === 1), JSON.stringify(doX.map((e) => e.conflito_com)));
-    checar("Cada entrevista traz status, formato, local, empresa (com logo_url) e telefone",
+    checar("Cada entrevista traz status, formato, local, empresa (com logo_arquivo_id) e telefone",
       doX.every((e) => e.status_exibido === "AGUARDANDO" && e.entrevista_formato && e.entrevista_local
-        && "logo_url" in e.vaga.empresa && e.estudante.telefone));
+        && "logo_arquivo_id" in e.vaga.empresa && e.estudante.telefone));
     r = await req("GET", "/entrevistas?inicio=abc&fim=def");
     checar("Período inválido → 400", r.status === 400, `[${r.status}]`);
     r = await req("GET", `/entrevistas?inicio=${new Date().toISOString()}&fim=${new Date(Date.now() + 90 * DIA).toISOString()}`);

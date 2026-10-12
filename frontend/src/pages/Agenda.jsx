@@ -423,7 +423,7 @@ export default function AgendaPage() {
                 }}
                 className="inline-flex h-10 items-center gap-1 rounded-md px-2 text-sm font-semibold text-marinho-700 hover:bg-marinho-50"
               >
-                {selectedCompany && <CompanyAvatar id={selectedCompany.id} name={selectedCompany.nome} logoUrl={selectedCompany.logo_url} size="xs" />}
+                {selectedCompany && <CompanyAvatar id={selectedCompany.id} name={selectedCompany.nome} logoId={selectedCompany.logo_arquivo_id} size="xs" />}
                 <X size={15} /> Limpar filtros
               </button>
             )}

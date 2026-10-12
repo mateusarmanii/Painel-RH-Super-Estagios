@@ -57,8 +57,8 @@ async function main() {
     checar("Candidatura traz entrevista (status, formato, local) e observação",
       a.entrevista_status === "AGUARDANDO" && a.entrevista_formato === "PRESENCIAL" && a.entrevista_local === "Rua A, 10"
         && a.observacao === "Prefere à tarde");
-    checar("Vaga com turno, status e empresa (com logo_url)",
-      a.vaga.turno === "TARDE" && a.vaga.status === "ABERTA" && a.vaga.empresa.nome === "[TESTE] Empresa Perfil" && "logo_url" in a.vaga.empresa);
+    checar("Vaga com turno, status e empresa (com logo_arquivo_id)",
+      a.vaga.turno === "TARDE" && a.vaga.status === "ABERTA" && a.vaga.empresa.nome === "[TESTE] Empresa Perfil" && "logo_arquivo_id" in a.vaga.empresa);
     const dispensa = r.body.aplicacoes.find((x) => x.id === b.body.id);
     checar("Dispensa com motivo e data (updated_at)", dispensa.motivo_recusa === "Sem vaga no período" && Boolean(dispensa.updated_at));
     let x = await req("GET", `/candidatos/${UUID_INEXISTENTE}`);

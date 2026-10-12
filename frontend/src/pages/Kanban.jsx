@@ -6,6 +6,7 @@ import {
   ArrowRightLeft,
   BriefcaseBusiness,
   CalendarClock,
+  FileText,
   MessageSquarePlus,
   MessageSquareX,
   StickyNote,
@@ -46,6 +47,7 @@ import InterviewFields, { interviewFormValues, interviewPayload } from "../compo
 import { interviewStatus, interviewStatusBadge, interviewStatusLabels } from "../interviewStatus.js";
 import { conflictWarning } from "../agenda/conflicts.js";
 import { turnoVagaLabels } from "../estudante.js";
+import { viewCurriculo } from "../curriculo.js";
 
 const TAMANHO_MAXIMO_OBSERVACAO = 1000;
 
@@ -116,6 +118,9 @@ function CardMenu({ candidate, onAction }) {
       wrapperProps={stopDrag}
       items={[
         { key: "profile", label: "Ver perfil", icon: UserRound, onClick: () => onAction("profile", candidate) },
+        ...(candidate.curriculo
+          ? [{ key: "curriculo", label: "Ver currículo", icon: FileText, onClick: () => viewCurriculo(candidate.id, candidate.curriculo) }]
+          : []),
         {
           key: "note",
           label: candidate.observacao ? "Editar observação" : "Adicionar observação",
@@ -540,6 +545,7 @@ function toCandidate(application, index) {
     entrevistaStatus: interviewStatus(application),
     motivo: application.motivo_recusa,
     observacao: application.observacao,
+    curriculo: application.estudante.curriculo ?? null,
     avatar: avatarStyles[index % avatarStyles.length],
   };
 }
@@ -701,7 +707,7 @@ function KanbanBoard({ vagaId }) {
           >
             <ArrowLeft size={19} />
           </Link>
-          {vaga && <CompanyAvatar id={vaga.empresa_id} name={vaga.empresa?.nome} logoUrl={vaga.empresa?.logo_url} />}
+          {vaga && <CompanyAvatar id={vaga.empresa_id} name={vaga.empresa?.nome} logoId={vaga.empresa?.logo_arquivo_id} />}
           <div className="min-w-0">
             <h2 className="truncate text-xl font-extrabold text-marinho-900">
               {vaga?.titulo ?? "Candidatos"}

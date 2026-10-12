@@ -21,7 +21,7 @@ const rotulosDoFunil = {
   EM_TESTE: "Em teste",
   APROVADO: "Contratado",
 };
-const { PASTA_LOGOS, URL_LOGOS } = require("./src/logos");
+const arquivosRoutes = require("./src/routes/arquivos");
 const { exigirLogin, segredoJwt } = require("./src/auth");
 
 // Confere o JWT_SECRET já na subida (sem ele a API não sobe).
@@ -51,20 +51,8 @@ app.use(cors({
 app.use(express.json());
 app.use(aparaTextos);
 
-// Logos das empresas como arquivos estáticos e públicos (nomes únicos, então podem ficar em cache).
-// nosniff e CSP restrita: o navegador só trata o arquivo como imagem. fallthrough: false → arquivo
-// inexistente é 404 aqui mesmo, sem passar pelo login.
-app.use(URL_LOGOS, express.static(PASTA_LOGOS, {
-  index: false,
-  dotfiles: "deny",
-  fallthrough: false,
-  maxAge: "30d",
-  immutable: true,
-  setHeaders: (res) => {
-    res.set("X-Content-Type-Options", "nosniff");
-    res.set("Content-Security-Policy", "default-src 'none'");
-  },
-}));
+// Logo das empresas (guardada no banco): pública, para poder ir direto em <img>. Currículos exigem login.
+app.use("/arquivos", arquivosRoutes.publico);
 
 app.get("/", (_req, res) => {
   res.json({ status: "ok", mensagem: "API Super Estágios" });
@@ -143,7 +131,7 @@ app.get("/dashboard-metrics", async (_req, res) => {
             codigo_vaga: true,
             titulo: true,
             created_at: true,
-            empresa: { select: { id: true, nome: true, logo_url: true } },
+            empresa: { select: { id: true, nome: true, logo_arquivo_id: true } },
             _count: { select: { aplicacoes: true } },
           },
         }),
@@ -203,7 +191,7 @@ app.use("/entrevistas", entrevistasRoutes);
 app.use("/eventos", eventosRoutes);
 app.use("/lembretes", lembretesRoutes);
 
-// Erros que escapam das rotas (JSON malformado, logo inexistente...): resposta curta em JSON, sem detalhes internos.
+// Erros que escapam das rotas (JSON malformado...): resposta curta em JSON, sem detalhes internos.
 app.use((error, _req, res, _next) => {
   const status = error.status ?? error.statusCode ?? 500;
   if (status >= 500) console.error("Erro não tratado:", error);

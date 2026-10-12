@@ -239,7 +239,7 @@ export default function ContratacoesPage() {
             ) : top ? (
               <p className="flex min-w-0 items-center gap-2 pt-1">
                 {!companyId && (
-                  <CompanyAvatar id={top.hire.vaga?.empresa?.id} name={top.label} logoUrl={top.hire.vaga?.empresa?.logo_url} size="sm" />
+                  <CompanyAvatar id={top.hire.vaga?.empresa?.id} name={top.label} logoId={top.hire.vaga?.empresa?.logo_arquivo_id} size="sm" />
                 )}
                 <span className="line-clamp-2 text-sm font-extrabold leading-tight text-marinho-900">{top.label}</span>
               </p>
@@ -338,7 +338,7 @@ export default function ContratacoesPage() {
                         <p className="truncate text-xs text-slate-500">{hire.estudante.curso}</p>
                       </div>
                       <div className="col-span-2 flex min-w-0 items-center gap-2.5 md:col-span-1">
-                        <CompanyAvatar id={hire.vaga?.empresa?.id} name={hire.vaga?.empresa?.nome ?? ""} logoUrl={hire.vaga?.empresa?.logo_url} size="sm" />
+                        <CompanyAvatar id={hire.vaga?.empresa?.id} name={hire.vaga?.empresa?.nome ?? ""} logoId={hire.vaga?.empresa?.logo_arquivo_id} size="sm" />
                         <div className="min-w-0">
                           <p className="truncate text-sm font-semibold text-slate-800">{hire.vaga?.titulo}</p>
                           <p className="truncate text-xs text-slate-500">

@@ -32,7 +32,7 @@ const camposDaEntrevista = {
       id: true,
       codigo_vaga: true,
       titulo: true,
-      empresa: { select: { id: true, nome: true, logo_url: true } },
+      empresa: { select: { id: true, nome: true, logo_arquivo_id: true } },
     },
   },
 };

@@ -23,7 +23,7 @@ export default function CandidaturaHistory({ aplicacoes = [] }) {
                   <CompanyAvatar
                     id={aplicacao.vaga?.empresa?.id}
                     name={aplicacao.vaga?.empresa?.nome ?? ""}
-                    logoUrl={aplicacao.vaga?.empresa?.logo_url}
+                    logoId={aplicacao.vaga?.empresa?.logo_arquivo_id}
                     size="sm"
                   />
                   <div className="min-w-0">

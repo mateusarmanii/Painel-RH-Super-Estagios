@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import CompanyAvatar from "../components/CompanyAvatar.jsx";
 import CreationForm from "../components/CreationForm.jsx";
+import { CurriculoManager } from "../components/CurriculoField.jsx";
 import EmptyState from "../components/EmptyState.jsx";
 import { IndicateDialog } from "../components/IndicateForm.jsx";
 import Modal from "../components/Modal.jsx";
@@ -63,7 +64,7 @@ function Chip({ children }) {
 function JobLine({ vaga }) {
   return (
     <div className="flex min-w-0 items-center gap-2.5">
-      <CompanyAvatar id={vaga?.empresa?.id} name={vaga?.empresa?.nome ?? ""} logoUrl={vaga?.empresa?.logo_url} size="sm" />
+      <CompanyAvatar id={vaga?.empresa?.id} name={vaga?.empresa?.nome ?? ""} logoId={vaga?.empresa?.logo_arquivo_id} size="sm" />
       <div className="min-w-0">
         <p className="truncate text-sm font-bold text-marinho-900">{vaga?.titulo ?? "Vaga"}</p>
         <p className="truncate text-xs text-slate-500">
@@ -383,12 +384,16 @@ export default function EstudantePerfilPage() {
                   <li className="flex items-center gap-2">
                     <FileText size={15} className="shrink-0 text-slate-400" />
                     <a href={student.link_curriculo} target="_blank" rel="noopener noreferrer" className="font-semibold text-marinho-700 underline">
-                      Currículo <ExternalLink size={12} className="inline" />
+                      Link do currículo <ExternalLink size={12} className="inline" />
                     </a>
                   </li>
                 )}
                 {student.data_nascimento && <li className="text-slate-500">Nascimento: {dateFormat.format(new Date(`${student.data_nascimento.slice(0, 10)}T12:00:00`))}</li>}
               </ul>
+            </Section>
+
+            <Section title="Currículo">
+              <CurriculoManager studentId={student.id} curriculo={student.curriculo} />
             </Section>
 
             <Section

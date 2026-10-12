@@ -2,6 +2,7 @@ const express = require("express");
 const prisma = require("../prisma");
 const { uuidValido, pluralizar, resumirVaga } = require("../utils");
 const { camposVaga } = require("../campos");
+const { RESUMO_ARQUIVO } = require("../arquivos");
 
 const router = express.Router();
 const statusVagaValidos = new Set(["ABERTA", "FECHADA", "SUSPENSA"]);
@@ -52,6 +53,7 @@ router.get("/:vagaId/candidatos", async (req, res) => {
             instituicao_ensino: true,
             telefone: true,
             email: true,
+            curriculo: { select: RESUMO_ARQUIVO },
           },
         },
       },

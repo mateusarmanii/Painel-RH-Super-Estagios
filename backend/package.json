@@ -9,6 +9,7 @@
     "seed": "node prisma/seed.js",
     "usuario:criar": "node scripts/criar-usuario.js",
     "usuario:senha": "node scripts/alterar-usuario.js",
+    "logos:migrar": "node scripts/migrar-logos.js",
     "test:etapa1": "node scripts/testar-etapa1.js",
     "test:etapa2a": "node scripts/testar-etapa2a.js",
     "test:etapa2d": "node scripts/testar-etapa2d.js",
@@ -23,7 +24,8 @@
     "test:cadastros": "node scripts/testar-cadastros.js",
     "test:etapas": "node scripts/testar-etapas.js",
     "test:campos": "node scripts/testar-campos.js",
-    "test:eventos": "node scripts/testar-eventos.js"
+    "test:eventos": "node scripts/testar-eventos.js",
+    "test:arquivos": "node scripts/testar-arquivos.js"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

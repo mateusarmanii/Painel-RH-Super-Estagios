@@ -38,13 +38,14 @@ async function main() {
     console.log("\n== Rotas sem token");
     checar("GET / continua público (200)", (await req("GET", "/", undefined, { token: null })).status === 200);
     for (const [method, url] of [["GET", "/vagas"], ["GET", "/candidatos"], ["GET", "/dashboard-metrics"], ["GET", "/entrevistas"],
-      ["GET", "/auth/me"], ["POST", "/empresas"], ["DELETE", "/vagas/00000000-0000-4000-8000-000000000000"]]) {
+      ["GET", "/auth/me"], ["GET", "/candidatos/00000000-0000-4000-8000-000000000000/curriculo"], ["POST", "/empresas"],
+      ["DELETE", "/vagas/00000000-0000-4000-8000-000000000000"]]) {
       const r = await req(method, url, method === "POST" ? { nome: "[TESTE] Não deve ser criada" } : undefined, { token: null });
       checar(`${method} ${url} sem token → 401`, r.status === 401, `[${r.status}]`);
     }
     checar("POST sem token não criou nada", await prisma.empresa.count({ where: { nome: "[TESTE] Não deve ser criada" } }) === 0);
-    const logo = await fetch(`${BASE}/uploads/logos/00000000-0000-4000-8000-000000000000.png`);
-    checar("Logos são públicas: arquivo inexistente → 404 (não 401)", logo.status === 404, `[${logo.status}]`);
+    const logo = await fetch(`${BASE}/arquivos/logo/00000000-0000-4000-8000-000000000000`);
+    checar("Logos são públicas: logo inexistente → 404 (não 401)", logo.status === 404, `[${logo.status}]`);
 
     console.log("\n== Token inválido");
     const segredo = process.env.JWT_SECRET;

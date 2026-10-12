@@ -166,7 +166,7 @@ export default function InterviewPanel({ interview, conflicts, reminderVersion, 
           </section>
 
           <section className="flex items-center gap-3 rounded-md bg-slate-50 p-3">
-            <CompanyAvatar id={interview.vaga.empresa.id} name={interview.vaga.empresa.nome} logoUrl={interview.vaga.empresa.logo_url} />
+            <CompanyAvatar id={interview.vaga.empresa.id} name={interview.vaga.empresa.nome} logoId={interview.vaga.empresa.logo_arquivo_id} />
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-bold text-slate-800">{interview.vaga.empresa.nome}</p>
               <p className="truncate text-sm text-slate-600">

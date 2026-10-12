@@ -112,7 +112,7 @@ function renderVaga(vaga) {
         />
       )}
       <div className="flex items-center gap-3 pr-10">
-        <CompanyAvatar id={vaga.empresa_id} name={vaga.empresa?.nome} logoUrl={vaga.empresa?.logo_url} />
+        <CompanyAvatar id={vaga.empresa_id} name={vaga.empresa?.nome} logoId={vaga.empresa?.logo_arquivo_id} />
         <div className="min-w-0">
           <p className="truncate text-sm font-bold text-slate-800">{vaga.empresa?.nome}</p>
           <p className="truncate text-xs text-slate-500">
@@ -192,7 +192,7 @@ function groupByEmpresa(vagas) {
       label: group.empresa?.nome,
       title: (
         <>
-          <CompanyAvatar id={group.key} name={group.empresa?.nome} logoUrl={group.empresa?.logo_url} size="sm" />
+          <CompanyAvatar id={group.key} name={group.empresa?.nome} logoId={group.empresa?.logo_arquivo_id} size="sm" />
           <h2 className="min-w-0 truncate text-base font-extrabold text-marinho-900">{group.empresa?.nome}</h2>
           <span className="shrink-0 text-sm text-slate-500">{plural(group.items.length, "vaga", "vagas")}</span>
         </>
@@ -280,11 +280,11 @@ function CountHeader({ items, isLoading }) {
 
 function EmpresaHeader({ empresaId, empresaNome, items, isLoading }) {
   const open = items.filter((vaga) => vaga.status === "ABERTA").length;
-  const logoUrl = items.find((vaga) => vaga.empresa?.logo_url)?.empresa?.logo_url;
+  const logoId = items.find((vaga) => vaga.empresa?.logo_arquivo_id)?.empresa?.logo_arquivo_id;
   return (
     <div className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
       <div className="flex min-w-0 items-center gap-4">
-        <CompanyAvatar id={empresaId} name={empresaNome ?? ""} logoUrl={logoUrl} size="lg" />
+        <CompanyAvatar id={empresaId} name={empresaNome ?? ""} logoId={logoId} size="lg" />
         <div className="min-w-0">
           <h2 className="text-xl font-extrabold leading-tight text-marinho-900 sm:text-2xl">
             Vagas de {empresaNome ?? "…"}

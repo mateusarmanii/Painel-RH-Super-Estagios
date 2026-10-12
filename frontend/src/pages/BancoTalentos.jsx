@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Mail, MessageCircle, MessageSquareX, Phone, Send, UserRound, Users } from "lucide-react";
+import { FileText, Mail, MessageCircle, MessageSquareX, Phone, Send, UserRound, Users } from "lucide-react";
 import ActionMenu from "../components/ActionMenu.jsx";
 import ListToolbar from "../components/ListToolbar.jsx";
 import { IndicateForm } from "../components/IndicateForm.jsx";
@@ -10,6 +10,7 @@ import LoadError from "../components/LoadError.jsx";
 import { courseOptions, formatPhone, normalize, plural, whatsappLink } from "../text.js";
 import { toTalents } from "../regras.js";
 import { apiFetch } from "../api.js";
+import { viewCurriculo } from "../curriculo.js";
 
 const dateFormat = new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium" });
 
@@ -152,6 +153,9 @@ export default function BancoTalentosPage() {
                       title={talent.nome_completo}
                       items={[
                         { key: "profile", label: "Ver perfil", icon: UserRound, onClick: () => navigate(`/estudantes/${talent.id}`) },
+                        ...(talent.curriculo
+                          ? [{ key: "curriculo", label: "Ver currículo", icon: FileText, onClick: () => viewCurriculo(talent.id, talent.curriculo) }]
+                          : []),
                         { key: "indicate", label: "Indicar para vaga", icon: Send, onClick: () => setIndicating(talent) },
                         whatsappLink(talent.telefone)
                           ? { key: "whatsapp", label: "Abrir WhatsApp", icon: MessageCircle, href: whatsappLink(talent.telefone) }

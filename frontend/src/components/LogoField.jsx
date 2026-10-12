@@ -28,7 +28,7 @@ export async function saveLogoChange(empresaId, change) {
 }
 
 // Campo de logo do cadastro/edição de empresa: pré-visualização, escolher/trocar e remover.
-export default function LogoField({ empresaId, name, currentLogoUrl, change, onChange }) {
+export default function LogoField({ empresaId, name, currentLogoId, change, onChange }) {
   const inputRef = useRef(null);
   const [error, setError] = useState("");
   const [previewUrl, setPreviewUrl] = useState(null);
@@ -43,7 +43,7 @@ export default function LogoField({ empresaId, name, currentLogoUrl, change, onC
     return () => URL.revokeObjectURL(url);
   }, [change?.file]);
 
-  const hasLogo = Boolean(change?.file || (currentLogoUrl && !change?.remove));
+  const hasLogo = Boolean(change?.file || (currentLogoId && !change?.remove));
 
   function handleFile(event) {
     const file = event.target.files?.[0];
@@ -65,7 +65,7 @@ export default function LogoField({ empresaId, name, currentLogoUrl, change, onC
             <img src={previewUrl} alt="Pré-visualização da logo" className="size-full object-contain p-0.5" />
           </span>
         ) : (
-          <CompanyAvatar id={empresaId} name={name || "?"} logoUrl={change?.remove ? null : currentLogoUrl} size="lg" />
+          <CompanyAvatar id={empresaId} name={name || "?"} logoId={change?.remove ? null : currentLogoId} size="lg" />
         )}
         <div className="min-w-0 flex-1">
           <p className="text-xs text-slate-500">
@@ -91,7 +91,7 @@ export default function LogoField({ empresaId, name, currentLogoUrl, change, onC
                 type="button"
                 onClick={() => {
                   setError("");
-                  onChange(currentLogoUrl ? { remove: true } : null);
+                  onChange(currentLogoId ? { remove: true } : null);
                 }}
                 className="inline-flex h-9 items-center gap-1.5 rounded-md px-3 text-sm font-semibold text-rose-700 transition-colors hover:bg-rose-50"
               >

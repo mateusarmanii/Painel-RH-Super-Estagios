@@ -95,6 +95,7 @@ model Usuario {
   // Só do lado do Prisma (a chave estrangeira fica nas tabelas novas).
   eventos    Evento[]
   lembretes  LembreteEmail[]
+  arquivos   Arquivo[]
 }
 
 // Compromisso do Calendário que não é entrevista (reunião, visita, prazo...).
@@ -146,14 +147,38 @@ model LembreteEmail {
   @@index([enviado_por_id, enviado_em])
 }
 
+enum TipoArquivo {
+  LOGO
+  CURRICULO
+}
+
+// Arquivos enviados (logos das empresas e currículos dos estudantes), guardados no próprio banco: o disco do
+// Render é apagado a cada reinício. "conteudo" é pesado: as listagens nunca devem selecioná-lo (só o download).
+model Arquivo {
+  id             String      @id @default(uuid()) @db.Uuid
+  tipo           TipoArquivo
+  nome_original  String      @db.VarChar(255)
+  mime           String      @db.VarChar(100)
+  tamanho_bytes  Int
+  conteudo       Bytes
+  enviado_por_id String?     @db.Uuid
+  created_at     DateTime    @default(now())
+  enviado_por    Usuario?    @relation(fields: [enviado_por_id], references: [id], onDelete: SetNull)
+  empresas       Empresa[]
+  estudantes     Estudante[]
+}
+
 model Empresa {
-  id               String  @id @default(uuid()) @db.Uuid
+  id               String   @id @default(uuid()) @db.Uuid
   nome             String
-  setor            String? @default("Nao informado")
+  setor            String?  @default("Nao informado")
   nome_contato     String
   telefone_contato String
   email_contato    String?
+  // Antiga (arquivo em backend/uploads/logos); não é mais usada desde a logo no banco (logo_arquivo_id).
   logo_url         String?
+  logo_arquivo_id  String?  @db.Uuid
+  logo_arquivo     Arquivo? @relation(fields: [logo_arquivo_id], references: [id], onDelete: SetNull)
   vagas            Vaga[]
 }
 
@@ -178,6 +203,8 @@ model Estudante {
   semestre_atual       Int?
   previsao_formatura   DateTime?      @db.Date
   data_nascimento      DateTime?      @db.Date
+  curriculo_arquivo_id String?        @db.Uuid
+  curriculo            Arquivo?       @relation(fields: [curriculo_arquivo_id], references: [id], onDelete: SetNull)
   aplicacoes           Aplicacao[]
 }
 

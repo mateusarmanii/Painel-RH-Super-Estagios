@@ -119,7 +119,7 @@ function Block({ entry, top, height, preview, onOpen }) {
           <p className="truncate font-semibold">{isEvent ? item.data.titulo : interviewWho(interview)}</p>
           {!isEvent && height >= 64 && (
             <p className="mt-0.5 flex min-w-0 items-center gap-1 opacity-80">
-              <CompanyAvatar id={interview.vaga.empresa.id} name={interview.vaga.empresa.nome} logoUrl={interview.vaga.empresa.logo_url} size="xs" />
+              <CompanyAvatar id={interview.vaga.empresa.id} name={interview.vaga.empresa.nome} logoId={interview.vaga.empresa.logo_arquivo_id} size="xs" />
               <span className="truncate">{interview.vaga.titulo}</span>
             </p>
           )}

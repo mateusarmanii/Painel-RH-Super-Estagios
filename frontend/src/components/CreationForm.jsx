@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import { apiFetch, apiJson } from "../api.js";
 import LogoField, { saveLogoChange } from "./LogoField.jsx";
+import CurriculoField from "./CurriculoField.jsx";
+import { saveCurriculoChange } from "../curriculo.js";
 import {
   modalidadeLabels,
   periodoLabels,
@@ -128,6 +130,8 @@ export default function CreationForm({ type, initialData, onSuccess }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   // Logo da empresa: { file } para enviar/trocar, { remove: true } para apagar; enviada depois de salvar os dados.
   const [logoChange, setLogoChange] = useState(null);
+  // Currículo do estudante, no mesmo esquema da logo: { file } ou { remove: true }, enviado depois de salvar.
+  const [curriculoChange, setCurriculoChange] = useState(null);
   // Busca do CEP no ViaCEP: "loading" enquanto busca, "notFound" se não achou ou o serviço falhou (o cadastro segue).
   const [cepStatus, setCepStatus] = useState(null);
   const cepRequest = useRef(null);
@@ -221,6 +225,14 @@ export default function CreationForm({ type, initialData, onSuccess }) {
         }
       }
 
+      if (curriculoChange) {
+        try {
+          await saveCurriculoChange(result.id, curriculoChange);
+        } catch (curriculoError) {
+          toast.error(`Os dados foram salvos, mas o currículo não: ${curriculoError.message}`);
+        }
+      }
+
       toast.success(successMessages[type][isEditing ? "edit" : "create"]);
       // Avisa o Dashboard e as listas para recarregarem.
       window.dispatchEvent(new Event("dashboard:refresh"));
@@ -258,7 +270,7 @@ export default function CreationForm({ type, initialData, onSuccess }) {
         <LogoField
           empresaId={initialData?.id}
           name={form.nome}
-          currentLogoUrl={initialData?.logo_url}
+          currentLogoId={initialData?.logo_arquivo_id}
           change={logoChange}
           onChange={setLogoChange}
         />
@@ -380,6 +392,10 @@ export default function CreationForm({ type, initialData, onSuccess }) {
           </label>
         );
       })}
+
+      {type === "estudante" && (
+        <CurriculoField current={initialData?.curriculo} change={curriculoChange} onChange={setCurriculoChange} />
+      )}
 
       <div className="flex justify-end pt-2 sm:col-span-2">
         <button

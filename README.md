@@ -69,7 +69,7 @@ Painel interno da Super Estágios (agência de estágios) para acompanhar o fech
 
 ## Usuários e login
 
-Todo o painel exige login (e-mail e senha). A API só responde sem login a `POST /auth/login`, `GET /` e às logos (`/uploads/logos/...`); o resto devolve **401**. O login devolve um token que vale **8 horas**, enviado pelo frontend no cabeçalho `Authorization: Bearer`. Depois de 8 erros de senha num mesmo e-mail (ou 20 num mesmo IP) em 15 minutos, o login fica bloqueado por 15 minutos.
+Todo o painel exige login (e-mail e senha). A API só responde sem login a `POST /auth/login`, `GET /` e às logos das empresas (`/arquivos/logo/...`); o resto devolve **401** (inclusive o download do currículo). O login devolve um token que vale **8 horas**, enviado pelo frontend no cabeçalho `Authorization: Bearer`. Depois de 8 erros de senha num mesmo e-mail (ou 20 num mesmo IP) em 15 minutos, o login fica bloqueado por 15 minutos.
 
 Não existe cadastro público: os usuários são criados pelo terminal, que pergunta nome, e-mail, senha (mínimo 10 caracteres, não aparece na tela) e papel (`admin` ou `recrutador`):
 
@@ -143,7 +143,7 @@ npm run test:etapa2d   # histórico de candidaturas e reagendamento de entrevist
 npm run test:banco-talentos   # "Indicar para vaga" (nova candidatura, sem duplicatas) e data da dispensa
 npm run test:resumos   # números dos cards de vagas e empresas; espaços extras tirados ao salvar
 npm run test:frente2   # turno, disponibilidade, semestre, formatura, nascimento, turno da vaga e observação
-npm run test:logos     # envio, troca e remoção da logo; recusa de SVG, de arquivos grandes e de formatos falsos
+npm run test:logos     # envio, troca e remoção da logo (no banco); recusa de SVG, de arquivos grandes e de formatos falsos
 npm run test:agenda    # agendamento com detalhes, conflito de horário, resumo da agenda e ações do painel
 npm run test:status-vaga   # suspender, fechar (motivo, dispensas, entrevistas canceladas) e reabrir vagas
 npm run test:perfil    # perfil do estudante: dados, candidaturas, entrevistas, observações e dispensas
@@ -152,6 +152,7 @@ npm run test:cadastros # telefone repetido (409), instituição opcional, códig
 npm run test:etapas    # etapas do Kanban (Candidato Contatado, Em Teste) e regras de cada uma
 npm run test:campos    # setor opcional, CEP/cidade/bairro, instituição NULL e campos novos da vaga (modalidade, horário, preferência interna)
 npm run test:eventos   # eventos do Calendário e lembretes por e-mail (.ics: UID, SEQUENCE, VALARM, fuso, REQUEST e CANCEL)
+npm run test:arquivos  # currículo: PDF/DOC/DOCX, arquivo grande, tipo falso, download só com login, troca, remoção e exclusão
 ```
 
 O `test:eventos` **não envia e-mail de verdade**: a API de teste usa um transporte falso (`EMAIL_TRANSPORTE_FALSO`), que só grava a mensagem montada num arquivo temporário (ignorado com `NODE_ENV=production`).
@@ -169,7 +170,18 @@ O backup precisa de **duas partes**:
    docker exec superestagios-db pg_dump -U <usuário> -d superestagios -Fc > backup.dump
    ```
    Os arquivos `*.dump` e `*.sql.gz` estão no `.gitignore`, mas guarde o backup fora da pasta do projeto.
-2. **A pasta `backend/uploads/logos`**, com as logos das empresas. Os arquivos ficam nessa pasta e o banco guarda só o caminho (`logo_url`). Ela está no `.gitignore`, então **não vai para o GitHub**: sem copiar essa pasta, as empresas voltam sem logo (e aparecem com as iniciais).
+2. **Logos e currículos já estão no banco** (tabela `Arquivo`), então entram no `pg_dump`. A pasta antiga `backend/uploads/logos` só importa até rodar `npm run logos:migrar` (abaixo).
+
+### Logos antigas da pasta `uploads`
+
+Até a Parte 6 as logos ficavam em `backend/uploads/logos`, que o Render apaga a cada reinício. Para copiar as que ainda existirem na pasta para o banco:
+
+```bash
+cd backend
+npm run logos:migrar
+```
+
+O script mostra em qual banco vai gravar, lista as empresas (copiar / ignorar, com o motivo) e pede confirmação. Pode rodar mais de uma vez: só pega empresas que ainda não têm logo no banco. Ele não apaga a pasta nem a coluna `logo_url` (que deixou de ser usada).
 
 ## Estrutura
 
@@ -178,8 +190,8 @@ backend/
   server.js               API Express e /dashboard-metrics
   src/routes/             empresas (inclui o envio da logo), vagas, candidatos (inclui o PATCH do Kanban), entrevistas, eventos, lembretes
   src/ics.js, src/email.js   convite de calendário (.ics) e envio por SMTP (nodemailer)
-  uploads/logos/          logos das empresas (fora do git; precisa entrar no backup)
-  prisma/schema.prisma    modelo de dados (Empresa, Vaga, Estudante, Aplicacao, Usuario, Evento, LembreteEmail)
+  src/arquivos.js         logos e currículos guardados no banco (tabela Arquivo; formato conferido pelo conteúdo)
+  prisma/schema.prisma    modelo de dados (Empresa, Vaga, Estudante, Aplicacao, Usuario, Evento, LembreteEmail, Arquivo)
   prisma/migrations/      histórico de alterações do banco
   scripts/                testes (funções comuns em scripts/lib/teste.js)
 frontend/src/

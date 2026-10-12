@@ -112,7 +112,7 @@ export default function InterviewList({ interviews, events = [], onOpen }) {
                           )}
                         </span>
                         <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-slate-500">
-                          <CompanyAvatar id={interview.vaga.empresa.id} name={interview.vaga.empresa.nome} logoUrl={interview.vaga.empresa.logo_url} size="xs" />
+                          <CompanyAvatar id={interview.vaga.empresa.id} name={interview.vaga.empresa.nome} logoId={interview.vaga.empresa.logo_arquivo_id} size="xs" />
                           <span className="truncate">{interview.vaga.titulo}</span>
                         </span>
                       </span>

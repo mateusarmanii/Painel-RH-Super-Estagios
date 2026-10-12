@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Pencil, Send, SlidersHorizontal, Trash2, UserRound, X } from "lucide-react";
+import { FileText, Pencil, Send, SlidersHorizontal, Trash2, UserRound, X } from "lucide-react";
 import CandidaturaHistory from "../components/CandidaturaHistory.jsx";
 import EntityList from "../components/EntityList.jsx";
 import { IndicateDialog } from "../components/IndicateForm.jsx";
@@ -10,8 +10,11 @@ import { courseOptions, formatPhone, normalize, phoneDigits } from "../text.js";
 import { availabilityText, formatDate, formatMonthYear, periodoLabels, studyShift, studyShiftLabel, turnoEstudoLabels } from "../estudante.js";
 import { situationLabels, studentSituation } from "../perfil.js";
 import { formatCep } from "../cep.js";
+import { viewCurriculo } from "../curriculo.js";
 
-const EMPTY_FILTERS = { curso: "", instituicao: "", turno: "", semestreMinimo: "", situacao: "", disponibilidade: [] };
+const EMPTY_FILTERS = { curso: "", instituicao: "", turno: "", semestreMinimo: "", situacao: "", curriculo: "", disponibilidade: [] };
+
+const curriculoFilterLabels = { COM: "Com currículo", SEM: "Sem currículo" };
 
 const situationStyles = {
   EM_PROCESSO: "bg-sky-50 text-sky-800",
@@ -36,7 +39,7 @@ const csvExport = {
     { header: "CEP", value: (estudante) => formatCep(estudante.cep) },
     { header: "Cidade", value: (estudante) => estudante.cidade },
     { header: "Bairro", value: (estudante) => estudante.bairro },
-    { header: "Currículo", value: (estudante) => estudante.link_curriculo },
+    { header: "Currículo", value: (estudante) => estudante.curriculo?.nome_original ?? estudante.link_curriculo },
     { header: "Candidaturas", value: (estudante) => estudante.aplicacoes?.length ?? 0 },
     {
       header: "Vagas e etapas",
@@ -62,6 +65,7 @@ function matchesFilters(estudante, filters) {
   if (filters.turno && studyShift(estudante) !== filters.turno) return false;
   if (filters.semestreMinimo && !(estudante.semestre_atual >= Number(filters.semestreMinimo))) return false;
   if (filters.situacao && studentSituation(estudante) !== filters.situacao) return false;
+  if (filters.curriculo && Boolean(estudante.curriculo) !== (filters.curriculo === "COM")) return false;
   if (filters.disponibilidade.length && !filters.disponibilidade.every((periodo) => estudante.disponibilidade?.includes(periodo))) return false;
   return true;
 }
@@ -82,6 +86,16 @@ function renderEstudante(estudante) {
         )}
         {estudante.semestre_atual && (
           <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">{estudante.semestre_atual}º semestre</span>
+        )}
+        {estudante.curriculo && (
+          <button
+            type="button"
+            onClick={() => viewCurriculo(estudante.id, estudante.curriculo)}
+            title={`Ver currículo (${estudante.curriculo.nome_original})`}
+            className="inline-flex items-center gap-1 rounded-full bg-marinho-50 px-2.5 py-1 text-xs font-semibold text-marinho-800 hover:bg-marinho-100"
+          >
+            <FileText size={12} /> Currículo
+          </button>
         )}
       </div>
       <h2 className="pr-10 text-lg font-semibold leading-6">
@@ -158,6 +172,7 @@ function Filters({ filters, onChange, students, visibleCount, isLoading }) {
     filters.turno && { key: "turno", label: `Estuda: ${turnoEstudoLabels[filters.turno]}`, clear: { turno: "" } },
     filters.semestreMinimo && { key: "semestre", label: `A partir do ${filters.semestreMinimo}º semestre`, clear: { semestreMinimo: "" } },
     filters.situacao && { key: "situacao", label: situationLabels[filters.situacao], clear: { situacao: "" } },
+    filters.curriculo && { key: "curriculo", label: curriculoFilterLabels[filters.curriculo], clear: { curriculo: "" } },
     ...filters.disponibilidade.map((periodo) => ({
       key: `disp-${periodo}`,
       label: `Disponível: ${periodoLabels[periodo]}`,
@@ -184,7 +199,7 @@ function Filters({ filters, onChange, students, visibleCount, isLoading }) {
       </div>
 
       {isOpen && (
-        <div className="grid grid-cols-2 gap-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm sm:grid-cols-3 lg:grid-cols-6 sm:p-4">
+        <div className="grid grid-cols-2 gap-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm sm:grid-cols-3 sm:p-4 lg:grid-cols-4 2xl:grid-cols-7">
           <FilterSelect id="filtro-curso" label="Curso" value={filters.curso} onChange={set("curso")}>
             <option value="">Todos</option>
             {courses.map((course) => <option key={course.key} value={course.key}>{course.label}</option>)}
@@ -206,6 +221,10 @@ function Filters({ filters, onChange, students, visibleCount, isLoading }) {
           <FilterSelect id="filtro-situacao" label="Situação" value={filters.situacao} onChange={set("situacao")}>
             <option value="">Todas</option>
             {Object.entries(situationLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+          </FilterSelect>
+          <FilterSelect id="filtro-curriculo" label="Currículo" value={filters.curriculo} onChange={set("curriculo")}>
+            <option value="">Todos</option>
+            {Object.entries(curriculoFilterLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
           </FilterSelect>
           <div role="group" aria-labelledby="filtro-disponibilidade" className="col-span-2 min-w-0 space-y-1 sm:col-span-1">
             <span id="filtro-disponibilidade" className="block text-xs font-bold uppercase tracking-wide text-slate-500">Disponível em</span>
@@ -266,6 +285,9 @@ export default function EstudantesPage() {
     (estudante, { edit, remove }) => [
       { key: "profile", label: "Ver perfil", icon: UserRound, onClick: () => navigate(`/estudantes/${estudante.id}`) },
       { key: "edit", label: "Editar", icon: Pencil, onClick: edit },
+      ...(estudante.curriculo
+        ? [{ key: "curriculo", label: "Ver currículo", icon: FileText, onClick: () => viewCurriculo(estudante.id, estudante.curriculo) }]
+        : []),
       { key: "indicate", label: "Indicar para vaga", icon: Send, onClick: () => setIndicating(estudante) },
       { key: "delete", label: "Excluir", icon: Trash2, danger: true, onClick: remove },
     ],

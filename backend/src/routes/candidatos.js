@@ -4,6 +4,7 @@ const { uuidValido, pluralizar } = require("../utils");
 const { camposEstudante, observacao } = require("../campos");
 const { camposEntrevista, conflitosDoEstudante, statusAoSairDaEntrevista } = require("../agenda");
 const { ETAPAS, ETAPA_INICIAL } = require("../etapas");
+const { RESUMO_ARQUIVO, receberArquivo, gravarArquivo, apagarArquivo, enviarArquivo } = require("../arquivos");
 
 const router = express.Router();
 // AGUARDANDO_RETORNO ("Em análise") saiu das telas e não é mais aceito (veja src/etapas.js).
@@ -33,6 +34,8 @@ router.get("/", async (_req, res) => {
   try {
     const candidatos = await prisma.estudante.findMany({
       include: {
+        // Só o resumo do currículo (nome, tipo, tamanho): o conteúdo sai apenas no download.
+        curriculo: { select: RESUMO_ARQUIVO },
         aplicacoes: {
           select: {
             id: true,
@@ -46,7 +49,7 @@ router.get("/", async (_req, res) => {
             // Enquanto RECUSADO, a última atualização corresponde à data da dispensa (Banco de Talentos).
             updated_at: true,
             vaga: {
-              select: { codigo_vaga: true, titulo: true, empresa: { select: { id: true, nome: true, logo_url: true } } },
+              select: { codigo_vaga: true, titulo: true, empresa: { select: { id: true, nome: true, logo_arquivo_id: true } } },
             },
           },
           orderBy: { created_at: "desc" },
@@ -73,6 +76,7 @@ router.get("/:id", async (req, res) => {
     const estudante = await prisma.estudante.findUnique({
       where: { id },
       include: {
+        curriculo: { select: RESUMO_ARQUIVO },
         aplicacoes: {
           orderBy: { created_at: "desc" },
           include: {
@@ -84,7 +88,7 @@ router.get("/:id", async (req, res) => {
                 status: true,
                 turno: true,
                 valor: true,
-                empresa: { select: { id: true, nome: true, logo_url: true } },
+                empresa: { select: { id: true, nome: true, logo_arquivo_id: true } },
               },
             },
           },
@@ -96,6 +100,78 @@ router.get("/:id", async (req, res) => {
   } catch (error) {
     console.error("Erro ao carregar candidato:", error);
     return res.status(500).json({ erro: "Não foi possível carregar o candidato." });
+  }
+});
+
+// Currículo do estudante, guardado no banco: PDF, DOC ou DOCX até 5 MB (multipart, campo "curriculo").
+// Enviar de novo troca o arquivo; o anterior é apagado do banco.
+router.post("/:id/curriculo", async (req, res, next) => {
+  if (!uuidValido.test(req.params.id)) {
+    return res.status(400).json({ erro: "ID de candidato inválido." });
+  }
+  // O estudante é conferido antes de ler o arquivo, para não receber upload de estudante inexistente.
+  const estudante = await prisma.estudante.findUnique({ where: { id: req.params.id }, select: { id: true } }).catch(() => null);
+  if (!estudante) return res.status(404).json({ erro: "Candidato não encontrado." });
+  return next();
+}, receberArquivo("CURRICULO"), async (req, res) => {
+  try {
+    const curriculo = await prisma.$transaction(async (tx) => {
+      const anterior = await tx.estudante.findUnique({ where: { id: req.params.id }, select: { curriculo_arquivo_id: true } });
+      if (!anterior) return null;
+      const arquivo = await gravarArquivo(tx, "CURRICULO", req.arquivo, req.usuario?.id);
+      await tx.estudante.update({ where: { id: req.params.id }, data: { curriculo_arquivo_id: arquivo.id } });
+      await apagarArquivo(tx, anterior.curriculo_arquivo_id);
+      return arquivo;
+    });
+    if (!curriculo) return res.status(404).json({ erro: "Candidato não encontrado." });
+    return res.json({ curriculo_arquivo_id: curriculo.id, curriculo });
+  } catch (error) {
+    console.error("Erro ao salvar currículo:", error);
+    return res.status(500).json({ erro: "Não foi possível salvar o currículo." });
+  }
+});
+
+router.delete("/:id/curriculo", async (req, res) => {
+  const { id } = req.params;
+  if (!uuidValido.test(id)) {
+    return res.status(400).json({ erro: "ID de candidato inválido." });
+  }
+
+  try {
+    const encontrado = await prisma.$transaction(async (tx) => {
+      const anterior = await tx.estudante.findUnique({ where: { id }, select: { curriculo_arquivo_id: true } });
+      if (!anterior) return false;
+      await tx.estudante.update({ where: { id }, data: { curriculo_arquivo_id: null } });
+      await apagarArquivo(tx, anterior.curriculo_arquivo_id);
+      return true;
+    });
+    if (!encontrado) return res.status(404).json({ erro: "Candidato não encontrado." });
+    return res.json({ curriculo_arquivo_id: null, curriculo: null });
+  } catch (error) {
+    console.error("Erro ao remover currículo:", error);
+    return res.status(500).json({ erro: "Não foi possível remover o currículo." });
+  }
+});
+
+// Download (só com login, como todas as rotas daqui): o painel busca pelo apiFetch e abre/baixa no navegador.
+router.get("/:id/curriculo", async (req, res) => {
+  const { id } = req.params;
+  if (!uuidValido.test(id)) {
+    return res.status(400).json({ erro: "ID de candidato inválido." });
+  }
+
+  try {
+    const estudante = await prisma.estudante.findUnique({
+      where: { id },
+      select: { curriculo: { select: { nome_original: true, mime: true, conteudo: true } } },
+    });
+    if (!estudante) return res.status(404).json({ erro: "Candidato não encontrado." });
+    if (!estudante.curriculo) return res.status(404).json({ erro: "Este estudante não tem currículo anexado." });
+    const disposicao = estudante.curriculo.mime === "application/pdf" ? "inline" : "attachment";
+    return enviarArquivo(res, estudante.curriculo, { disposicao, cache: "private, no-store" });
+  } catch (error) {
+    console.error("Erro ao enviar currículo:", error);
+    return res.status(500).json({ erro: "Não foi possível baixar o currículo." });
   }
 });
 
@@ -242,7 +318,7 @@ router.post("/:id/candidaturas", async (req, res) => {
 
     const candidatura = await prisma.aplicacao.create({
       data: { estudante_id: id, vaga_id, status_kanban: ETAPA_INICIAL },
-      include: { vaga: { select: { codigo_vaga: true, titulo: true, empresa: { select: { id: true, nome: true, logo_url: true } } } } },
+      include: { vaga: { select: { codigo_vaga: true, titulo: true, empresa: { select: { id: true, nome: true, logo_arquivo_id: true } } } } },
     });
 
     return res.status(201).json(candidatura);
@@ -398,7 +474,7 @@ router.delete("/:id", async (req, res) => {
   try {
     const candidato = await prisma.estudante.findUnique({
       where: { id },
-      select: { _count: { select: { aplicacoes: true } } },
+      select: { curriculo_arquivo_id: true, _count: { select: { aplicacoes: true } } },
     });
 
     if (!candidato) {
@@ -412,7 +488,11 @@ router.delete("/:id", async (req, res) => {
       });
     }
 
-    await prisma.estudante.delete({ where: { id } });
+    // O currículo vai junto (o arquivo só existe para este estudante).
+    await prisma.$transaction(async (tx) => {
+      await tx.estudante.delete({ where: { id } });
+      await apagarArquivo(tx, candidato.curriculo_arquivo_id);
+    });
     return res.status(204).end();
   } catch (error) {
     if (error.code === "P2003") {

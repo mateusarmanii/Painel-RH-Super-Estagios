@@ -27,16 +27,15 @@ const sizes = {
   lg: "size-14 rounded-xl text-lg",
 };
 
-// A API guarda o caminho ("/uploads/logos/…"); a imagem vem do servidor da API.
-export function logoSrc(logoUrl) {
-  if (!logoUrl) return null;
-  return logoUrl.startsWith("/") ? `${API_URL}${logoUrl}` : logoUrl;
+// A logo fica no banco (logo_arquivo_id) e é pública: vai direto no <img>, sem login.
+export function logoSrc(logoId) {
+  return logoId ? `${API_URL}/arquivos/logo/${logoId}` : null;
 }
 
 // Logo da empresa ou, sem logo (ou se a imagem não carregar), as iniciais coloridas.
-export default function CompanyAvatar({ id, name, logoUrl, size = "md" }) {
+export default function CompanyAvatar({ id, name, logoId, size = "md" }) {
   const [failedSrc, setFailedSrc] = useState(null);
-  const src = logoSrc(logoUrl);
+  const src = logoSrc(logoId);
 
   if (src && failedSrc !== src) {
     return (
