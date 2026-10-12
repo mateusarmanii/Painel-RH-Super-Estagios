@@ -1,9 +1,18 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import { apiFetch, apiJson } from "../api.js";
 import LogoField, { saveLogoChange } from "./LogoField.jsx";
-import { periodoLabels, toDateInput, toMonthInput, turnoEstudoLabels, turnoVagaLabels } from "../estudante.js";
+import {
+  modalidadeLabels,
+  periodoLabels,
+  sexoPreferenciaLabels,
+  toDateInput,
+  toMonthInput,
+  turnoEstudoLabels,
+  turnoVagaLabels,
+} from "../estudante.js";
+import { cepDigits, formatCep, lookupCep } from "../cep.js";
 
 const toOptions = (labels) => Object.entries(labels).map(([id, label]) => ({ id, label }));
 
@@ -17,7 +26,7 @@ const successMessages = {
 const fieldSets = {
   empresa: [
     { name: "nome", label: "Nome da empresa", placeholder: "Nome da empresa" },
-    { name: "setor", label: "Setor", placeholder: "Ex.: Tecnologia" },
+    { name: "setor", label: "Setor", placeholder: "Ex.: Tecnologia", optional: true },
     { name: "nome_contato", label: "Nome do contato", placeholder: "Nome completo" },
     { name: "telefone_contato", label: "Telefone de contato", type: "tel", placeholder: "(00) 00000-0000" },
     { name: "email_contato", label: "E-mail de contato", type: "email", placeholder: "contato@empresa.com" },
@@ -35,7 +44,21 @@ const fieldSets = {
     { name: "descricao", label: "Descrição", type: "textarea", placeholder: "Descreva as responsabilidades" },
     { name: "valor", label: "Bolsa-auxílio", type: "number", placeholder: "0,00", min: "0", step: "0.01" },
     { name: "empresa_id", label: "Empresa", type: "select", optionsKey: "empresas" },
-    { name: "turno", label: "Turno", type: "select", options: toOptions(turnoVagaLabels), optional: true },
+    { name: "turno", label: "Turno", type: "select", options: toOptions(turnoVagaLabels), optional: true, half: true },
+    { name: "horario", label: "Horário", placeholder: "Ex.: 08h às 14h", maxLength: 100, optional: true, half: true },
+    { name: "modalidade", label: "Modalidade", type: "select", options: toOptions(modalidadeLabels), optional: true, half: true },
+    { name: "cep", label: "CEP", type: "cep", optional: true, half: true },
+    { name: "cidade", label: "Cidade", maxLength: 100, optional: true, half: true },
+    { name: "bairro", label: "Bairro", maxLength: 100, optional: true, half: true },
+    // Uso interno: registra o pedido da empresa e não aparece em mensagens enviadas a candidatos.
+    {
+      name: "sexo_preferencia",
+      label: "Preferência informada pela empresa (uso interno)",
+      type: "select",
+      options: toOptions(sexoPreferenciaLabels),
+      emptyLabel: "Sem preferência",
+      optional: true,
+    },
   ],
   estudante: [
     { name: "nome_completo", label: "Nome", placeholder: "Nome completo" },
@@ -54,6 +77,9 @@ const fieldSets = {
     },
     { name: "previsao_formatura", label: "Previsão de formatura", type: "month", optional: true, half: true },
     { name: "data_nascimento", label: "Data de nascimento", type: "date", optional: true, half: true },
+    { name: "cep", label: "CEP", type: "cep", optional: true, half: true },
+    { name: "cidade", label: "Cidade", maxLength: 100, optional: true, half: true, newRow: true },
+    { name: "bairro", label: "Bairro", maxLength: 100, optional: true, half: true },
     // A vaga só é escolhida no cadastro; depois, as candidaturas são geridas pelo Kanban.
     { name: "vaga_id", label: "Vaga", type: "select", optionsKey: "vagas", createOnly: true, optional: true },
     {
@@ -73,6 +99,7 @@ function toFormValue(field, value) {
   if (value == null) return "";
   if (field.type === "month") return toMonthInput(value);
   if (field.type === "date") return toDateInput(value);
+  if (field.type === "cep") return formatCep(value);
   return String(value);
 }
 
@@ -83,6 +110,7 @@ function toPayloadValue(field, value) {
   if (field.name === "valor") return Number(text);
   if (field.optional && text.trim() === "") return null;
   if (field.type === "integer") return Number(text);
+  if (field.type === "cep") return cepDigits(text);
   return text;
 }
 
@@ -100,6 +128,9 @@ export default function CreationForm({ type, initialData, onSuccess }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   // Logo da empresa: { file } para enviar/trocar, { remove: true } para apagar; enviada depois de salvar os dados.
   const [logoChange, setLogoChange] = useState(null);
+  // Busca do CEP no ViaCEP: "loading" enquanto busca, "notFound" se não achou ou o serviço falhou (o cadastro segue).
+  const [cepStatus, setCepStatus] = useState(null);
+  const cepRequest = useRef(null);
   const optionField = fields.find((field) => field.optionsKey);
   const optionType = optionField?.optionsKey ?? null;
 
@@ -132,9 +163,34 @@ export default function CreationForm({ type, initialData, onSuccess }) {
     };
   }, [optionType]);
 
+  useEffect(() => () => cepRequest.current?.abort(), []);
+
   function updateField(event) {
     const { name, value } = event.target;
+    if (name === "cep") return updateCep(value);
     setForm((current) => ({ ...current, [name]: value }));
+  }
+
+  // Máscara 00000-000; ao completar os 8 dígitos, preenche cidade e bairro (que continuam editáveis).
+  function updateCep(value) {
+    const formatted = formatCep(value);
+    setForm((current) => ({ ...current, cep: formatted }));
+    cepRequest.current?.abort();
+    if (cepDigits(formatted).length !== 8) {
+      setCepStatus(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    cepRequest.current = controller;
+    setCepStatus("loading");
+    lookupCep(formatted, controller.signal).then((found) => {
+      if (controller.signal.aborted) return;
+      setCepStatus(found ? null : "notFound");
+      if (found) {
+        setForm((current) => ({ ...current, cidade: found.cidade || current.cidade, bairro: found.bairro || current.bairro }));
+      }
+    });
   }
 
   function toggleOption(name, option) {
@@ -222,7 +278,7 @@ export default function CreationForm({ type, initialData, onSuccess }) {
             {field.optional && <span className="font-normal text-slate-400"> (opcional)</span>}
           </span>
         );
-        const span = field.half ? "" : "sm:col-span-2";
+        const span = `${field.half ? "" : "sm:col-span-2"} ${field.newRow ? "sm:col-start-1" : ""}`;
 
         if (field.type === "checkboxes") {
           const selected = form[field.name] ?? [];
@@ -270,7 +326,7 @@ export default function CreationForm({ type, initialData, onSuccess }) {
               <select {...commonProps}>
                 <option value="">
                   {field.optional && field.options
-                    ? "Não informado"
+                    ? field.emptyLabel ?? "Não informado"
                     : isLoadingOptions && field.optionsKey
                     ? "Carregando..."
                     : field.optionsKey === "vagas"
@@ -290,6 +346,24 @@ export default function CreationForm({ type, initialData, onSuccess }) {
                   </option>
                 ))}
               </select>
+            ) : field.type === "cep" ? (
+              <>
+                <input
+                  {...commonProps}
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="postal-code"
+                  placeholder="00000-000"
+                  pattern="[0-9]{5}-[0-9]{3}"
+                  title="Use os 8 dígitos do CEP (00000-000)."
+                  maxLength={9}
+                />
+                {cepStatus && (
+                  <span className="block text-xs text-slate-500" aria-live="polite">
+                    {cepStatus === "loading" ? "Buscando cidade e bairro..." : "CEP não encontrado. Preencha cidade e bairro, se quiser."}
+                  </span>
+                )}
+              </>
             ) : (
               <input
                 {...commonProps}

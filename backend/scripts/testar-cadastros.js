@@ -1,4 +1,4 @@
-// Testes dos ajustes de cadastro: telefone repetido (409), instituição opcional, código da vaga com 5 ou 6 dígitos
+// Testes dos ajustes de cadastro: telefone repetido (409), instituição opcional (NULL), código da vaga com 5 ou 6 dígitos
 // (e ordem numérica na lista) e encerrar a vaga depois de uma contratação ("Vaga preenchida").
 // Sobe a API na porta 3389, cria registros "[TESTE]" e remove tudo no final.
 // ATENÇÃO: grava e apaga dados no banco do DATABASE_URL (só os registros que o próprio teste cria).
@@ -73,13 +73,13 @@ async function main() {
     console.log("\n== Instituição de ensino opcional");
     r = await req("POST", "/candidatos", { nome_completo: "[TESTE] Sem instituição", telefone: teste.telefone(), curso: "Teste" });
     if (r.body?.id) ids.estudantes.push(r.body.id);
-    checar("Sem instituição → 201, gravada vazia", r.status === 201 && r.body.instituicao_ensino === "", `[${r.status}] ${r.body?.erro ?? ""}`);
+    checar("Sem instituição → 201, gravada como null", r.status === 201 && r.body.instituicao_ensino === null, `[${r.status}] ${r.body?.erro ?? ""}`);
     r = await req("POST", "/candidatos", { nome_completo: "[TESTE] Instituição null", telefone: teste.telefone(), curso: "Teste",
       instituicao_ensino: null });
     if (r.body?.id) ids.estudantes.push(r.body.id);
-    checar("Instituição null (formulário em branco) → 201", r.status === 201 && r.body.instituicao_ensino === "", `[${r.status}] ${r.body?.erro ?? ""}`);
+    checar("Instituição null (formulário em branco) → 201, null", r.status === 201 && r.body.instituicao_ensino === null, `[${r.status}] ${r.body?.erro ?? ""}`);
     r = await req("PUT", `/candidatos/${a.id}`, { nome_completo: a.nome_completo, telefone: telefoneA, curso: "Teste", instituicao_ensino: null });
-    checar("Editar apagando a instituição → 200, vazia", r.status === 200 && r.body.instituicao_ensino === "", `[${r.status}] ${r.body?.erro ?? ""}`);
+    checar("Editar apagando a instituição → 200, null", r.status === 200 && r.body.instituicao_ensino === null, `[${r.status}] ${r.body?.erro ?? ""}`);
     r = await req("POST", "/candidatos", { nome_completo: "[TESTE] Sem curso", telefone: teste.telefone() });
     if (r.body?.id) ids.estudantes.push(r.body.id);
     checar("Sem curso continua → 400", r.status === 400 && r.body.erro === "Informe nome, telefone e curso.", `[${r.status}] ${r.body?.erro}`);

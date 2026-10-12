@@ -117,6 +117,8 @@ npm run test:status-vaga   # suspender, fechar (motivo, dispensas, entrevistas c
 npm run test:perfil    # perfil do estudante: dados, candidaturas, entrevistas, observações e dispensas
 npm run test:login     # login, token inválido/expirado, rotas sem token, usuário inativo, CORS e limite de tentativas
 npm run test:cadastros # telefone repetido (409), instituição opcional, código da vaga com 5 ou 6 dígitos e encerrar vaga após contratar
+npm run test:etapas    # etapas do Kanban (Candidato Contatado, Em Teste) e regras de cada uma
+npm run test:campos    # setor opcional, CEP/cidade/bairro, instituição NULL e campos novos da vaga (modalidade, horário, preferência interna)
 ```
 
 ## Dados de exemplo

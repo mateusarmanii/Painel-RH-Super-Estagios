@@ -8,7 +8,9 @@ import {
   CirclePlay,
   CircleX,
   KanbanSquare,
+  Clock,
   LayoutGrid,
+  MapPin,
   Pencil,
   Rows3,
   Trash2,
@@ -24,7 +26,8 @@ import { csvDate, csvDecimal } from "../csv.js";
 import { normalize, plural } from "../text.js";
 import { buttonDanger, buttonPrimary, buttonSecondary } from "../ui.js";
 import { apiFetch } from "../api.js";
-import { turnoVagaLabels } from "../estudante.js";
+import { modalidadeLabels, sexoPreferenciaLabels, turnoVagaLabels } from "../estudante.js";
+import { formatCep, placeText } from "../cep.js";
 
 const currency = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 
@@ -98,8 +101,16 @@ function MiniFunnel({ resumo }) {
 
 function renderVaga(vaga) {
   const total = vaga.resumo?.total ?? 0;
+  const place = placeText(vaga);
   return (
     <>
+      {/* Preferência interna "Feminino": só uma faixa rosa discreta na lateral do card. */}
+      {vaga.sexo_preferencia === "FEMININO" && (
+        <span
+          className="absolute inset-y-0 left-0 w-1 rounded-l-lg bg-pink-300"
+          title={`Preferência informada pela empresa: ${sexoPreferenciaLabels.FEMININO}`}
+        />
+      )}
       <div className="flex items-center gap-3 pr-10">
         <CompanyAvatar id={vaga.empresa_id} name={vaga.empresa?.nome} logoUrl={vaga.empresa?.logo_url} />
         <div className="min-w-0">
@@ -116,6 +127,17 @@ function renderVaga(vaga) {
       <div className="mt-3 flex flex-wrap gap-1.5">
         <span className={`${tagBase} bg-marinho-50 text-marinho-800`}>{currency.format(vaga.valor)}</span>
         {vaga.turno && <span className={`${tagBase} bg-marinho-50 text-marinho-800`}>{turnoVagaLabels[vaga.turno] ?? vaga.turno}</span>}
+        {vaga.modalidade && <span className={`${tagBase} bg-marinho-50 text-marinho-800`}>{modalidadeLabels[vaga.modalidade]}</span>}
+        {vaga.horario && (
+          <span className={`${tagBase} bg-slate-100 text-slate-700`} title="Horário">
+            <Clock size={13} /> {vaga.horario}
+          </span>
+        )}
+        {place && (
+          <span className={`${tagBase} bg-slate-100 text-slate-700`} title="Bairro e cidade">
+            <MapPin size={13} /> {place}
+          </span>
+        )}
         <AgeTag vaga={vaga} />
       </div>
 
@@ -142,6 +164,12 @@ const csvExport = {
     { header: "Status", value: (vaga) => statusLabels[vaga.status] },
     { header: "Bolsa-auxílio (R$)", value: (vaga) => csvDecimal(vaga.valor) },
     { header: "Turno", value: (vaga) => turnoVagaLabels[vaga.turno] },
+    { header: "Horário", value: (vaga) => vaga.horario },
+    { header: "Modalidade", value: (vaga) => modalidadeLabels[vaga.modalidade] },
+    { header: "CEP", value: (vaga) => formatCep(vaga.cep) },
+    { header: "Cidade", value: (vaga) => vaga.cidade },
+    { header: "Bairro", value: (vaga) => vaga.bairro },
+    { header: "Preferência informada pela empresa (uso interno)", value: (vaga) => sexoPreferenciaLabels[vaga.sexo_preferencia] },
     { header: "Candidatos", value: (vaga) => vaga.resumo?.total ?? 0 },
     { header: "Criada em", value: (vaga) => csvDate(vaga.created_at) },
     { header: "Descrição", value: (vaga) => vaga.descricao },

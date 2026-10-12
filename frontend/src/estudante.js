@@ -3,6 +3,9 @@
 export const turnoEstudoLabels = { MANHA: "Manhã", TARDE: "Tarde", NOITE: "Noite", INTEGRAL: "Integral", EAD: "EAD" };
 export const periodoLabels = { MANHA: "Manhã", TARDE: "Tarde", NOITE: "Noite" };
 export const turnoVagaLabels = { MANHA: "Manhã", TARDE: "Tarde", INTEGRAL: "Integral" };
+export const modalidadeLabels = { PRESENCIAL: "Presencial", HIBRIDA: "Híbrida", HOME_OFFICE: "Home office" };
+// Preferência da empresa: uso interno, nunca entra em mensagens enviadas a candidatos.
+export const sexoPreferenciaLabels = { FEMININO: "Feminino", MASCULINO: "Masculino" };
 
 // Turno de estudo; cadastros antigos ainda podem ter só o horário de estudo.
 export function studyShift(estudante) {

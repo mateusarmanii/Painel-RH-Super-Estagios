@@ -21,7 +21,8 @@
     "test:perfil": "node scripts/testar-perfil.js",
     "test:login": "node scripts/testar-login.js",
     "test:cadastros": "node scripts/testar-cadastros.js",
-    "test:etapas": "node scripts/testar-etapas.js"
+    "test:etapas": "node scripts/testar-etapas.js",
+    "test:campos": "node scripts/testar-campos.js"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

@@ -39,6 +39,18 @@ enum TurnoVaga {
   INTEGRAL
 }
 
+enum ModalidadeVaga {
+  PRESENCIAL
+  HIBRIDA
+  HOME_OFFICE
+}
+
+// Preferência de sexo informada pela empresa. Campo INTERNO: nunca vai em textos enviados a candidatos.
+enum SexoPreferencia {
+  FEMININO
+  MASCULINO
+}
+
 enum EntrevistaStatus {
   AGUARDANDO
   CONFIRMADA
@@ -85,7 +97,7 @@ model Usuario {
 model Empresa {
   id               String  @id @default(uuid()) @db.Uuid
   nome             String
-  setor            String  @default("Nao informado")
+  setor            String? @default("Nao informado")
   nome_contato     String
   telefone_contato String
   email_contato    String?
@@ -99,9 +111,13 @@ model Estudante {
   telefone             String
   email                String?
   curso                String
-  instituicao_ensino   String
+  instituicao_ensino   String?
   link_curriculo       String?
   endereco             String?
+  // CEP só com os 8 dígitos; cidade e bairro vêm do ViaCEP e podem ser editados.
+  cep                  String?        @db.VarChar(8)
+  cidade               String?
+  bairro               String?
   // Campo antigo, mantido como histórico; as telas usam turno_estudo.
   horario_estudo       HorarioEstudo?
   anotacoes_recrutador String?        @db.Text
@@ -114,17 +130,25 @@ model Estudante {
 }
 
 model Vaga {
-  id          String      @id @default(uuid()) @db.Uuid
-  codigo_vaga String      @unique @db.VarChar(6)
-  titulo      String
-  descricao   String
-  valor       Float
-  status      StatusVaga  @default(ABERTA)
-  turno       TurnoVaga?
-  empresa_id  String      @db.Uuid
-  created_at  DateTime    @default(now())
-  empresa     Empresa     @relation(fields: [empresa_id], references: [id])
-  aplicacoes  Aplicacao[]
+  id               String           @id @default(uuid()) @db.Uuid
+  codigo_vaga      String           @unique @db.VarChar(6)
+  titulo           String
+  descricao        String
+  valor            Float
+  status           StatusVaga       @default(ABERTA)
+  turno            TurnoVaga?
+  // Texto livre, ex.: "08h às 14h" (o turno continua separado).
+  horario          String?
+  cep              String?          @db.VarChar(8)
+  cidade           String?
+  bairro           String?
+  modalidade       ModalidadeVaga?
+  // Uso interno: registra o pedido da empresa; não aparece em mensagens a candidatos.
+  sexo_preferencia SexoPreferencia?
+  empresa_id       String           @db.Uuid
+  created_at       DateTime         @default(now())
+  empresa          Empresa          @relation(fields: [empresa_id], references: [id])
+  aplicacoes       Aplicacao[]
 }
 
 model Aplicacao {

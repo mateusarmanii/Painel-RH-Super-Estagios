@@ -6,8 +6,6 @@ const { camposEntrevista, conflitosDoEstudante, statusAoSairDaEntrevista } = req
 const { ETAPAS, ETAPA_INICIAL } = require("../etapas");
 
 const router = express.Router();
-// A coluna instituicao_ensino é obrigatória no banco; sem migration, "não informada" é gravada como texto vazio.
-const SEM_INSTITUICAO = "";
 // AGUARDANDO_RETORNO ("Em análise") saiu das telas e não é mais aceito (veja src/etapas.js).
 const statusKanbanValidos = new Set(ETAPAS);
 
@@ -313,7 +311,7 @@ router.post("/", async (req, res) => {
           telefone,
           email,
           curso,
-          instituicao_ensino: instituicao_ensino || SEM_INSTITUICAO,
+          instituicao_ensino: instituicao_ensino || null,
           link_curriculo,
           endereco,
           anotacoes_recrutador,
@@ -371,7 +369,7 @@ router.put("/:id", async (req, res) => {
         telefone,
         email,
         curso,
-        instituicao_ensino: instituicao_ensino || SEM_INSTITUICAO,
+        instituicao_ensino: instituicao_ensino || null,
         link_curriculo,
         endereco,
         anotacoes_recrutador,

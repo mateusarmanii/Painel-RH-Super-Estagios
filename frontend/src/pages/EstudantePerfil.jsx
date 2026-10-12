@@ -28,6 +28,7 @@ import { interviewFormatLabels, interviewStatus, interviewStatusBadge, interview
 import { ageFrom, availabilityText, formatMonthYear, studyShiftLabel, turnoVagaLabels } from "../estudante.js";
 import { compatibleJobs, IN_PROCESS, nextInterview, profileAlerts, situationLabels, studentSituation, timeline } from "../perfil.js";
 import { formatPhone, getInitials, plural, whatsappLink } from "../text.js";
+import { formatCep, placeText } from "../cep.js";
 import { buttonPrimary, buttonSecondary, card } from "../ui.js";
 import { apiFetch, apiJson } from "../api.js";
 
@@ -256,6 +257,12 @@ export default function EstudantePerfilPage() {
                 {student.disponibilidade?.length > 0 && <Chip>Disponível: {availabilityText(student.disponibilidade)}</Chip>}
                 {age !== null && <Chip>{age} anos</Chip>}
                 {student.previsao_formatura && <Chip>Forma em {formatMonthYear(student.previsao_formatura)}</Chip>}
+                {(placeText(student) || student.cep) && (
+                  <Chip>
+                    <MapPin size={12} className="mr-1 inline-block align-[-1px]" />
+                    {[placeText(student), student.cep && `CEP ${formatCep(student.cep)}`].filter(Boolean).join(" · ")}
+                  </Chip>
+                )}
               </div>
             </div>
             <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">

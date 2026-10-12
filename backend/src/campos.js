@@ -5,6 +5,10 @@ const turnosEstudo = new Set(["MANHA", "TARDE", "NOITE", "INTEGRAL", "EAD"]);
 const periodos = ["MANHA", "TARDE", "NOITE"];
 const turnosVaga = new Set(["MANHA", "TARDE", "INTEGRAL"]);
 const horariosAntigos = new Set(["MANHA", "TARDE", "NOITE"]);
+const modalidades = new Set(["PRESENCIAL", "HIBRIDA", "HOME_OFFICE"]);
+const sexosPreferencia = new Set(["FEMININO", "MASCULINO"]);
+
+const TAMANHO_MAXIMO_TEXTO_CURTO = 100;
 
 const TAMANHO_MAXIMO_OBSERVACAO = 1000;
 
@@ -89,15 +93,76 @@ function camposEstudante(body) {
     }
   }
 
+  const endereco = camposEndereco(body);
+  if (endereco.erro) return endereco;
+  Object.assign(data, endereco.data);
+
   return { data };
 }
 
-function turnoVaga(body) {
-  const { turno } = body;
-  if (turno === undefined) return { data: {} };
-  if (vazio(turno)) return { data: { turno: null } };
-  if (!turnosVaga.has(turno)) return erro("Turno da vaga inválido: use Manhã, Tarde ou Integral.");
-  return { data: { turno } };
+// Texto curto opcional (cidade, bairro, horário da vaga).
+function textoCurto(data, campo, valor, rotulo) {
+  if (valor === undefined) return null;
+  if (vazio(valor)) {
+    data[campo] = null;
+    return null;
+  }
+  if (typeof valor !== "string") return `Campo "${rotulo}" inválido.`;
+  if (valor.length > TAMANHO_MAXIMO_TEXTO_CURTO) return `${rotulo} pode ter no máximo ${TAMANHO_MAXIMO_TEXTO_CURTO} caracteres.`;
+  data[campo] = valor;
+  return null;
+}
+
+// CEP, cidade e bairro (estudante e vaga). O CEP é guardado só com os 8 dígitos ("30130-010" → "30130010").
+function camposEndereco(body) {
+  const data = {};
+  const { cep, cidade, bairro } = body;
+
+  if (cep !== undefined) {
+    if (vazio(cep)) data.cep = null;
+    else {
+      const digitos = typeof cep === "string" || typeof cep === "number" ? String(cep).replace(/\D/g, "") : "";
+      if (digitos.length !== 8) return erro("CEP inválido: use 8 dígitos.");
+      data.cep = digitos;
+    }
+  }
+
+  const problema = textoCurto(data, "cidade", cidade, "Cidade") ?? textoCurto(data, "bairro", bairro, "Bairro");
+  if (problema) return erro(problema);
+  return { data };
+}
+
+// Campos opcionais da vaga: turno, horário, endereço, modalidade e preferência de sexo (uso interno).
+function camposVaga(body) {
+  const data = {};
+  const { turno, horario, modalidade, sexo_preferencia } = body;
+
+  if (turno !== undefined) {
+    if (vazio(turno)) data.turno = null;
+    else if (turnosVaga.has(turno)) data.turno = turno;
+    else return erro("Turno da vaga inválido: use Manhã, Tarde ou Integral.");
+  }
+
+  const problema = textoCurto(data, "horario", horario, "Horário");
+  if (problema) return erro(problema);
+
+  const endereco = camposEndereco(body);
+  if (endereco.erro) return endereco;
+  Object.assign(data, endereco.data);
+
+  if (modalidade !== undefined) {
+    if (vazio(modalidade)) data.modalidade = null;
+    else if (modalidades.has(modalidade)) data.modalidade = modalidade;
+    else return erro("Modalidade inválida: use Presencial, Híbrida ou Home office.");
+  }
+
+  if (sexo_preferencia !== undefined) {
+    if (vazio(sexo_preferencia)) data.sexo_preferencia = null;
+    else if (sexosPreferencia.has(sexo_preferencia)) data.sexo_preferencia = sexo_preferencia;
+    else return erro("Preferência informada pela empresa inválida.");
+  }
+
+  return { data };
 }
 
 function observacao(valor) {
@@ -110,4 +175,4 @@ function observacao(valor) {
   return { data: { observacao: valor } };
 }
 
-module.exports = { camposEstudante, turnoVaga, observacao, TAMANHO_MAXIMO_OBSERVACAO };
+module.exports = { camposEstudante, camposVaga, observacao, TAMANHO_MAXIMO_OBSERVACAO };

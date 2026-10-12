@@ -9,6 +9,7 @@ import { kanbanStatusLabels } from "../kanbanStatus.js";
 import { courseOptions, formatPhone, normalize, phoneDigits } from "../text.js";
 import { availabilityText, formatDate, formatMonthYear, periodoLabels, studyShift, studyShiftLabel, turnoEstudoLabels } from "../estudante.js";
 import { situationLabels, studentSituation } from "../perfil.js";
+import { formatCep } from "../cep.js";
 
 const EMPTY_FILTERS = { curso: "", instituicao: "", turno: "", semestreMinimo: "", situacao: "", disponibilidade: [] };
 
@@ -32,6 +33,9 @@ const csvExport = {
     { header: "Previsão de formatura", value: (estudante) => formatMonthYear(estudante.previsao_formatura) },
     { header: "Data de nascimento", value: (estudante) => formatDate(estudante.data_nascimento) },
     { header: "Endereço", value: (estudante) => estudante.endereco },
+    { header: "CEP", value: (estudante) => formatCep(estudante.cep) },
+    { header: "Cidade", value: (estudante) => estudante.cidade },
+    { header: "Bairro", value: (estudante) => estudante.bairro },
     { header: "Currículo", value: (estudante) => estudante.link_curriculo },
     { header: "Candidaturas", value: (estudante) => estudante.aplicacoes?.length ?? 0 },
     {
@@ -45,7 +49,7 @@ const csvExport = {
   ],
 };
 
-const getSearchText = (estudante) => `${estudante.nome_completo} ${estudante.curso} ${estudante.instituicao_ensino}`;
+const getSearchText = (estudante) => `${estudante.nome_completo} ${estudante.curso} ${estudante.instituicao_ensino ?? ""}`;
 // Busca só com dígitos (4 ou mais): também procura pelo final do telefone, ignorando a formatação ("7777" acha "(31) 98888-7777").
 const matchPhoneEnd = (estudante, term) => /^\d{4,}$/.test(term) && phoneDigits(estudante.telefone).endsWith(term);
 const getName = (estudante) => estudante.nome_completo;

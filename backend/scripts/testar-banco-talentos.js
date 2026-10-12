@@ -94,8 +94,8 @@ async function main() {
     checar("Cadastro em vaga fechada continua → 409", r.status === 409, `[${r.status}] ${r.body?.erro}`);
     r = await req("POST", "/candidatos", { telefone: teste.telefone(), curso: "Teste", nome_completo: "[TESTE] Sem instituição" });
     if (r.body?.id) ids.semVaga.push(r.body.id);
-    checar("Sem instituição → 201 (instituição é opcional; gravada vazia)",
-      r.status === 201 && r.body.instituicao_ensino === "", `[${r.status}] ${r.body?.erro ?? JSON.stringify(r.body?.instituicao_ensino)}`);
+    checar("Sem instituição → 201 (instituição é opcional; gravada como null)",
+      r.status === 201 && r.body.instituicao_ensino === null, `[${r.status}] ${r.body?.erro ?? JSON.stringify(r.body?.instituicao_ensino)}`);
     r = await req("GET", "/candidatos");
     checar("Aparece em Estudantes com 0 candidaturas",
       r.body.some((e) => e.id === idSemVaga && e.aplicacoes.length === 0));

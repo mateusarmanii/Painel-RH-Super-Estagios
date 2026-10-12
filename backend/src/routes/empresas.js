@@ -49,15 +49,15 @@ router.get("/", async (_req, res) => {
 router.post("/", async (req, res) => {
   const { nome, setor, nome_contato, telefone_contato, email_contato } = req.body ?? {};
 
-  if (!nome || !setor || !nome_contato || !telefone_contato || !email_contato) {
+  if (!nome || !nome_contato || !telefone_contato || !email_contato) {
     return res.status(400).json({
-      erro: "Informe nome, setor, nome do contato, telefone e e-mail de contato.",
+      erro: "Informe nome, nome do contato, telefone e e-mail de contato.",
     });
   }
 
   try {
     const empresa = await prisma.empresa.create({
-      data: { nome, setor, nome_contato, telefone_contato, email_contato },
+      data: { nome, setor: setor || null, nome_contato, telefone_contato, email_contato },
     });
 
     return res.status(201).json(empresa);
@@ -75,16 +75,16 @@ router.put("/:id", async (req, res) => {
     return res.status(400).json({ erro: "ID de empresa inválido." });
   }
 
-  if (!nome || !setor || !nome_contato || !telefone_contato || !email_contato) {
+  if (!nome || !nome_contato || !telefone_contato || !email_contato) {
     return res.status(400).json({
-      erro: "Informe nome, setor, nome do contato, telefone e e-mail de contato.",
+      erro: "Informe nome, nome do contato, telefone e e-mail de contato.",
     });
   }
 
   try {
     const empresa = await prisma.empresa.update({
       where: { id },
-      data: { nome, setor, nome_contato, telefone_contato, email_contato },
+      data: { nome, setor: setor || null, nome_contato, telefone_contato, email_contato },
     });
 
     return res.json(empresa);

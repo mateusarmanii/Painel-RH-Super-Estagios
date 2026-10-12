@@ -282,6 +282,17 @@ Regras:
 - Testes: novo `npm run test:etapas` (20 casos); `test:resumos`, `test:status-vaga`, `test:agenda`, `test:etapa2a` e `test:banco-talentos` atualizados. 13 scripts, 312 casos, 0 sobras.
 - **Antes de publicar:** aplicar as 2 migrations no Neon (`migrate deploy`), com aprovação.
 
+### ✅ Parte 4 — Campos novos nos cadastros (12/10/2026); falta validar no navegador
+Migration `20261012120000_campos_cadastro_cep_vaga` (só adições e `DROP NOT NULL`, aprovada pelo usuário; aplicada **só no banco local**, não no Neon). `prisma migrate diff` banco × schema: sem diferença.
+- **Empresa:** `setor` aceita `NULL` (o padrão `'Nao informado'` continua na coluna, mas a API grava `NULL` quando vem vazio). Setor opcional no formulário; sem setor, o card não mostra nada.
+- **Estudante:** `cep` (`VARCHAR(8)`, só dígitos), `cidade`, `bairro`. `instituicao_ensino` passou a aceitar `NULL` e "não informada" é gravada como `NULL` (o `UPDATE` de `''` → `NULL` achou 0 linhas no banco local). As telas continuam escondendo a instituição vazia.
+- **Vaga:** `horario` (texto livre, ex.: "08h às 14h", separado do `turno`), `cep`, `cidade`, `bairro`, `modalidade` (enum `ModalidadeVaga`: `PRESENCIAL`, `HIBRIDA`, `HOME_OFFICE`) e `sexo_preferencia` (enum `SexoPreferencia`: `FEMININO`, `MASCULINO`).
+  - `sexo_preferencia` é **interno**: rótulo "Preferência informada pela empresa (uso interno)"; `FEMININO` põe uma faixa rosa fina na lateral do card da vaga (com dica ao passar o mouse). **Nunca** entra em textos enviados a candidatos (WhatsApp, Google Agenda); o `GET /entrevistas` não devolve o campo (conferido no teste). Vai no CSV de vagas, que é interno.
+- Validação em `src/campos.js` (`camposEndereco`, `camposVaga`, que substituiu o `turnoVaga`): CEP com ou sem máscara → 8 dígitos ou 400; textos curtos até 100 caracteres; enums inválidos → 400; ausente não muda, `null`/`""` apaga.
+- **Frontend:** `cep.js` (máscara `00000-000`, `lookupCep` no ViaCEP com `fetch` direto — não usa o `apiFetch` para não mandar o token a um site de fora —, tempo-limite de 5 s). No `CreationForm`, ao completar 8 dígitos preenche cidade e bairro (editáveis); se o ViaCEP falhar, mostra só um aviso discreto e o cadastro segue. Card da vaga com etiquetas de modalidade, horário e bairro/cidade; CSV de vagas e de estudantes com as colunas novas; perfil do estudante com bairro/cidade e CEP.
+- Testes: novo `npm run test:campos` (43 casos); `test:cadastros` e `test:banco-talentos` passaram a esperar `NULL` na instituição. 14 scripts, 355 casos, 0 sobras.
+- **Antes de publicar:** aplicar a migration no Neon (`migrate deploy`), com aprovação. Se o Neon tiver empresas com setor `'Nao informado'`, elas continuam mostrando esse texto.
+
 ## Regras de trabalho
 
 - **Banco de dados: antes de aplicar QUALQUER alteração no banco (migrations, `migrate deploy`/`dev`/`reset`, `db push`, SQL manual, escrita em `_prisma_migrations`, criação/remoção de bancos, scripts de teste que gravam dados), mostrar o SQL/operações ao usuário e esperar aprovação explícita.**
