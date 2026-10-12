@@ -7,6 +7,8 @@ const empresasRoutes = require("./src/routes/empresas");
 const vagasRoutes = require("./src/routes/vagas");
 const candidatosRoutes = require("./src/routes/candidatos");
 const entrevistasRoutes = require("./src/routes/entrevistas");
+const eventosRoutes = require("./src/routes/eventos");
+const lembretesRoutes = require("./src/routes/lembretes");
 const authRoutes = require("./src/routes/auth");
 const { DIA_MS, DIAS_PARA_ALERTA, aparaTextos } = require("./src/utils");
 const { ETAPAS_EM_PROCESSO, ETAPAS_AVANCADAS } = require("./src/etapas");
@@ -198,6 +200,8 @@ app.use("/empresas", empresasRoutes);
 app.use("/vagas", vagasRoutes);
 app.use("/candidatos", candidatosRoutes);
 app.use("/entrevistas", entrevistasRoutes);
+app.use("/eventos", eventosRoutes);
+app.use("/lembretes", lembretesRoutes);
 
 // Erros que escapam das rotas (JSON malformado, logo inexistente...): resposta curta em JSON, sem detalhes internos.
 app.use((error, _req, res, _next) => {

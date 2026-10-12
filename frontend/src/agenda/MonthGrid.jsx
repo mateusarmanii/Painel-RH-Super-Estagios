@@ -1,15 +1,21 @@
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, CalendarDays } from "lucide-react";
 import { interviewStatusDot, interviewStatusLabels } from "../interviewStatus.js";
 import { dayKey, interviewLine, interviewWho, sameDay, timeFormat } from "./dates.js";
+import { eventDot, eventLine, eventStart } from "./events.js";
 
 const weekdays = ["seg", "ter", "qua", "qui", "sex", "sáb", "dom"];
 const MAX_PER_DAY = 3;
 
-// Visão Mês: até 3 entrevistas por dia; "+N" (ou tocar no dia, no celular) abre o dia.
-export default function MonthGrid({ days, month, interviews, onOpen, onPickDay }) {
+// Visão Mês: até 3 itens (entrevistas e eventos) por dia; "+N" (ou tocar no dia, no celular) abre o dia.
+// Eventos de dia inteiro vêm primeiro; o resto em ordem de horário. onOpen(kind, item).
+export default function MonthGrid({ days, month, interviews, events = [], onOpen, onPickDay }) {
   const today = new Date();
   const byDay = new Map(days.map((day) => [dayKey(day), []]));
-  for (const interview of interviews) byDay.get(dayKey(new Date(interview.data_hora_entrevista)))?.push(interview);
+  const items = [
+    ...interviews.map((interview) => ({ kind: "entrevista", key: `entrevista:${interview.id}`, start: new Date(interview.data_hora_entrevista), data: interview })),
+    ...events.map((event) => ({ kind: "evento", key: `evento:${event.id}`, start: eventStart(event), data: event })),
+  ].sort((a, b) => Number(b.kind === "evento" && b.data.dia_inteiro) - Number(a.kind === "evento" && a.data.dia_inteiro) || a.start - b.start);
+  for (const item of items) byDay.get(dayKey(item.start))?.push(item);
 
   return (
     <div>
@@ -49,30 +55,45 @@ export default function MonthGrid({ days, month, interviews, onOpen, onPickDay }
                   type="button"
                   onClick={() => onPickDay(day)}
                   className="flex flex-wrap gap-0.5 px-1 sm:hidden"
-                  aria-label={`${items.length} entrevista(s) — ver o dia`}
+                  aria-label={`${items.length} compromisso(s) — ver o dia`}
                 >
-                  {items.slice(0, 6).map((interview) => (
-                    <span key={interview.id} className={`size-1.5 rounded-full ${interviewStatusDot[interview.status_exibido]}`} />
+                  {items.slice(0, 6).map((item) => (
+                    <span
+                      key={item.key}
+                      className={`size-1.5 rounded-full ${item.kind === "evento" ? eventDot : interviewStatusDot[item.data.status_exibido]}`}
+                    />
                   ))}
                 </button>
               )}
 
               <ul className="hidden space-y-0.5 sm:block">
-                {items.slice(0, MAX_PER_DAY).map((interview) => (
-                  <li key={interview.id}>
-                    <button
-                      type="button"
-                      onClick={() => onOpen(interview)}
-                      title={`${interviewLine(interview)} · ${interviewStatusLabels[interview.status_exibido]}`}
-                      className={`flex w-full items-center gap-1 rounded px-1 py-0.5 text-left text-[11px] transition-colors hover:bg-marinho-50 ${
-                        interview.status_exibido === "CANCELADA" ? "text-slate-400 line-through" : "text-slate-700"
-                      }`}
-                    >
-                      <span className={`size-1.5 shrink-0 rounded-full ${interviewStatusDot[interview.status_exibido]}`} />
-                      <span className="shrink-0 font-bold tabular-nums">{timeFormat.format(new Date(interview.data_hora_entrevista))}</span>
-                      <span className="truncate">· {interviewWho(interview)}</span>
-                      {interview.conflito_com?.length > 0 && <AlertTriangle size={11} className="shrink-0 text-rose-600" />}
-                    </button>
+                {items.slice(0, MAX_PER_DAY).map(({ kind, key, data }) => (
+                  <li key={key}>
+                    {kind === "evento" ? (
+                      <button
+                        type="button"
+                        onClick={() => onOpen("evento", data)}
+                        title={eventLine(data)}
+                        className="flex w-full items-center gap-1 rounded bg-sky-50 px-1 py-0.5 text-left text-[11px] text-sky-950 transition-colors hover:bg-sky-100"
+                      >
+                        <CalendarDays size={11} className="shrink-0 text-sky-700" />
+                        <span className="truncate">{eventLine(data)}</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => onOpen("entrevista", data)}
+                        title={`${interviewLine(data)} · ${interviewStatusLabels[data.status_exibido]}`}
+                        className={`flex w-full items-center gap-1 rounded px-1 py-0.5 text-left text-[11px] transition-colors hover:bg-marinho-50 ${
+                          data.status_exibido === "CANCELADA" ? "text-slate-400 line-through" : "text-slate-700"
+                        }`}
+                      >
+                        <span className={`size-1.5 shrink-0 rounded-full ${interviewStatusDot[data.status_exibido]}`} />
+                        <span className="shrink-0 font-bold tabular-nums">{timeFormat.format(new Date(data.data_hora_entrevista))}</span>
+                        <span className="truncate">· {interviewWho(data)}</span>
+                        {data.conflito_com?.length > 0 && <AlertTriangle size={11} className="shrink-0 text-rose-600" />}
+                      </button>
+                    )}
                   </li>
                 ))}
                 {items.length > MAX_PER_DAY && (

@@ -84,14 +84,66 @@ enum PapelUsuario {
 // Quem entra no painel. Sem cadastro público: usuários são criados com "npm run usuario:criar".
 // E-mail guardado sempre em minúsculas; a senha só como hash bcrypt.
 model Usuario {
-  id         String       @id @default(uuid()) @db.Uuid
+  id         String          @id @default(uuid()) @db.Uuid
   nome       String
-  email      String       @unique
+  email      String          @unique
   senha_hash String
-  papel      PapelUsuario @default(RECRUTADOR)
-  ativo      Boolean      @default(true)
-  created_at DateTime     @default(now())
-  updated_at DateTime     @default(now()) @updatedAt
+  papel      PapelUsuario    @default(RECRUTADOR)
+  ativo      Boolean         @default(true)
+  created_at DateTime        @default(now())
+  updated_at DateTime        @default(now()) @updatedAt
+  // Só do lado do Prisma (a chave estrangeira fica nas tabelas novas).
+  eventos    Evento[]
+  lembretes  LembreteEmail[]
+}
+
+// Compromisso do Calendário que não é entrevista (reunião, visita, prazo...).
+// Dia inteiro: "inicio" guarda 00:00 de São Paulo daquele dia e a duração é 1440.
+model Evento {
+  id              String          @id @default(uuid()) @db.Uuid
+  titulo          String          @db.VarChar(120)
+  descricao       String?         @db.Text
+  inicio          DateTime
+  duracao_minutos Int             @default(60)
+  dia_inteiro     Boolean         @default(false)
+  criado_por_id   String?         @db.Uuid
+  created_at      DateTime        @default(now())
+  updated_at      DateTime        @default(now()) @updatedAt
+  criado_por      Usuario?        @relation(fields: [criado_por_id], references: [id], onDelete: SetNull)
+  lembretes       LembreteEmail[]
+
+  @@index([inicio])
+}
+
+enum TipoLembrete {
+  CONVITE
+  CANCELAMENTO
+}
+
+// Registro de cada e-mail de lembrete (convite .ics) enviado, de um evento ou de uma entrevista (Aplicacao).
+// Mesmo UID em todos os envios do mesmo compromisso; SEQUENCE cresce a cada envio, para o celular atualizar
+// o compromisso em vez de duplicar. Fica guardado mesmo se o evento for excluído (o vínculo vira NULL).
+model LembreteEmail {
+  id              String       @id @default(uuid()) @db.Uuid
+  evento_id       String?      @db.Uuid
+  aplicacao_id    String?      @db.Uuid
+  tipo            TipoLembrete @default(CONVITE)
+  email_destino   String       @db.VarChar(254)
+  enviado_em      DateTime     @default(now())
+  enviado_por_id  String?      @db.Uuid
+  uid             String       @db.VarChar(255)
+  sequence        Int
+  // Alarmes do convite, em minutos antes do início (reaproveitados ao reenviar).
+  alarmes_minutos Int[]        @default([])
+  // Horário que foi no convite: se o compromisso mudar, o painel oferece reenviar.
+  inicio_convite  DateTime
+  fim_convite     DateTime
+  evento          Evento?      @relation(fields: [evento_id], references: [id], onDelete: SetNull)
+  aplicacao       Aplicacao?   @relation(fields: [aplicacao_id], references: [id], onDelete: SetNull)
+  enviado_por     Usuario?     @relation(fields: [enviado_por_id], references: [id], onDelete: SetNull)
+
+  @@index([uid])
+  @@index([enviado_por_id, enviado_em])
 }
 
 model Empresa {
@@ -169,6 +221,7 @@ model Aplicacao {
   updated_at           DateTime           @default(now()) @updatedAt
   vaga                 Vaga               @relation(fields: [vaga_id], references: [id])
   estudante            Estudante          @relation(fields: [estudante_id], references: [id])
+  lembretes            LembreteEmail[]
 
   @@unique([vaga_id, estudante_id])
 }

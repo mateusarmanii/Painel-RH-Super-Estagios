@@ -1,21 +1,49 @@
 import { useState } from "react";
-import { AlertTriangle, CalendarX2, ChevronDown, MapPin, Video } from "lucide-react";
+import { AlertTriangle, CalendarDays, CalendarX2, ChevronDown, MapPin, Video } from "lucide-react";
 import CompanyAvatar from "../components/CompanyAvatar.jsx";
 import EmptyState from "../components/EmptyState.jsx";
 import { interviewStatusBadge, interviewStatusDot, interviewStatusLabels } from "../interviewStatus.js";
 import { dayKey, dayTitle, interviewTimeRange, interviewWho, sameDay, startOfDay } from "./dates.js";
+import { eventBadge, eventDot, eventStart, eventTimeRange } from "./events.js";
 
-// Visão Lista: entrevistas do mês, separadas por dia. No mês atual, começa em hoje; os dias anteriores ficam
-// recolhidos num botão.
-export default function InterviewList({ interviews, onOpen }) {
+function EventRow({ event, onOpen }) {
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={() => onOpen("evento", event)}
+        className="flex w-full flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 text-left transition-colors hover:bg-sky-50/60 sm:px-5"
+      >
+        <span className="flex w-28 shrink-0 items-center gap-2 text-sm font-extrabold tabular-nums text-marinho-900">
+          <span className={`size-2 rounded-full ${eventDot}`} />
+          {eventTimeRange(event)}
+        </span>
+        <span className="min-w-0 flex-1 basis-48">
+          <span className="block truncate text-sm font-semibold text-marinho-900">{event.titulo}</span>
+          {event.descricao && <span className="mt-0.5 block truncate text-xs text-slate-500">{event.descricao}</span>}
+        </span>
+        <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold ${eventBadge}`}>
+          <CalendarDays size={12} /> Evento
+        </span>
+      </button>
+    </li>
+  );
+}
+
+// Visão Lista: entrevistas e eventos do mês, separados por dia (eventos de dia inteiro primeiro). No mês atual,
+// começa em hoje; os dias anteriores ficam recolhidos num botão. onOpen(kind, item).
+export default function InterviewList({ interviews, events = [], onOpen }) {
   const today = new Date();
   const [showPast, setShowPast] = useState(false);
+  const all = [
+    ...interviews.map((interview) => ({ kind: "entrevista", key: `entrevista:${interview.id}`, date: new Date(interview.data_hora_entrevista), data: interview })),
+    ...events.map((event) => ({ kind: "evento", key: `evento:${event.id}`, date: eventStart(event), data: event })),
+  ].sort((a, b) => a.date - b.date || Number(b.kind === "evento" && b.data.dia_inteiro) - Number(a.kind === "evento" && a.data.dia_inteiro));
   const groups = [];
-  for (const interview of interviews) {
-    const date = new Date(interview.data_hora_entrevista);
-    const key = dayKey(date);
-    if (groups.at(-1)?.key !== key) groups.push({ key, date, items: [] });
-    groups.at(-1).items.push(interview);
+  for (const item of all) {
+    const key = dayKey(item.date);
+    if (groups.at(-1)?.key !== key) groups.push({ key, date: item.date, items: [] });
+    groups.at(-1).items.push(item);
   }
 
   const past = groups.filter((group) => group.date < startOfDay(today));
@@ -26,7 +54,11 @@ export default function InterviewList({ interviews, onOpen }) {
   if (groups.length === 0) {
     return (
       <div className="p-4">
-        <EmptyState icon={CalendarX2} title="Nenhuma entrevista neste período" description="Agende pelo Kanban da vaga, movendo o candidato para Em Entrevista." />
+        <EmptyState
+          icon={CalendarX2}
+          title="Nenhuma entrevista ou evento neste período"
+          description="Agende entrevistas pelo Kanban da vaga (movendo o candidato para Em Entrevista) ou crie um evento em “Novo evento”."
+        />
       </div>
     );
   }
@@ -41,7 +73,7 @@ export default function InterviewList({ interviews, onOpen }) {
           className="flex w-full items-center justify-center gap-1.5 bg-slate-50 px-4 py-2 text-xs font-bold text-marinho-700 hover:bg-marinho-50"
         >
           <ChevronDown size={14} className={showPast ? "rotate-180" : ""} />
-          {showPast ? "Esconder os dias anteriores" : `Ver ${pastCount} ${pastCount === 1 ? "entrevista" : "entrevistas"} de dias anteriores deste mês`}
+          {showPast ? "Esconder os dias anteriores" : `Ver ${pastCount} ${pastCount === 1 ? "compromisso" : "compromissos"} de dias anteriores deste mês`}
         </button>
       )}
       {visibleGroups.map((group) => {
@@ -57,14 +89,15 @@ export default function InterviewList({ interviews, onOpen }) {
               <span className="font-semibold normal-case tracking-normal opacity-70">· {group.items.length}</span>
             </h3>
             <ul className="divide-y divide-slate-100">
-              {group.items.map((interview) => {
+              {group.items.map(({ kind, key, data: interview }) => {
+                if (kind === "evento") return <EventRow key={key} event={interview} onOpen={onOpen} />;
                 const FormatIcon = interview.entrevista_formato === "ONLINE" ? Video : MapPin;
                 const cancelled = interview.status_exibido === "CANCELADA";
                 return (
-                  <li key={interview.id}>
+                  <li key={key}>
                     <button
                       type="button"
-                      onClick={() => onOpen(interview)}
+                      onClick={() => onOpen("entrevista", interview)}
                       className="flex w-full flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 text-left transition-colors hover:bg-marinho-50/60 sm:px-5"
                     >
                       <span className="flex w-28 shrink-0 items-center gap-2 text-sm font-extrabold tabular-nums text-marinho-900">

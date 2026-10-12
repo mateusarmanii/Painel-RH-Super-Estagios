@@ -6,7 +6,7 @@ Painel interno da Super Estágios (agência de estágios) para acompanhar o fech
 - **Banco de Talentos**: candidatos dispensados (e não contratados), com filtro por curso e "Indicar para vaga".
 - **Contratações efetivas**: todos os estudantes contratados, com data e vaga.
 - **Kanban por vaga**: cada candidato passa por *Enviado à empresa → Em análise → Entrevista → Contratado* ou *Dispensado*. Ao mover para "Entrevista" o sistema pede data e hora; para "Dispensado", o motivo.
-- **Calendário** de entrevistas (dia, semana, mês e lista), com reagendamento.
+- **Calendário** de entrevistas e eventos (dia, semana, mês e lista), com reagendamento e **lembrete por e-mail** (convite de calendário com alarmes).
 - **Dashboard** com vagas abertas, tempo médio de contratação, vagas paradas há mais de 10 dias, funil de contratação e distribuição dos estudantes por curso.
 - **Histórico de candidaturas** de cada estudante.
 
@@ -51,6 +51,7 @@ Painel interno da Super Estágios (agência de estágios) para acompanhar o fech
    | `JWT_SECRET` | Segredo que assina os tokens de login. **Obrigatório** (a API não sobe sem ele), com pelo menos 32 caracteres aleatórios. Gere com `node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"`. |
    | `FRONTEND_URL` | Endereço do frontend liberado no CORS (vários separados por vírgula). Fora de produção, `localhost` já é liberado. |
    | `NODE_ENV` | `production` no servidor: bloqueia o `localhost` no CORS e confia no proxy do Render para saber o IP real (limite de tentativas de login). |
+   | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_REMETENTE` | Envio dos lembretes por e-mail (opcional). Sem as cinco, o botão "Criar lembrete para responsável" fica desabilitado. Veja [Lembretes por e-mail](#lembretes-por-e-mail-gmail). |
 
    O frontend chama a API em `http://localhost:3333`. Se ela estiver em outro endereço, crie `frontend/.env` a partir de `frontend/.env.example` e defina `VITE_API_URL` (depois reinicie o `npm run dev` ou gere o build de novo).
 
@@ -81,6 +82,37 @@ O script usa o banco do `DATABASE_URL` e mostra qual é (servidor e nome do banc
 
 Para trocar a senha de alguém, ou ativar/desativar o usuário, use `npm run usuario:senha` (pede o e-mail, mostra o banco e pede confirmação antes de gravar). Desativar tem efeito na hora: os tokens dessa pessoa deixam de valer.
 
+## Lembretes por e-mail (Gmail)
+
+No Calendário, o painel de um evento ou de uma entrevista tem o botão **"Criar lembrete para responsável"**: ele envia, para até 10 e-mails, um convite de calendário (`.ics`) com os alarmes escolhidos (padrão: 1 dia e 1 hora antes). Ao mudar a data/hora, o painel oferece **"Reenviar convite atualizado"** (o compromisso é atualizado na agenda de quem recebeu, sem duplicar); ao excluir o evento ou cancelar a entrevista, oferece enviar o **cancelamento**. Cada usuário pode enviar no máximo 30 e-mails por hora.
+
+A configuração é feita **só por variáveis de ambiente** no `backend/.env` (local) ou no painel do Render (produção). **Nunca** coloque a senha no código nem no Git.
+
+```env
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=465
+SMTP_USER=sua-conta@gmail.com
+SMTP_PASS=abcdefghijklmnop
+EMAIL_REMETENTE="Super Estágios <sua-conta@gmail.com>"
+```
+
+- `SMTP_PORT`: `465` (TLS direto) ou `587` (STARTTLS).
+- `EMAIL_REMETENTE`: no Gmail, use o mesmo endereço do `SMTP_USER` (ou um alias "Enviar como" já confirmado na conta); senão o Gmail troca o remetente.
+- `SMTP_PASS` é uma **senha de app**, não a senha normal da conta.
+
+**Como criar a senha de app do Gmail:**
+
+1. Entre na conta Google que vai enviar os e-mails e abra **Gerenciar sua Conta do Google → Segurança**.
+2. Ative a **Verificação em duas etapas** (a senha de app só aparece com ela ativa).
+3. Acesse <https://myaccount.google.com/apppasswords> (ou procure "Senhas de app" na busca da conta).
+4. Dê um nome (ex.: "Painel Super Estágios") e clique em **Criar**. O Google mostra uma senha de 16 letras.
+5. Copie a senha **sem os espaços** para o `SMTP_PASS` e reinicie a API. Ela não é mostrada de novo; se perder, apague e crie outra.
+
+Para revogar o acesso, apague a senha de app na mesma página. Contas do Google Workspace podem ter a senha de app bloqueada pelo administrador.
+
+> Os alarmes (`VALARM`) são respeitados pelo app Calendário do iPhone, pelo Outlook e por outros apps; o Google Agenda costuma usar os próprios alarmes padrão no lugar dos do convite.
+> O convite de entrevista leva só o nome do candidato (sem telefone, e-mail ou curso).
+
 ## Como rodar
 
 Em dois terminais:
@@ -101,7 +133,7 @@ Para gerar a versão de produção do frontend: `cd frontend && npm run build` (
 
 ## Scripts de teste
 
-Os testes sobem a API numa porta separada (3399), criam registros marcados com **`[TESTE]`**, verificam as rotas e apagam tudo no final, informando quantos registros `[TESTE]` restaram (deve ser 0). Cada script cria um usuário `[TESTE]` temporário (e-mail `@teste.local`), entra com ele e o apaga no final. Eles **gravam no banco do `DATABASE_URL`**, então use um banco de desenvolvimento.
+Os testes sobem a API numa porta separada (entre 3383 e 3399), criam registros marcados com **`[TESTE]`**, verificam as rotas e apagam tudo no final, informando quantos registros `[TESTE]` restaram (deve ser 0). Cada script cria um usuário `[TESTE]` temporário (e-mail `@teste.local`), entra com ele e o apaga no final. Eles **gravam no banco do `DATABASE_URL`**, então use um banco de desenvolvimento.
 
 ```bash
 cd backend
@@ -119,7 +151,10 @@ npm run test:login     # login, token inválido/expirado, rotas sem token, usuá
 npm run test:cadastros # telefone repetido (409), instituição opcional, código da vaga com 5 ou 6 dígitos e encerrar vaga após contratar
 npm run test:etapas    # etapas do Kanban (Candidato Contatado, Em Teste) e regras de cada uma
 npm run test:campos    # setor opcional, CEP/cidade/bairro, instituição NULL e campos novos da vaga (modalidade, horário, preferência interna)
+npm run test:eventos   # eventos do Calendário e lembretes por e-mail (.ics: UID, SEQUENCE, VALARM, fuso, REQUEST e CANCEL)
 ```
+
+O `test:eventos` **não envia e-mail de verdade**: a API de teste usa um transporte falso (`EMAIL_TRANSPORTE_FALSO`), que só grava a mensagem montada num arquivo temporário (ignorado com `NODE_ENV=production`).
 
 ## Dados de exemplo
 
@@ -141,9 +176,10 @@ O backup precisa de **duas partes**:
 ```
 backend/
   server.js               API Express e /dashboard-metrics
-  src/routes/             empresas (inclui o envio da logo), vagas, candidatos (inclui o PATCH do Kanban), entrevistas
+  src/routes/             empresas (inclui o envio da logo), vagas, candidatos (inclui o PATCH do Kanban), entrevistas, eventos, lembretes
+  src/ics.js, src/email.js   convite de calendário (.ics) e envio por SMTP (nodemailer)
   uploads/logos/          logos das empresas (fora do git; precisa entrar no backup)
-  prisma/schema.prisma    modelo de dados (Empresa, Vaga, Estudante, Aplicacao)
+  prisma/schema.prisma    modelo de dados (Empresa, Vaga, Estudante, Aplicacao, Usuario, Evento, LembreteEmail)
   prisma/migrations/      histórico de alterações do banco
   scripts/                testes (funções comuns em scripts/lib/teste.js)
 frontend/src/

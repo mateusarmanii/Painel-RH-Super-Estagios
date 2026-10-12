@@ -22,7 +22,8 @@
     "test:login": "node scripts/testar-login.js",
     "test:cadastros": "node scripts/testar-cadastros.js",
     "test:etapas": "node scripts/testar-etapas.js",
-    "test:campos": "node scripts/testar-campos.js"
+    "test:campos": "node scripts/testar-campos.js",
+    "test:eventos": "node scripts/testar-eventos.js"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
@@ -32,7 +33,8 @@
     "express": "^4.21.2",
     "express-rate-limit": "8.7.0",
     "jsonwebtoken": "9.0.3",
-    "multer": "^2.4.0"
+    "multer": "^2.4.0",
+    "nodemailer": "10.0.11"
   },
   "devDependencies": {
     "prisma": "^5.22.0"

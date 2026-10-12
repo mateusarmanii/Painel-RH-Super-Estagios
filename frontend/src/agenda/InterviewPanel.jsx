@@ -28,6 +28,7 @@ import { formatPhone, getInitials, whatsappLink } from "../text.js";
 import { buttonPrimary, buttonSecondary } from "../ui.js";
 import { runInterviewAction } from "./api.js";
 import { conflictWarning } from "./conflicts.js";
+import ReminderSection from "./ReminderSection.jsx";
 import { confirmationMessage, dayTitle, googleCalendarLink, interviewTimeRange, isLink, timeFormat } from "./dates.js";
 
 const actionButton =
@@ -43,7 +44,7 @@ function Detail({ icon: Icon, children }) {
 }
 
 // Painel lateral da entrevista: detalhes e ações (celular: ocupa a tela).
-export default function InterviewPanel({ interview, conflicts, onClose, onUpdated, onOpenProfile }) {
+export default function InterviewPanel({ interview, conflicts, reminderVersion, onClose, onUpdated, onOpenProfile }) {
   const [mode, setMode] = useState(null); // null | "reagendar" | "dispensar"
   const [form, setForm] = useState(() => interviewFormValues(interview));
   const [reason, setReason] = useState("");
@@ -201,6 +202,12 @@ export default function InterviewPanel({ interview, conflicts, onClose, onUpdate
             {interview.observacao && <Detail icon={StickyNote}>{interview.observacao}</Detail>}
             {interview.motivo_recusa && <Detail icon={UserX}>Motivo da dispensa: {interview.motivo_recusa}</Detail>}
           </section>
+
+          <ReminderSection
+            target={{ entrevista_id: interview.id }}
+            version={`${interview.data_hora_entrevista}|${interview.entrevista_duracao}|${status}|${reminderVersion}`}
+            blockedReason={status === "CANCELADA" ? "Entrevista cancelada" : undefined}
+          />
 
           {mode === "reagendar" && (
             <form onSubmit={reschedule} className="space-y-4 rounded-md border border-slate-200 p-4">

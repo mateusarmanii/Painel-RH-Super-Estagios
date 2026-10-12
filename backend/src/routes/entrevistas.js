@@ -8,6 +8,7 @@ const {
   statusAoSairDaEntrevista,
   statusDaEntrevista,
 } = require("../agenda");
+const { fimDoEvento, selectEvento } = require("../eventos");
 
 const router = express.Router();
 const HORA_MS = 60 * 60 * 1000;
@@ -73,6 +74,7 @@ router.get("/", async (req, res) => {
 });
 
 // Números do topo da Agenda: próximas 24h sem confirmação, total da semana e comparecimento (últimos 90 dias).
+// eventos24h: eventos do Calendário (não entrevistas) em andamento ou que começam nas próximas 24h, separados.
 // A semana vem do navegador (?inicioSemana=&fimSemana=), para respeitar o fuso de quem usa.
 router.get("/resumo", async (req, res) => {
   const inicioSemana = lerData(req.query.inicioSemana);
@@ -83,7 +85,8 @@ router.get("/resumo", async (req, res) => {
 
   const agora = new Date();
   try {
-    const [proximas, daSemana, recentes] = await Promise.all([
+    const daqui24h = new Date(agora.getTime() + 24 * HORA_MS);
+    const [proximas, daSemana, recentes, eventos] = await Promise.all([
       prisma.aplicacao.findMany({
         where: {
           status_kanban: "ENTREVISTA_AGENDADA",
@@ -101,12 +104,19 @@ router.get("/resumo", async (req, res) => {
         where: { data_hora_entrevista: { gte: new Date(agora.getTime() - 90 * DIA_MS), lte: agora } },
         select: { status_kanban: true, entrevista_status: true },
       }),
+      // Começam até daqui a 24h e podem ter começado há até 1 dia (duração máxima); os já terminados saem abaixo.
+      prisma.evento.findMany({
+        where: { inicio: { gte: new Date(agora.getTime() - DIA_MS), lt: daqui24h } },
+        orderBy: [{ inicio: "asc" }, { titulo: "asc" }],
+        select: selectEvento,
+      }),
     ]);
 
     const realizadas = recentes.filter((a) => statusDaEntrevista(a) === "REALIZADA").length;
     const faltas = recentes.filter((a) => statusDaEntrevista(a) === "NAO_COMPARECEU").length;
     return res.json({
       semConfirmacao24h: proximas.map(comStatus),
+      eventos24h: eventos.filter((evento) => fimDoEvento(evento) > agora),
       semana: daSemana.filter((a) => statusDaEntrevista(a) !== "CANCELADA").length,
       comparecimento: {
         realizadas,

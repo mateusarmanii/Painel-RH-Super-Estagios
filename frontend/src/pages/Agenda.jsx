@@ -1,19 +1,23 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { AlertTriangle, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Percent, X } from "lucide-react";
+import { AlertTriangle, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Percent, Plus, X } from "lucide-react";
 import LoadError from "../components/LoadError.jsx";
 import CompanyAvatar from "../components/CompanyAvatar.jsx";
 import TimeGrid from "../agenda/TimeGrid.jsx";
 import MonthGrid from "../agenda/MonthGrid.jsx";
 import InterviewList from "../agenda/InterviewList.jsx";
 import InterviewPanel from "../agenda/InterviewPanel.jsx";
-import { runInterviewAction } from "../agenda/api.js";
+import EventPanel from "../agenda/EventPanel.jsx";
+import EventFormModal from "../agenda/EventFormModal.jsx";
+import ReminderPrompt, { reminderFollowUp } from "../agenda/ReminderPrompt.jsx";
+import { listEvents, runInterviewAction, saveEvent } from "../agenda/api.js";
 import { conflictWarning } from "../agenda/conflicts.js";
 import { addDays, dayTitle, interviewWho, periodFor, periodLabel, shiftAnchor, startOfWeek, timeFormat } from "../agenda/dates.js";
+import { eventDot, eventEnd, eventLine } from "../agenda/events.js";
 import { interviewStatusDot, interviewStatusLabels } from "../interviewStatus.js";
 import { plural } from "../text.js";
-import { buttonSecondary } from "../ui.js";
+import { buttonPrimary, buttonSecondary } from "../ui.js";
 import { apiFetch } from "../api.js";
 
 const views = [
@@ -42,16 +46,46 @@ function SummaryCard({ children, tone = "neutral" }) {
     alert: "border-orange-200 bg-orange-50/60",
     ok: "border-slate-200 bg-white",
   };
-  return <div className={`rounded-lg border p-3 shadow-sm sm:p-4 ${tones[tone]} ${tone === "neutral" ? "" : "col-span-2 sm:col-span-1"}`}>{children}</div>;
+  return <div className={`rounded-lg border p-3 shadow-sm sm:p-4 ${tones[tone]} ${tone === "neutral" ? "" : "col-span-2 lg:col-span-1"}`}>{children}</div>;
 }
 
-// Topo: entrevistas das próximas 24h sem confirmação, total da semana e taxa de comparecimento.
-function Summary({ summary, onOpen }) {
+// Eventos (não entrevistas) em andamento ou nas próximas 24h, separados das entrevistas.
+function EventsCard({ events, onOpen }) {
+  return (
+    <div className="col-span-2 rounded-lg border border-sky-200 bg-sky-50/50 p-3 shadow-sm sm:p-4 lg:col-span-1">
+      <p className="flex items-center gap-1.5 text-sm font-bold text-sky-900">
+        <CalendarDays size={16} className="text-sky-700" />
+        {events.length ? `${plural(events.length, "evento", "eventos")} nas próximas 24h` : "Nenhum evento nas próximas 24h"}
+      </p>
+      {events.length > 0 && (
+        <ul className="mt-2 space-y-1">
+          {events.slice(0, 3).map((event) => (
+            <li key={event.id}>
+              <button
+                type="button"
+                onClick={() => onOpen(event)}
+                className="flex w-full min-w-0 items-center gap-1.5 text-left text-sm text-sky-950 hover:underline"
+              >
+                <span className="truncate">
+                  {new Date(event.inicio) < new Date() && !event.dia_inteiro ? `Agora · ${event.titulo}` : eventLine(event)}
+                </span>
+              </button>
+            </li>
+          ))}
+          {events.length > 3 && <li className="text-xs text-sky-800">e mais {events.length - 3}</li>}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+// Topo: entrevistas das próximas 24h sem confirmação, eventos das próximas 24h, total da semana e comparecimento.
+function Summary({ summary, onOpen, onOpenEvent }) {
   if (summary === false) return null;
   if (!summary) {
     return (
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3" aria-busy="true">
-        {[0, 1, 2].map((key) => <div key={key} className="h-24 animate-pulse rounded-lg border border-slate-200 bg-white" />)}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-busy="true">
+        {[0, 1, 2, 3].map((key) => <div key={key} className="h-24 animate-pulse rounded-lg border border-slate-200 bg-white" />)}
       </div>
     );
   }
@@ -59,7 +93,7 @@ function Summary({ summary, onOpen }) {
   const pending = summary.semConfirmacao24h;
   const { taxa, realizadas, faltas } = summary.comparecimento;
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       {pending.length > 0 ? (
         <SummaryCard tone="alert">
           <p className="flex items-center gap-1.5 text-sm font-bold text-orange-900">
@@ -90,6 +124,7 @@ function Summary({ summary, onOpen }) {
           <p className="mt-1 text-sm text-slate-600">Todas as entrevistas desse período estão confirmadas (ou não há nenhuma).</p>
         </SummaryCard>
       )}
+      <EventsCard events={summary.eventos24h ?? []} onOpen={onOpenEvent} />
       <SummaryCard>
         <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-600">
           <CalendarDays size={16} className="text-marinho-600" /> Esta semana
@@ -123,6 +158,14 @@ export default function AgendaPage() {
   const [companyFilter, setCompanyFilter] = useState("");
   const [jobFilter, setJobFilter] = useState("");
   const [selected, setSelected] = useState(null);
+  const [events, setEvents] = useState([]);
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  // Modal do evento: { event } para editar, { date } para criar.
+  const [eventForm, setEventForm] = useState(null);
+  // Pergunta "Reenviar convite atualizado?" / "Enviar cancelamento?" depois de uma mudança.
+  const [reminderPrompt, setReminderPrompt] = useState(null);
+  // Muda depois de um envio pelo aviso, para os painéis recarregarem o histórico de lembretes.
+  const [reminderVersion, setReminderVersion] = useState(0);
   const navigate = useNavigate();
 
   const period = useMemo(() => periodFor(view, anchor), [view, anchor]);
@@ -137,15 +180,21 @@ export default function AgendaPage() {
     }
   }, [view]);
 
+  // Entrevistas e eventos do período.
   const loadInterviews = useCallback(async () => {
     try {
-      const response = await apiFetch(`/entrevistas?inicio=${encodeURIComponent(startIso)}&fim=${encodeURIComponent(endIso)}`);
+      const [response, eventList] = await Promise.all([
+        apiFetch(`/entrevistas?inicio=${encodeURIComponent(startIso)}&fim=${encodeURIComponent(endIso)}`),
+        listEvents(startIso, endIso),
+      ]);
       if (!response.ok) throw new Error("Não foi possível carregar as entrevistas.");
       const list = await response.json();
       setInterviews(list);
+      setEvents(eventList);
       setLoadError("");
-      // Mantém o painel aberto com os dados novos.
+      // Mantém os painéis abertos com os dados novos.
       setSelected((current) => (current ? list.find((item) => item.id === current.id) ?? current : current));
+      setSelectedEvent((current) => (current ? eventList.find((item) => item.id === current.id) ?? current : current));
     } catch (error) {
       setLoadError(error.message);
     } finally {
@@ -199,16 +248,69 @@ export default function AgendaPage() {
   const visible = interviews.filter(
     (interview) => (!companyFilter || interview.vaga.empresa.id === companyFilter) && (!jobFilter || interview.vaga.id === jobFilter),
   );
+  // Eventos não têm empresa nem vaga: com um filtro ativo, ficam de fora.
+  const visibleEvents = companyFilter || jobFilter ? [] : events;
   const selectedCompany = companies.find((company) => company.id === companyFilter);
+
+  // Depois de mudar data/hora ou cancelar: se havia lembrete enviado, pergunta se reenvia ou cancela o convite.
+  async function followUpReminder(target, title) {
+    const prompt = await reminderFollowUp(target, title);
+    if (prompt) setReminderPrompt(prompt);
+  }
 
   function handleUpdated(result) {
     setSelected(result);
     loadInterviews();
     loadSummary();
+    followUpReminder({ entrevista_id: result.id }, `entrevista ${interviewWho(result)}`);
   }
 
-  // Arrastar na grade: reagenda direto (com a mesma regra do painel: só para o futuro).
-  async function handleMove(interview, date) {
+  function openItem(kind, item) {
+    if (kind === "evento") {
+      setSelected(null);
+      setSelectedEvent(item);
+    } else {
+      setSelectedEvent(null);
+      setSelected(item);
+    }
+  }
+
+  function handleEventSaved(saved, previous) {
+    setEventForm(null);
+    setSelectedEvent(saved);
+    loadInterviews();
+    loadSummary();
+    const timeChanged = previous && (previous.inicio !== saved.inicio || eventEnd(previous).getTime() !== eventEnd(saved).getTime());
+    if (timeChanged) followUpReminder({ evento_id: saved.id }, `evento “${saved.titulo}”`);
+  }
+
+  function handleEventDeleted() {
+    setSelectedEvent(null);
+    loadInterviews();
+    loadSummary();
+  }
+
+  // Arrastar um evento na grade: muda só o início (a duração fica).
+  async function moveEvent(event, date) {
+    setEvents((current) => current.map((item) => (item.id === event.id ? { ...item, inicio: date.toISOString() } : item)));
+    try {
+      const saved = await saveEvent(event.id, { inicio: date.toISOString() });
+      toast.success(`${event.titulo}: movido para ${dayTitle(date).toLowerCase()}, às ${timeFormat.format(date)}.`);
+      window.dispatchEvent(new Event("dashboard:refresh"));
+      followUpReminder({ evento_id: saved.id }, `evento “${saved.titulo}”`);
+    } catch (error) {
+      toast.error(error.message);
+      loadInterviews();
+    }
+  }
+
+  // Arrastar na grade: reagenda direto (entrevistas com a mesma regra do painel: só para o futuro).
+  async function handleMove(kind, item, date) {
+    if (kind === "evento") {
+      moveEvent(item, date);
+      return;
+    }
+    const interview = item;
     if (date <= new Date()) {
       toast.error("Escolha um horário no futuro para reagendar.");
       return;
@@ -221,6 +323,7 @@ export default function AgendaPage() {
       toast.success(`${interview.estudante.nome_completo}: reagendada para ${dayTitle(date).toLowerCase()}, às ${timeFormat.format(date)}.`);
       if (result.conflitos?.length) toast(conflictWarning(interview.estudante.nome_completo, result.conflitos), { icon: "⚠️", duration: 8000 });
       window.dispatchEvent(new Event("dashboard:refresh"));
+      followUpReminder({ entrevista_id: interview.id }, `entrevista ${interviewWho(interview)}`);
     } catch (error) {
       toast.error(error.message);
       loadInterviews();
@@ -239,7 +342,7 @@ export default function AgendaPage() {
   return (
     <section className="min-h-[calc(100vh-4rem)] px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto w-full max-w-7xl space-y-5">
-        <Summary summary={summary} onOpen={setSelected} />
+        <Summary summary={summary} onOpen={(interview) => openItem("entrevista", interview)} onOpenEvent={(event) => openItem("evento", event)} />
 
         <div className="space-y-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
           <div className="flex flex-wrap items-center gap-2">
@@ -282,6 +385,9 @@ export default function AgendaPage() {
                 </button>
               ))}
             </div>
+            <button type="button" onClick={() => setEventForm({ date: null })} className={buttonPrimary}>
+              <Plus size={16} /> Novo evento
+            </button>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -321,12 +427,16 @@ export default function AgendaPage() {
                 <X size={15} /> Limpar filtros
               </button>
             )}
-            <ul className="ml-auto flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-600" aria-label="Legenda dos status">
+            <ul className="ml-auto flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-600" aria-label="Legenda das cores">
               {Object.entries(interviewStatusLabels).map(([status, label]) => (
                 <li key={status} className="inline-flex items-center gap-1.5">
                   <span className={`size-2 rounded-full ${interviewStatusDot[status]}`} /> {label}
                 </li>
               ))}
+              <li className="inline-flex items-center gap-1.5 border-l border-slate-200 pl-3 font-semibold text-sky-800">
+                <span className={`size-2 rounded-full ${eventDot}`} />
+                <CalendarDays size={12} /> Evento
+              </li>
             </ul>
           </div>
         </div>
@@ -347,15 +457,27 @@ export default function AgendaPage() {
           ) : isLoading && interviews.length === 0 ? (
             <div className="h-96 animate-pulse bg-slate-50" />
           ) : view === "mes" ? (
-            <MonthGrid days={period.days} month={anchor.getMonth()} interviews={visible} onOpen={setSelected} onPickDay={pickDay} />
+            <MonthGrid days={period.days} month={anchor.getMonth()} interviews={visible} events={visibleEvents} onOpen={openItem} onPickDay={pickDay} />
           ) : view === "lista" ? (
-            <InterviewList interviews={visible} onOpen={setSelected} />
+            <InterviewList interviews={visible} events={visibleEvents} onOpen={openItem} />
           ) : (
-            <TimeGrid days={period.days} interviews={visible} onOpen={setSelected} onMove={handleMove} />
+            <TimeGrid
+              days={period.days}
+              interviews={visible}
+              events={visibleEvents}
+              onOpen={openItem}
+              onMove={handleMove}
+              onCreate={(date) => setEventForm({ date })}
+            />
           )}
         </div>
         {(view === "dia" || view === "semana") && (
-          <p className="text-xs text-slate-500">Dica: arraste uma entrevista em aberto para outro dia ou horário para reagendar.</p>
+          <p className="text-xs text-slate-500">
+            Dica: clique num horário vazio para criar um evento; arraste uma entrevista em aberto ou um evento para outro dia ou horário para reagendar.
+          </p>
+        )}
+        {(companyFilter || jobFilter) && events.length > 0 && (
+          <p className="text-xs text-slate-500">Os eventos ficam escondidos enquanto houver filtro de empresa ou vaga.</p>
         )}
       </div>
 
@@ -364,9 +486,36 @@ export default function AgendaPage() {
           key={selected.id}
           interview={selected}
           conflicts={conflicts}
+          reminderVersion={reminderVersion}
           onClose={() => setSelected(null)}
           onUpdated={handleUpdated}
           onOpenProfile={(studentId) => navigate(`/estudantes/${studentId}`)}
+        />
+      )}
+
+      {selectedEvent && (
+        <EventPanel
+          key={selectedEvent.id}
+          event={selectedEvent}
+          reminderVersion={reminderVersion}
+          onClose={() => setSelectedEvent(null)}
+          onEdit={(event) => setEventForm({ event })}
+          onDeleted={handleEventDeleted}
+        />
+      )}
+
+      {eventForm && (
+        <EventFormModal event={eventForm.event} date={eventForm.date} onClose={() => setEventForm(null)} onSaved={handleEventSaved} />
+      )}
+
+      {reminderPrompt && (
+        <ReminderPrompt
+          prompt={reminderPrompt}
+          onClose={() => setReminderPrompt(null)}
+          onDone={() => {
+            setReminderPrompt(null);
+            setReminderVersion((current) => current + 1);
+          }}
         />
       )}
 
