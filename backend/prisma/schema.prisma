@@ -52,9 +52,13 @@ enum EntrevistaFormato {
   ONLINE
 }
 
+// Etapas da candidatura, na ordem do Kanban. AGUARDANDO_RETORNO ("Em análise") não é mais usado: as candidaturas
+// foram movidas para EM_TESTE e o valor fica só para não recriar o tipo (veja src/etapas.js).
 enum StatusKanban {
+  CANDIDATO_CONTATADO
   ENVIADO_EMPRESA
   ENTREVISTA_AGENDADA
+  EM_TESTE
   AGUARDANDO_RETORNO
   APROVADO
   RECUSADO
@@ -90,7 +94,7 @@ model Empresa {
 }
 
 model Estudante {
-  id                   String        @id @default(uuid()) @db.Uuid
+  id                   String         @id @default(uuid()) @db.Uuid
   nome_completo        String
   telefone             String
   email                String?
@@ -100,12 +104,12 @@ model Estudante {
   endereco             String?
   // Campo antigo, mantido como histórico; as telas usam turno_estudo.
   horario_estudo       HorarioEstudo?
-  anotacoes_recrutador String?       @db.Text
+  anotacoes_recrutador String?        @db.Text
   turno_estudo         TurnoEstudo?
-  disponibilidade      Periodo[]     @default([])
+  disponibilidade      Periodo[]      @default([])
   semestre_atual       Int?
-  previsao_formatura   DateTime?     @db.Date
-  data_nascimento      DateTime?     @db.Date
+  previsao_formatura   DateTime?      @db.Date
+  data_nascimento      DateTime?      @db.Date
   aplicacoes           Aplicacao[]
 }
 
@@ -124,10 +128,10 @@ model Vaga {
 }
 
 model Aplicacao {
-  id                   String       @id @default(uuid()) @db.Uuid
-  vaga_id              String       @db.Uuid
-  estudante_id         String       @db.Uuid
-  status_kanban        StatusKanban @default(ENVIADO_EMPRESA)
+  id                   String             @id @default(uuid()) @db.Uuid
+  vaga_id              String             @db.Uuid
+  estudante_id         String             @db.Uuid
+  status_kanban        StatusKanban       @default(CANDIDATO_CONTATADO)
   data_hora_entrevista DateTime?
   motivo_recusa        String?
   data_aprovacao       DateTime?
@@ -137,10 +141,10 @@ model Aplicacao {
   entrevista_local     String?
   entrevista_duracao   Int?               @default(45)
   entrevistador        String?
-  created_at           DateTime     @default(now())
-  updated_at           DateTime     @default(now()) @updatedAt
-  vaga                 Vaga         @relation(fields: [vaga_id], references: [id])
-  estudante            Estudante    @relation(fields: [estudante_id], references: [id])
+  created_at           DateTime           @default(now())
+  updated_at           DateTime           @default(now()) @updatedAt
+  vaga                 Vaga               @relation(fields: [vaga_id], references: [id])
+  estudante            Estudante          @relation(fields: [estudante_id], references: [id])
 
   @@unique([vaga_id, estudante_id])
 }

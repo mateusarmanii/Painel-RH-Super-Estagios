@@ -143,7 +143,7 @@ async function main() {
         {
           vaga_id: vagaDesenvolvimento.id,
           estudante_id: candidatos[1].id,
-          status_kanban: "AGUARDANDO_RETORNO",
+          status_kanban: "EM_TESTE",
         },
         {
           vaga_id: vagaDados.id,
@@ -164,7 +164,7 @@ async function main() {
         {
           vaga_id: vagaMarketing.id,
           estudante_id: candidatos[5].id,
-          status_kanban: "AGUARDANDO_RETORNO",
+          status_kanban: "EM_TESTE",
         },
       ],
     });

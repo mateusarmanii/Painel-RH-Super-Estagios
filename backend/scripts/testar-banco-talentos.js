@@ -63,8 +63,8 @@ async function main() {
     r = await req("POST", `/candidatos/${ids.estudante}/candidaturas`, { vaga_id: vagaFechada.id });
     checar("Vaga fechada → 409", r.status === 409, `[${r.status}] ${r.body?.erro}`);
     r = await req("POST", `/candidatos/${ids.estudante}/candidaturas`, { vaga_id: vagaNova.id });
-    checar("Vaga aberta → 201 em ENVIADO_EMPRESA",
-      r.status === 201 && r.body.status_kanban === "ENVIADO_EMPRESA" && r.body.vaga?.titulo === "[TESTE] Vaga nova",
+    checar("Vaga aberta → 201 em CANDIDATO_CONTATADO",
+      r.status === 201 && r.body.status_kanban === "CANDIDATO_CONTATADO" && r.body.vaga?.titulo === "[TESTE] Vaga nova",
       `[${r.status}] ${r.body?.status_kanban ?? r.body?.erro}`);
     r = await req("POST", `/candidatos/${ids.estudante}/candidaturas`, { vaga_id: vagaNova.id });
     checar("Indicar de novo para a mesma vaga → 409", r.status === 409, `[${r.status}] ${r.body?.erro}`);
@@ -100,7 +100,7 @@ async function main() {
     checar("Aparece em Estudantes com 0 candidaturas",
       r.body.some((e) => e.id === idSemVaga && e.aplicacoes.length === 0));
     r = await req("POST", `/candidatos/${idSemVaga}/candidaturas`, { vaga_id: vagaNova.id });
-    checar("Depois pode ser indicado para uma vaga → 201", r.status === 201 && r.body.status_kanban === "ENVIADO_EMPRESA",
+    checar("Depois pode ser indicado para uma vaga → 201", r.status === 201 && r.body.status_kanban === "CANDIDATO_CONTATADO",
       `[${r.status}] ${r.body?.erro ?? ""}`);
   } finally {
     for (const id of [ids.estudante, ...ids.semVaga].filter(Boolean)) {

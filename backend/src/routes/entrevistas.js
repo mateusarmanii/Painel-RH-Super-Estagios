@@ -125,7 +125,7 @@ const acoes = new Set(["confirmar", "reagendar", "realizada", "nao_compareceu", 
 // Ações do painel da Agenda. Só valem enquanto o candidato está na etapa "Entrevista".
 //  confirmar        → Confirmada
 //  reagendar        → nova data (e, se vierem, formato/local/duração/entrevistador); volta para Aguardando
-//  realizada        → Realizada e o candidato vai para "Em análise"
+//  realizada        → Realizada e o candidato vai para "Em Teste"
 //  nao_compareceu   → Não compareceu (continua na etapa, para reagendar ou dispensar)
 //  dispensar        → candidato dispensado com motivo; a entrevista fica Cancelada (ou mantém "Não compareceu")
 router.patch("/:id", async (req, res) => {
@@ -142,7 +142,7 @@ router.patch("/:id", async (req, res) => {
     });
     if (!atual?.data_hora_entrevista) return res.status(404).json({ erro: "Entrevista não encontrada." });
     if (atual.status_kanban !== "ENTREVISTA_AGENDADA") {
-      return res.status(409).json({ erro: "Esta entrevista já foi encerrada: o candidato não está mais na etapa Entrevista." });
+      return res.status(409).json({ erro: "Esta entrevista já foi encerrada: o candidato não está mais na etapa Em Entrevista." });
     }
 
     const status = statusDaEntrevista(atual);
@@ -163,7 +163,7 @@ router.patch("/:id", async (req, res) => {
       data = { ...detalhes.data, data_hora_entrevista: novaData, entrevista_status: "AGUARDANDO" };
     } else if (acao === "realizada") {
       if (!jaAconteceu) return res.status(409).json({ erro: "A entrevista ainda não começou." });
-      data = { entrevista_status: "REALIZADA", status_kanban: "AGUARDANDO_RETORNO", motivo_recusa: null };
+      data = { entrevista_status: "REALIZADA", status_kanban: "EM_TESTE", motivo_recusa: null };
     } else if (acao === "nao_compareceu") {
       if (!jaAconteceu) return res.status(409).json({ erro: "A entrevista ainda não começou." });
       data = { entrevista_status: "NAO_COMPARECEU" };

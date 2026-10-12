@@ -3,17 +3,13 @@ const prisma = require("../prisma");
 const { uuidValido, pluralizar } = require("../utils");
 const { camposEstudante, observacao } = require("../campos");
 const { camposEntrevista, conflitosDoEstudante, statusAoSairDaEntrevista } = require("../agenda");
+const { ETAPAS, ETAPA_INICIAL } = require("../etapas");
 
 const router = express.Router();
 // A coluna instituicao_ensino é obrigatória no banco; sem migration, "não informada" é gravada como texto vazio.
 const SEM_INSTITUICAO = "";
-const statusKanbanValidos = new Set([
-  "ENVIADO_EMPRESA",
-  "ENTREVISTA_AGENDADA",
-  "AGUARDANDO_RETORNO",
-  "APROVADO",
-  "RECUSADO",
-]);
+// AGUARDANDO_RETORNO ("Em análise") saiu das telas e não é mais aceito (veja src/etapas.js).
+const statusKanbanValidos = new Set(ETAPAS);
 
 // Outro estudante com o mesmo telefone, comparando só os dígitos ("(31) 98888-7777" = "31988887777").
 // Na edição, ignora o próprio estudante. Não há restrição no banco: a checagem é só aqui.
@@ -225,7 +221,7 @@ router.put("/:id/candidaturas/:aplicacaoId/observacao", async (req, res) => {
   }
 });
 
-// Indica um estudante já cadastrado para outra vaga (Banco de Talentos): nova candidatura em ENVIADO_EMPRESA.
+// Indica um estudante já cadastrado para outra vaga (Banco de Talentos): nova candidatura em "Candidato Contatado".
 router.post("/:id/candidaturas", async (req, res) => {
   const { id } = req.params;
   const { vaga_id } = req.body ?? {};
@@ -247,7 +243,7 @@ router.post("/:id/candidaturas", async (req, res) => {
     }
 
     const candidatura = await prisma.aplicacao.create({
-      data: { estudante_id: id, vaga_id },
+      data: { estudante_id: id, vaga_id, status_kanban: ETAPA_INICIAL },
       include: { vaga: { select: { codigo_vaga: true, titulo: true, empresa: { select: { id: true, nome: true, logo_url: true } } } } },
     });
 
@@ -322,7 +318,7 @@ router.post("/", async (req, res) => {
           endereco,
           anotacoes_recrutador,
           ...extras.data,
-          ...(vaga_id && { aplicacoes: { create: { vaga: { connect: { id: vaga_id } } } } }),
+          ...(vaga_id && { aplicacoes: { create: { vaga: { connect: { id: vaga_id } }, status_kanban: ETAPA_INICIAL } } }),
         },
         include: { aplicacoes: true },
       });

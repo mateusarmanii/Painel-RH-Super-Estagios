@@ -93,7 +93,7 @@ async function main() {
     await new Promise((resolve) => setTimeout(resolve, 20));
     r = await patchStatus(x, "APROVADO");
     checar("Repetir APROVADO não altera a data", r.body.data_aprovacao === primeiraAprovacao);
-    r = await patchStatus(x, "AGUARDANDO_RETORNO");
+    r = await patchStatus(x, "EM_TESTE");
     checar("Sair de APROVADO limpa data_aprovacao", r.body.data_aprovacao === null);
     r = await patchStatus(x, "APROVADO");
     checar("Voltar para APROVADO grava nova data", r.body.data_aprovacao !== null);
@@ -110,7 +110,7 @@ async function main() {
     r = await patchStatus(y, "RECUSADO", { motivo_recusa: "  Perfil não aderente  " });
     checar("RECUSADO com motivo → 200 e motivo salvo sem espaços extras",
       r.status === 200 && r.body.motivo_recusa === "Perfil não aderente", `[${r.status}] "${r.body?.motivo_recusa}"`);
-    r = await patchStatus(y, "AGUARDANDO_RETORNO");
+    r = await patchStatus(y, "EM_TESTE");
     checar("Sair de RECUSADO limpa o motivo", r.status === 200 && r.body.motivo_recusa === null, `[${r.status}]`);
 
     console.log("\n== GET /entrevistas");

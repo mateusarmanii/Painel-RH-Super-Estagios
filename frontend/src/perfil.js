@@ -2,8 +2,9 @@
 import { normalize } from "./text.js";
 import { ageFrom } from "./estudante.js";
 import { interviewStatus } from "./interviewStatus.js";
+import { IN_PROCESS_STATUSES } from "./kanbanStatus.js";
 
-export const IN_PROCESS = ["ENVIADO_EMPRESA", "ENTREVISTA_AGENDADA", "AGUARDANDO_RETORNO"];
+export const IN_PROCESS = IN_PROCESS_STATUSES;
 
 // Situação do estudante (também usada no filtro de Estudantes): contratado > em processo > disponível.
 export function studentSituation(student) {

@@ -279,8 +279,8 @@ export default function InterviewPanel({ interview, conflicts, onClose, onUpdate
                 <button
                   type="button"
                   disabled={!started || Boolean(busy)}
-                  title={started ? "Move o candidato para Em análise" : "Disponível depois do horário da entrevista"}
-                  onClick={() => act("realizada", { acao: "realizada" }, () => `Entrevista realizada: ${interview.estudante.nome_completo} foi para Em análise.`)}
+                  title={started ? "Move o candidato para Em Teste" : "Disponível depois do horário da entrevista"}
+                  onClick={() => act("realizada", { acao: "realizada" }, () => `Entrevista realizada: ${interview.estudante.nome_completo} foi para Em Teste.`)}
                   className={`${actionButton} border-marinho-200 bg-marinho-50 text-marinho-800 hover:bg-marinho-100`}
                 >
                   <CheckCircle2 size={16} /> Realizada

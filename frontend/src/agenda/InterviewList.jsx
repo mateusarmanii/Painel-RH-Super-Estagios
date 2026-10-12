@@ -26,7 +26,7 @@ export default function InterviewList({ interviews, onOpen }) {
   if (groups.length === 0) {
     return (
       <div className="p-4">
-        <EmptyState icon={CalendarX2} title="Nenhuma entrevista neste período" description="Agende pelo Kanban da vaga, movendo o candidato para Entrevista." />
+        <EmptyState icon={CalendarX2} title="Nenhuma entrevista neste período" description="Agende pelo Kanban da vaga, movendo o candidato para Em Entrevista." />
       </div>
     );
   }

@@ -1,6 +1,7 @@
 // Regras de negócio usadas em mais de uma tela (listas e quadro "Olá, o RH tem" do Dashboard).
+import { IN_PROCESS_STATUSES } from "./kanbanStatus.js";
 
-const IN_PROCESS = new Set(["ENVIADO_EMPRESA", "AGUARDANDO_RETORNO", "ENTREVISTA_AGENDADA"]);
+const IN_PROCESS = new Set(IN_PROCESS_STATUSES);
 
 // Regras do Banco de Talentos:
 // - entra quem tem ao menos uma candidatura RECUSADO;

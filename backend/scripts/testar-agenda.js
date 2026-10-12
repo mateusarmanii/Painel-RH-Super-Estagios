@@ -129,8 +129,8 @@ async function main() {
 
     await agendar(y.id, y.aplicacao, new Date(Date.now() - 2 * DIA));
     r = await acao(y.aplicacao, { acao: "realizada" });
-    checar("Realizada → candidato vai para Em análise", r.status === 200 && r.body.entrevista_status === "REALIZADA"
-      && r.body.status_kanban === "AGUARDANDO_RETORNO", `[${r.status}] ${r.body?.status_kanban}`);
+    checar("Realizada → candidato vai para Em Teste", r.status === 200 && r.body.entrevista_status === "REALIZADA"
+      && r.body.status_kanban === "EM_TESTE", `[${r.status}] ${r.body?.status_kanban}`);
     r = await acao(y.aplicacao, { acao: "confirmar" });
     checar("Depois de encerrada, novas ações → 409", r.status === 409, `[${r.status}]`);
 
@@ -174,8 +174,8 @@ async function main() {
 
     console.log("\n== Mover pelo Kanban dá desfecho à entrevista");
     await agendar(w.id, w.aplicacao, daqui(2 * DIA));
-    r = await req("PATCH", `/candidatos/${w.id}`, { aplicacao_id: w.aplicacao, status_kanban: "AGUARDANDO_RETORNO" });
-    checar("Entrevista → Em análise: Realizada", r.body?.entrevista_status === "REALIZADA", `${r.body?.entrevista_status}`);
+    r = await req("PATCH", `/candidatos/${w.id}`, { aplicacao_id: w.aplicacao, status_kanban: "EM_TESTE" });
+    checar("Entrevista → Em Teste: Realizada", r.body?.entrevista_status === "REALIZADA", `${r.body?.entrevista_status}`);
     await agendar(k.id, k.aplicacao, daqui(2 * DIA));
     r = await req("PATCH", `/candidatos/${k.id}`, { aplicacao_id: k.aplicacao, status_kanban: "ENVIADO_EMPRESA" });
     checar("Entrevista → Enviado à empresa: Cancelada", r.body?.entrevista_status === "CANCELADA", `${r.body?.entrevista_status}`);

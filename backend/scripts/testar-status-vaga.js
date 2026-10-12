@@ -29,7 +29,8 @@ async function candidato(nome, vagaId, etapa, extra = {}) {
     instituicao_ensino: "Teste", vaga_id: vagaId });
   ids.estudantes.push(r.body.id);
   const aplicacao = r.body.aplicacoes[0].id;
-  if (etapa !== "ENVIADO_EMPRESA") {
+  // Toda candidatura nova começa em "Candidato Contatado".
+  if (etapa !== "CANDIDATO_CONTATADO") {
     await req("PATCH", `/candidatos/${r.body.id}`, { aplicacao_id: aplicacao, status_kanban: etapa, ...extra });
   }
   return { id: r.body.id, aplicacao };
@@ -85,9 +86,14 @@ async function main() {
     checar("Quem já estava dispensado mantém o próprio motivo", d.motivo_recusa === "Perfil não aderente");
 
     const outra = await criarVaga("[TESTE] Vaga Status 2");
-    const x = await candidato("Outro", outra.id, "AGUARDANDO_RETORNO");
+    const x = await candidato("Outro", outra.id, "EM_TESTE");
+    const contatado = await candidato("Contatado", outra.id, "CANDIDATO_CONTATADO");
     r = await req("PATCH", `/vagas/${outra.id}`, { status: "FECHADA", motivo: "Empresa congelou contratações" });
     checar("Fechar com motivo próprio", (await aplicacao(x.aplicacao)).motivo_recusa === "Empresa congelou contratações");
+    checar("Fechar dispensa também quem está Em Teste e Candidato Contatado",
+      (await aplicacao(x.aplicacao)).status_kanban === "RECUSADO"
+        && (await aplicacao(contatado.aplicacao)).status_kanban === "RECUSADO" && r.body.dispensados === 2,
+      `${r.body?.dispensados}`);
 
     console.log("\n== Validações e exclusão bloqueada");
     r = await req("PATCH", `/vagas/${vaga.id}`, { status: "PAUSADA" });

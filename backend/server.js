@@ -9,6 +9,16 @@ const candidatosRoutes = require("./src/routes/candidatos");
 const entrevistasRoutes = require("./src/routes/entrevistas");
 const authRoutes = require("./src/routes/auth");
 const { DIA_MS, DIAS_PARA_ALERTA, aparaTextos } = require("./src/utils");
+const { ETAPAS_EM_PROCESSO, ETAPAS_AVANCADAS } = require("./src/etapas");
+
+// Rótulos de reserva do funil (o frontend usa os mesmos nomes do Kanban).
+const rotulosDoFunil = {
+  CANDIDATO_CONTATADO: "Candidato contatado",
+  ENVIADO_EMPRESA: "Enviado à empresa",
+  ENTREVISTA_AGENDADA: "Em entrevista",
+  EM_TESTE: "Em teste",
+  APROVADO: "Contratado",
+};
 const { PASTA_LOGOS, URL_LOGOS } = require("./src/logos");
 const { exigirLogin, segredoJwt } = require("./src/auth");
 
@@ -123,7 +133,7 @@ app.get("/dashboard-metrics", async (_req, res) => {
           where: {
             status: "ABERTA",
             created_at: { lt: new Date(agora.getTime() - DIAS_PARA_ALERTA * DIA_MS) },
-            aplicacoes: { none: { status_kanban: "ENTREVISTA_AGENDADA" } },
+            aplicacoes: { none: { status_kanban: { in: ETAPAS_AVANCADAS } } },
           },
           orderBy: { created_at: "asc" },
           select: {
@@ -171,12 +181,12 @@ app.get("/dashboard-metrics", async (_req, res) => {
         totalCandidaturas: vaga._count.aplicacoes,
       })),
       distribuicaoPorCurso: agruparPorCurso(cursos.map((item) => item.curso)),
-      funnel: [
-        { status: "ENVIADO_EMPRESA", label: "Novos", total: countsByStatus.get("ENVIADO_EMPRESA") ?? 0 },
-        { status: "AGUARDANDO_RETORNO", label: "Análise", total: countsByStatus.get("AGUARDANDO_RETORNO") ?? 0 },
-        { status: "ENTREVISTA_AGENDADA", label: "Entrevista", total: countsByStatus.get("ENTREVISTA_AGENDADA") ?? 0 },
-        { status: "APROVADO", label: "Contratados", total: countsByStatus.get("APROVADO") ?? 0 },
-      ],
+      // Etapas do processo até a contratação, na ordem do Kanban (Dispensado não entra no funil).
+      funnel: [...ETAPAS_EM_PROCESSO, "APROVADO"].map((status) => ({
+        status,
+        label: rotulosDoFunil[status],
+        total: countsByStatus.get(status) ?? 0,
+      })),
     });
   } catch (error) {
     console.error("Erro ao carregar métricas do dashboard:", error);

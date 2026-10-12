@@ -11,7 +11,7 @@ function statusDaEntrevista(aplicacao) {
   switch (aplicacao.status_kanban) {
     case "ENTREVISTA_AGENDADA":
       return "AGUARDANDO";
-    case "AGUARDANDO_RETORNO":
+    case "EM_TESTE":
     case "APROVADO":
       return "REALIZADA";
     default:
@@ -19,11 +19,12 @@ function statusDaEntrevista(aplicacao) {
   }
 }
 
-// Ao tirar o candidato da coluna "Entrevista" pelo Kanban, a entrevista em aberto ganha um desfecho:
-// seguiu no processo → realizada; voltou ou foi dispensado → cancelada. "Não compareceu" e "Realizada" ficam.
+// Ao tirar o candidato da coluna "Em Entrevista" pelo Kanban, a entrevista em aberto ganha um desfecho:
+// seguiu no processo (Em Teste, Contratado) → realizada; voltou ou foi dispensado → cancelada.
+// "Não compareceu" e "Realizada" ficam.
 function statusAoSairDaEntrevista(statusAtual, novaEtapa) {
   if (statusAtual && !["AGUARDANDO", "CONFIRMADA"].includes(statusAtual)) return statusAtual;
-  return ["AGUARDANDO_RETORNO", "APROVADO"].includes(novaEtapa) ? "REALIZADA" : "CANCELADA";
+  return ["EM_TESTE", "APROVADO"].includes(novaEtapa) ? "REALIZADA" : "CANCELADA";
 }
 
 // Formato, local/link, duração e entrevistador (todos opcionais; ausente não muda, vazio apaga).

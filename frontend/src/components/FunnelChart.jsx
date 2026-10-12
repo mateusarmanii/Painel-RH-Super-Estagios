@@ -12,10 +12,10 @@ import {
 
 const percentFormat = new Intl.NumberFormat("pt-BR", { style: "percent", maximumFractionDigits: 0 });
 
-// Rótulo do eixo que quebra linha ("Enviado à empresa") para não encostar no vizinho em telas estreitas.
+// Rótulo do eixo que quebra linha ("Candidato Contatado") para não encostar no vizinho em telas estreitas (5 etapas).
 function StageTick({ x, y, payload }) {
   return (
-    <Text x={x} y={y + 4} width={72} textAnchor="middle" verticalAnchor="start" fill="#475569" fontSize={12}>
+    <Text x={x} y={y + 4} width={60} textAnchor="middle" verticalAnchor="start" fill="#475569" fontSize={11}>
       {payload.value}
     </Text>
   );

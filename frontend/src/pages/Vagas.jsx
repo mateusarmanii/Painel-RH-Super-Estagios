@@ -31,9 +31,10 @@ const currency = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "
 
 // Texto do mini funil: só as etapas com alguém, na ordem do Kanban.
 const funnelWords = {
+  CANDIDATO_CONTATADO: ["contatado", "contatados"],
   ENVIADO_EMPRESA: ["enviado", "enviados"],
-  ENTREVISTA_AGENDADA: ["entrevista", "entrevista"],
-  AGUARDANDO_RETORNO: ["em análise", "em análise"],
+  ENTREVISTA_AGENDADA: ["em entrevista", "em entrevista"],
+  EM_TESTE: ["em teste", "em teste"],
   APROVADO: ["contratado", "contratados"],
   RECUSADO: ["dispensado", "dispensados"],
 };
@@ -57,8 +58,8 @@ function AgeTag({ vaga }) {
   const text = days === 0 ? "Aberta hoje" : `${plural(days, "dia", "dias")} em aberto`;
   if (vaga.resumo?.em_alerta) {
     return (
-      <span className={`${tagBase} bg-rose-50 text-destaque ring-1 ring-rose-200`} title="Mais de 10 dias sem ninguém em entrevista">
-        <AlertTriangle size={13} /> {text} · sem entrevista
+      <span className={`${tagBase} bg-rose-50 text-destaque ring-1 ring-rose-200`} title="Mais de 10 dias sem ninguém em entrevista nem em teste">
+        <AlertTriangle size={13} /> {text} · sem entrevista nem teste
       </span>
     );
   }

@@ -132,15 +132,19 @@ O prompt que tentou alterar 17 arquivos (+1.461 linhas) não deixou alterações
 
 O schema **já possui** a tabela de relacionamento `Aplicacao` (vaga ↔ estudante), com `status_kanban`, `data_hora_entrevista` e `motivo_recusa`. O status fica na candidatura, não no estudante. **Não criar tabela `Candidatura`; não renomear o enum.**
 
-Enum `StatusKanban` e rótulos usados nas telas:
+Enum `StatusKanban` e rótulos usados nas telas (desde a Parte 3, 11/10/2026), na ordem do Kanban:
 
 | Enum | Rótulo na tela |
 |---|---|
-| `ENVIADO_EMPRESA` | Novos / Enviado à empresa |
-| `AGUARDANDO_RETORNO` | Análise |
-| `ENTREVISTA_AGENDADA` | Entrevista |
+| `CANDIDATO_CONTATADO` | Candidato Contatado (etapa inicial) |
+| `ENVIADO_EMPRESA` | Enviado à Empresa |
+| `ENTREVISTA_AGENDADA` | Em Entrevista (exige data) |
+| `EM_TESTE` | Em Teste |
 | `APROVADO` | **Contratado** |
-| `RECUSADO` | **Dispensado** |
+| `RECUSADO` | **Dispensado** (exige motivo) |
+| `AGUARDANDO_RETORNO` | *Não usado* ("Em análise"): fica no enum só para não recriar o tipo; a API devolve 400 |
+
+As listas de etapas ficam em `backend/src/etapas.js` e `frontend/src/kanbanStatus.js`.
 
 ### Causa real do "Kanban global" (resolvido na 2B)
 Não era o schema. O `Kanban.jsx` antigo buscava `GET /candidatos` e exibia as aplicações de **todas as vagas num único quadro**. Desde a 2B, cada quadro é de uma vaga (`/kanban/:vagaId`).
@@ -260,6 +264,23 @@ Sem migration. Testes: `npm run test:cadastros` (27 casos, `[TESTE]`, 0 sobras);
 - **Instituição de ensino opcional** no cadastro e na edição. A coluna continua `NOT NULL`: "não informada" é gravada como **texto vazio** (`""`) e as telas a escondem. Para usar `NULL` de verdade seria preciso uma migration.
 - **Contratado → "Deseja encerrar a vaga?"**: depois de salvar a mudança para Contratado (arrastando ou pelo "⋯") no Kanban, se a vaga não estiver fechada, abre o modal "Candidato contratado!" com **Encerrar vaga** (mesmo `PATCH /vagas/:id` do "Fechar vaga", com o motivo "Vaga preenchida": quem estava em andamento é dispensado, entrevistas em aberto são canceladas) e **Manter aberta**. Após encerrar, o quadro recarrega.
 - Falta validar no navegador: o modal de contratação, o aviso com link do telefone repetido e o Calendário nas 4 visões.
+
+### ✅ Parte 3 — Novas etapas do Kanban (11/10/2026); falta validar no navegador
+Migrations aprovadas pelo usuário e aplicadas **só no banco local** (não no Neon):
+- `20261011120000_etapas_kanban_novos_valores`: `ADD VALUE` de `CANDIDATO_CONTATADO` (antes de `ENVIADO_EMPRESA`) e `EM_TESTE` (depois de `ENTREVISTA_AGENDADA`).
+- `20261011120100_etapas_kanban_mover_dados`: `AGUARDANDO_RETORNO` → `EM_TESTE` (**9 candidaturas** no banco local; 0 restantes) e padrão da coluna `CANDIDATO_CONTATADO`. Separada da anterior porque o Postgres não deixa usar um valor novo de enum na mesma transação. `prisma migrate diff` banco × schema: sem diferença.
+
+Regras:
+- Candidaturas novas (cadastro com vaga e "Indicar para vaga") começam em **Candidato Contatado** (o código grava a etapa explicitamente).
+- `PATCH /candidatos/:id` aceita só as 6 etapas; `AGUARDANDO_RETORNO` → 400. Em Entrevista exige data; Dispensado exige motivo; as outras não pedem nada.
+- **Em processo** = Candidato Contatado, Enviado à Empresa, Em Entrevista, Em Teste (resumo de vagas e empresas, Banco de Talentos, situação do estudante, fechar vaga dispensa essas).
+- **Vaga em alerta** (cards de Vagas e Dashboard): aberta há mais de 10 dias sem ninguém em **Em Entrevista nem Em Teste** (decisão aprovada pelo usuário).
+- Entrevista: sair de Em Entrevista para Em Teste ou Contratado → Realizada; para outra etapa → Cancelada. "Realizada" no Calendário leva o candidato para **Em Teste**.
+- Funil do Dashboard: 5 etapas (Contatado → Contratado; Dispensado não entra).
+- Frontend: 6 colunas no Kanban (e no "Mover para…"), cores (Contatado cinza, Em Teste âmbar), mini funil dos cards de Vagas, histórico/perfil, CSV de Estudantes; o modal "Encerrar vaga" ao contratar continua.
+- `seed.js` usa `EM_TESTE` no lugar de `AGUARDANDO_RETORNO`.
+- Testes: novo `npm run test:etapas` (20 casos); `test:resumos`, `test:status-vaga`, `test:agenda`, `test:etapa2a` e `test:banco-talentos` atualizados. 13 scripts, 312 casos, 0 sobras.
+- **Antes de publicar:** aplicar as 2 migrations no Neon (`migrate deploy`), com aprovação.
 
 ## Regras de trabalho
 

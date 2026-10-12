@@ -35,7 +35,8 @@ import PageHeader from "../components/PageHeader.jsx";
 import PanelCard from "../components/PanelCard.jsx";
 import LoadError from "../components/LoadError.jsx";
 import { statusLabels, statusStyles } from "../vagaStatus.js";
-import { dateTimeFormat, kanbanStatusLabels } from "../kanbanStatus.js";
+// IN_PROCESS_STATUSES: etapas "em andamento", dispensadas quando a vaga é fechada.
+import { dateTimeFormat, IN_PROCESS_STATUSES, kanbanStatusLabels } from "../kanbanStatus.js";
 import { apiFetch, apiJson } from "../api.js";
 import { getInitials, plural } from "../text.js";
 import { buttonDanger, buttonSecondary } from "../ui.js";
@@ -50,6 +51,12 @@ const TAMANHO_MAXIMO_OBSERVACAO = 1000;
 
 const columns = [
   {
+    id: "contatados",
+    title: kanbanStatusLabels.CANDIDATO_CONTATADO,
+    status: "CANDIDATO_CONTATADO",
+    border: "border-t-slate-400",
+  },
+  {
     id: "novos",
     title: kanbanStatusLabels.ENVIADO_EMPRESA,
     status: "ENVIADO_EMPRESA",
@@ -62,9 +69,9 @@ const columns = [
     border: "border-t-violet-500",
   },
   {
-    id: "analise",
-    title: kanbanStatusLabels.AGUARDANDO_RETORNO,
-    status: "AGUARDANDO_RETORNO",
+    id: "teste",
+    title: kanbanStatusLabels.EM_TESTE,
+    status: "EM_TESTE",
     border: "border-t-amber-500",
   },
   {
@@ -81,9 +88,6 @@ const columns = [
     background: "bg-rose-50/40",
   },
 ];
-
-// Etapas "em andamento": são dispensadas quando a vaga é fechada.
-const IN_PROCESS_STATUSES = ["ENVIADO_EMPRESA", "ENTREVISTA_AGENDADA", "AGUARDANDO_RETORNO"];
 
 const columnByStatus = Object.fromEntries(
   columns.map((column) => [column.status, column.id]),
@@ -241,7 +245,7 @@ function KanbanColumn({ column, candidates, onAction }) {
   );
 }
 
-// Formulário dos modais de "Entrevista" (data, formato, local ou link, duração, entrevistador) e "Dispensado" (motivo).
+// Formulário dos modais de "Em Entrevista" (data, formato, local ou link, duração, entrevistador) e "Dispensado" (motivo).
 function MoveDetailsForm({ move, onConfirm, onCancel }) {
   const isInterview = move.destination.status === "ENTREVISTA_AGENDADA";
   const [interview, setInterview] = useState(() => interviewFormValues());
