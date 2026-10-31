@@ -46,6 +46,8 @@ const fieldSets = {
     { name: "descricao", label: "Descrição", type: "textarea", placeholder: "Descreva as responsabilidades" },
     { name: "valor", label: "Bolsa-auxílio", type: "number", placeholder: "0,00", min: "0", step: "0.01" },
     { name: "empresa_id", label: "Empresa", type: "select", optionsKey: "empresas" },
+    // O sistema detecta a área pelo título, descrição e setor da empresa; o RH só corrige se quiser.
+    { name: "area_manual", label: "Corrigir área", type: "area", optional: true },
     { name: "turno", label: "Turno", type: "select", options: toOptions(turnoVagaLabels), optional: true, half: true },
     { name: "horario", label: "Horário", placeholder: "Ex.: 08h às 14h", maxLength: 100, optional: true, half: true },
     { name: "modalidade", label: "Modalidade", type: "select", options: toOptions(modalidadeLabels), optional: true, half: true },
@@ -119,6 +121,58 @@ function toPayloadValue(field, value) {
 function initialFormState(type, initialData) {
   const fields = fieldSets[type].filter((field) => !(initialData && field.createOnly));
   return Object.fromEntries(fields.map((field) => [field.name, toFormValue(field, initialData?.[field.name])]));
+}
+
+// "Área detectada: X" (POST /vagas/area-detectada, atualizada enquanto o RH digita) e o seletor opcional para corrigir.
+// Vazio = usa a área detectada; vaga sem área identificada não aparece nas vagas compatíveis.
+function AreaField({ titulo, descricao, empresaId, value, ...selectProps }) {
+  const [areas, setAreas] = useState([]);
+  const [detected, setDetected] = useState(null); // null = buscando; [] = não identificada
+
+  useEffect(() => {
+    let isCurrent = true;
+    apiJson("/vagas/areas", {}, "Não foi possível carregar as áreas.")
+      .then((list) => isCurrent && setAreas(list))
+      .catch(() => {});
+    return () => {
+      isCurrent = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      apiJson("/vagas/area-detectada", { method: "POST", body: { titulo, descricao, empresa_id: empresaId || null }, signal: controller.signal })
+        .then((result) => setDetected(result.detectadas ?? []))
+        .catch(() => {
+          if (!controller.signal.aborted) setDetected([]);
+        });
+    }, 400);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [titulo, descricao, empresaId]);
+
+  const detectedText =
+    detected === null ? "detectando..." : detected.length === 0 ? "não identificada" : detected.map((area) => area.nome).join(" · ");
+
+  return (
+    <>
+      <span className="block text-xs text-slate-600" aria-live="polite" title={detected?.map((area) => area.motivo).join("\n")}>
+        Área detectada: <strong className={detected?.length === 0 ? "text-orange-700" : "text-marinho-900"}>{detectedText}</strong>
+        {detected?.length === 0 && " — a vaga não aparece nas vagas compatíveis até ter uma área."}
+      </span>
+      <select {...selectProps} value={value} required={false}>
+        <option value="">Usar a área detectada</option>
+        {areas.map((area) => (
+          <option key={area.id} value={area.id}>
+            {area.nome}
+          </option>
+        ))}
+      </select>
+    </>
+  );
 }
 
 export default function CreationForm({ type, initialData, onSuccess }) {
@@ -358,6 +412,8 @@ export default function CreationForm({ type, initialData, onSuccess }) {
                   </option>
                 ))}
               </select>
+            ) : field.type === "area" ? (
+              <AreaField {...commonProps} titulo={form.titulo} descricao={form.descricao} empresaId={form.empresa_id} />
             ) : field.type === "cep" ? (
               <>
                 <input

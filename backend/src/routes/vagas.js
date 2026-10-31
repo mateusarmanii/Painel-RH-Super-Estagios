@@ -3,6 +3,7 @@ const prisma = require("../prisma");
 const { uuidValido, pluralizar, resumirVaga } = require("../utils");
 const { camposVaga } = require("../campos");
 const { RESUMO_ARQUIVO } = require("../arquivos");
+const { areaDaVaga, listaAreas } = require("../compatibilidade");
 
 const router = express.Router();
 const statusVagaValidos = new Set(["ABERTA", "FECHADA", "SUSPENSA"]);
@@ -16,12 +17,36 @@ router.get("/", async (_req, res) => {
     // Ordem numérica do Nº: com códigos de 5 e 6 dígitos, a ordem de texto poria "100001" antes de "12345".
     vagas.sort((a, b) => Number(a.codigo_vaga) - Number(b.codigo_vaga));
 
-    // Resumo para os cards: candidatos por etapa, dias em aberto e alerta.
+    // Resumo para os cards: candidatos por etapa, dias em aberto e alerta. Área: detectada ou corrigida pelo RH.
     const agora = new Date();
-    return res.json(vagas.map(({ aplicacoes, ...vaga }) => ({ ...vaga, resumo: resumirVaga(vaga, aplicacoes, agora) })));
+    return res.json(
+      vagas.map(({ aplicacoes, ...vaga }) => ({ ...vaga, resumo: resumirVaga(vaga, aplicacoes, agora), area: areaDaVaga(vaga) })),
+    );
   } catch (error) {
     console.error("Erro ao listar vagas:", error);
     return res.status(500).json({ erro: "Não foi possível listar as vagas." });
+  }
+});
+
+// Áreas do dicionário (src/areas.js), para o seletor "Corrigir área" do formulário.
+router.get("/areas", (_req, res) => res.json(listaAreas));
+
+// Área que o sistema detecta para um título/descrição/empresa, enquanto o RH preenche o formulário (não grava nada).
+router.post("/area-detectada", async (req, res) => {
+  const { titulo, descricao, empresa_id } = req.body ?? {};
+  if ((titulo !== undefined && typeof titulo !== "string") || (descricao !== undefined && typeof descricao !== "string")) {
+    return res.status(400).json({ erro: "Título e descrição devem ser texto." });
+  }
+
+  try {
+    const empresa = uuidValido.test(empresa_id ?? "")
+      ? await prisma.empresa.findUnique({ where: { id: empresa_id }, select: { setor: true } })
+      : null;
+    const { detectadas } = areaDaVaga({ titulo, descricao, empresa });
+    return res.json({ detectadas });
+  } catch (error) {
+    console.error("Erro ao detectar área da vaga:", error);
+    return res.status(500).json({ erro: "Não foi possível detectar a área da vaga." });
   }
 });
 

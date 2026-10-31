@@ -25,7 +25,8 @@
     "test:etapas": "node scripts/testar-etapas.js",
     "test:campos": "node scripts/testar-campos.js",
     "test:eventos": "node scripts/testar-eventos.js",
-    "test:arquivos": "node scripts/testar-arquivos.js"
+    "test:arquivos": "node scripts/testar-arquivos.js",
+    "test:areas": "node scripts/testar-areas.js"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

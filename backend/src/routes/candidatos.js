@@ -5,6 +5,7 @@ const { camposEstudante, observacao } = require("../campos");
 const { camposEntrevista, conflitosDoEstudante, statusAoSairDaEntrevista } = require("../agenda");
 const { ETAPAS, ETAPA_INICIAL } = require("../etapas");
 const { RESUMO_ARQUIVO, receberArquivo, gravarArquivo, apagarArquivo, enviarArquivo } = require("../arquivos");
+const { separarVagas } = require("../compatibilidade");
 
 const router = express.Router();
 // AGUARDANDO_RETORNO ("Em análise") saiu das telas e não é mais aceito (veja src/etapas.js).
@@ -100,6 +101,50 @@ router.get("/:id", async (req, res) => {
   } catch (error) {
     console.error("Erro ao carregar candidato:", error);
     return res.status(500).json({ erro: "Não foi possível carregar o candidato." });
+  }
+});
+
+// Vagas abertas para indicar o estudante (perfil e "Indicar para vaga"), com a regra de src/compatibilidade.js:
+// compatíveis (área do curso ou correlata, sem conflito de turno/disponibilidade/cidade) e as outras, com o motivo.
+router.get("/:id/vagas-compativeis", async (req, res) => {
+  const { id } = req.params;
+  if (!uuidValido.test(id)) {
+    return res.status(400).json({ erro: "ID de candidato inválido." });
+  }
+
+  try {
+    const [estudante, vagas] = await Promise.all([
+      prisma.estudante.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          nome_completo: true,
+          curso: true,
+          turno_estudo: true,
+          horario_estudo: true,
+          disponibilidade: true,
+          cidade: true,
+          aplicacoes: { select: { vaga_id: true } },
+        },
+      }),
+      prisma.vaga.findMany({
+        where: { status: "ABERTA" },
+        include: { empresa: { select: { id: true, nome: true, setor: true, logo_arquivo_id: true } } },
+      }),
+    ]);
+    if (!estudante) return res.status(404).json({ erro: "Candidato não encontrado." });
+
+    const { areaCurso, compativeis, outras, semArea } = separarVagas(estudante, vagas);
+    return res.json({
+      estudante: { id: estudante.id, nome_completo: estudante.nome_completo, curso: estudante.curso },
+      area_curso: areaCurso,
+      compativeis,
+      outras,
+      sem_area: semArea,
+    });
+  } catch (error) {
+    console.error("Erro ao listar vagas compatíveis:", error);
+    return res.status(500).json({ erro: "Não foi possível carregar as vagas compatíveis." });
   }
 });
 

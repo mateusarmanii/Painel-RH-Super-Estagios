@@ -1,5 +1,6 @@
 // Validação dos campos opcionais de estudante, vaga e candidatura.
 // Regra comum: campo ausente (undefined) não muda nada; null ou "" apaga o valor.
+const { areaPorId } = require("./compatibilidade");
 
 const turnosEstudo = new Set(["MANHA", "TARDE", "NOITE", "INTEGRAL", "EAD"]);
 const periodos = ["MANHA", "TARDE", "NOITE"];
@@ -132,10 +133,17 @@ function camposEndereco(body) {
   return { data };
 }
 
-// Campos opcionais da vaga: turno, horário, endereço, modalidade e preferência de sexo (uso interno).
+// Campos opcionais da vaga: turno, horário, endereço, modalidade, preferência de sexo (uso interno) e área
+// corrigida pelo RH (id de src/areas.js; vazio = usa a área detectada).
 function camposVaga(body) {
   const data = {};
-  const { turno, horario, modalidade, sexo_preferencia } = body;
+  const { turno, horario, modalidade, sexo_preferencia, area_manual } = body;
+
+  if (area_manual !== undefined) {
+    if (vazio(area_manual)) data.area_manual = null;
+    else if (areaPorId.has(area_manual)) data.area_manual = area_manual;
+    else return erro("Área da vaga inválida.");
+  }
 
   if (turno !== undefined) {
     if (vazio(turno)) data.turno = null;

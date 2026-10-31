@@ -99,6 +99,27 @@ function MiniFunnel({ resumo }) {
   );
 }
 
+// Área da vaga (detectada pelo sistema ou corrigida pelo RH), discreta abaixo do título; o motivo aparece ao passar o mouse.
+const hasArea = (vaga) => (vaga.area?.areas?.length ?? 0) > 0;
+const areaNames = (vaga) => (vaga.area?.areas ?? []).map((area) => area.nome).join(" · ");
+
+function AreaLine({ area }) {
+  if (!area) return null;
+  if (area.areas.length === 0) {
+    return (
+      <p className="mt-1 text-xs font-semibold text-orange-700" title="Corrija a área no Editar da vaga para ela entrar nas vagas compatíveis">
+        Área não identificada
+      </p>
+    );
+  }
+  return (
+    <p className="mt-1 cursor-help text-xs text-slate-500" title={area.areas.map((item) => item.motivo).join("\n")}>
+      Área: {area.areas.map((item) => item.nome).join(" · ")}
+      {area.manual && " (corrigida)"}
+    </p>
+  );
+}
+
 function renderVaga(vaga) {
   const total = vaga.resumo?.total ?? 0;
   const place = placeText(vaga);
@@ -123,6 +144,7 @@ function renderVaga(vaga) {
       </div>
 
       <h2 className="mt-4 text-xl font-extrabold leading-snug text-marinho-900">{vaga.titulo}</h2>
+      <AreaLine area={vaga.area} />
 
       <div className="mt-3 flex flex-wrap gap-1.5">
         <span className={`${tagBase} bg-marinho-50 text-marinho-800`}>{currency.format(vaga.valor)}</span>
@@ -162,6 +184,7 @@ const csvExport = {
     { header: "Título", value: (vaga) => vaga.titulo },
     { header: "Empresa", value: (vaga) => vaga.empresa?.nome },
     { header: "Status", value: (vaga) => statusLabels[vaga.status] },
+    { header: "Área", value: (vaga) => (hasArea(vaga) ? areaNames(vaga) : "Não identificada") },
     { header: "Bolsa-auxílio (R$)", value: (vaga) => csvDecimal(vaga.valor) },
     { header: "Turno", value: (vaga) => turnoVagaLabels[vaga.turno] },
     { header: "Horário", value: (vaga) => vaga.horario },
@@ -260,6 +283,24 @@ function StatusFilter({ value, onChange, items }) {
   );
 }
 
+// "Área não identificada": para o RH conferir as vagas que ficam fora das vagas compatíveis.
+function AreaFilter({ active, onChange, items }) {
+  const count = items.filter((vaga) => !hasArea(vaga)).length;
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      onClick={() => onChange(!active)}
+      className={`inline-flex h-10 items-center gap-1.5 rounded-md border px-3 text-sm font-semibold transition-colors ${
+        active ? "border-orange-300 bg-orange-50 text-orange-800" : "border-slate-300 bg-white text-marinho-800 hover:bg-marinho-50"
+      }`}
+    >
+      Área não identificada
+      <span className={`text-xs tabular-nums ${active ? "text-orange-700" : "text-slate-400"}`}>{count}</span>
+    </button>
+  );
+}
+
 function CountHeader({ items, isLoading }) {
   const open = items.filter((vaga) => vaga.status === "ABERTA").length;
   const alerts = items.filter((vaga) => vaga.resumo?.em_alerta).length;
@@ -309,12 +350,23 @@ function readView() {
   }
 }
 
-// "Ver vagas" das Empresas chega aqui com ?empresa=<id>.
+// "Ver vagas" das Empresas chega aqui com ?empresa=<id>; o aviso do perfil do estudante, com ?area=nao-identificada.
 export default function VagasPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const empresaId = searchParams.get("empresa");
+  const onlyWithoutArea = searchParams.get("area") === "nao-identificada";
+  const setOnlyWithoutArea = useCallback(
+    (active) =>
+      setSearchParams((params) => {
+        const next = new URLSearchParams(params);
+        if (active) next.set("area", "nao-identificada");
+        else next.delete("area");
+        return next;
+      }, { replace: true }),
+    [setSearchParams],
+  );
   const [fetchedNames, setFetchedNames] = useState({});
   const empresaNome = location.state?.empresaNome ?? fetchedNames[empresaId];
   const [view, setView] = useState(readView);
@@ -343,8 +395,11 @@ export default function VagasPage() {
   }, [empresaId, empresaNome]);
 
   const filterItems = useCallback(
-    (vaga) => (!empresaId || vaga.empresa_id === empresaId) && (statusFilter === "TODAS" || vaga.status === statusFilter),
-    [empresaId, statusFilter],
+    (vaga) =>
+      (!empresaId || vaga.empresa_id === empresaId) &&
+      (statusFilter === "TODAS" || vaga.status === statusFilter) &&
+      (!onlyWithoutArea || !hasArea(vaga)),
+    [empresaId, statusFilter, onlyWithoutArea],
   );
 
   async function reopen(vaga) {
@@ -388,13 +443,18 @@ export default function VagasPage() {
           ) : (
             <CountHeader items={allItems} isLoading={isLoading} />
           )}
-          <div className="mb-4">
+          <div className="mb-4 flex flex-wrap items-center gap-2">
             <StatusFilter value={statusFilter} onChange={setStatusFilter} items={ofCompany} />
+            <AreaFilter
+              active={onlyWithoutArea}
+              onChange={setOnlyWithoutArea}
+              items={ofCompany.filter((vaga) => statusFilter === "TODAS" || vaga.status === statusFilter)}
+            />
           </div>
         </>
       );
     },
-    [empresaId, empresaNome, statusFilter],
+    [empresaId, empresaNome, statusFilter, onlyWithoutArea, setOnlyWithoutArea],
   );
 
   return (
@@ -405,7 +465,13 @@ export default function VagasPage() {
       endpoint="vagas"
       entityLabel={{ singular: "vaga", plural: "vagas", article: "a" }}
       searchPlaceholder="Buscar vaga por título, Nº ou empresa"
-      emptyMessage={empresaId && statusFilter === "TODAS" ? "Esta empresa ainda não tem vagas cadastradas." : emptyByStatus[statusFilter]}
+      emptyMessage={
+        onlyWithoutArea
+          ? "Nenhuma vaga sem área identificada neste filtro."
+          : empresaId && statusFilter === "TODAS"
+            ? "Esta empresa ainda não tem vagas cadastradas."
+            : emptyByStatus[statusFilter]
+      }
       getSearchText={getSearchText}
       getName={getName}
       csvExport={csvExport}

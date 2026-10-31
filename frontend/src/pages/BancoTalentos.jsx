@@ -16,7 +16,6 @@ const dateFormat = new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium" });
 
 export default function BancoTalentosPage() {
   const [students, setStudents] = useState([]);
-  const [openJobs, setOpenJobs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [search, setSearch] = useState("");
@@ -26,13 +25,9 @@ export default function BancoTalentosPage() {
 
   const loadData = useCallback(async () => {
     try {
-      const [studentsResponse, jobsResponse] = await Promise.all([
-        apiFetch("/candidatos"),
-        apiFetch("/vagas"),
-      ]);
-      if (!studentsResponse.ok || !jobsResponse.ok) throw new Error("Não foi possível carregar o Banco de Talentos.");
+      const studentsResponse = await apiFetch("/candidatos");
+      if (!studentsResponse.ok) throw new Error("Não foi possível carregar o Banco de Talentos.");
       setStudents(await studentsResponse.json());
-      setOpenJobs((await jobsResponse.json()).filter((job) => job.status === "ABERTA"));
       setLoadError("");
     } catch (error) {
       setLoadError(error.message);
@@ -208,8 +203,7 @@ export default function BancoTalentosPage() {
         {indicating && (
           <IndicateForm
             key={indicating.id}
-            talent={indicating}
-            openJobs={openJobs}
+            studentId={indicating.id}
             onDone={() => setIndicating(null)}
             onCancel={() => setIndicating(null)}
           />

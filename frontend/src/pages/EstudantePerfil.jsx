@@ -27,7 +27,7 @@ import Modal from "../components/Modal.jsx";
 import { kanbanStatusLabels, kanbanStatusStyles } from "../kanbanStatus.js";
 import { interviewFormatLabels, interviewStatus, interviewStatusBadge, interviewStatusLabels } from "../interviewStatus.js";
 import { ageFrom, availabilityText, formatMonthYear, modalidadeLabels, studyShiftLabel, turnoVagaLabels } from "../estudante.js";
-import { compatibleJobs, IN_PROCESS, nextInterview, profileAlerts, situationLabels, studentSituation, timeline } from "../perfil.js";
+import { IN_PROCESS, nextInterview, profileAlerts, situationLabels, studentSituation, timeline } from "../perfil.js";
 import { formatPhone, getInitials, plural, whatsappLink } from "../text.js";
 import { formatCep, placeText } from "../cep.js";
 import { buttonPrimary, buttonSecondary, card } from "../ui.js";
@@ -75,8 +75,9 @@ function JobLine({ vaga }) {
   );
 }
 
-// Etiquetas das vagas compatíveis: o que foi conferido (verde) e o que falta informar (laranja).
-const checkLabels = { schedule: "Disponibilidade", study: "Turno de estudo", city: "Cidade" };
+// Etiquetas das vagas compatíveis (regra no backend, src/compatibilidade.js): o que foi conferido (verde)
+// e o que falta informar (laranja).
+const checkLabels = { disponibilidade: "Disponibilidade", turno_estudo: "Turno de estudo", cidade: "Cidade" };
 
 function confirmedChecks(checks) {
   return Object.keys(checkLabels).filter((key) => checks[key] === true).map((key) => checkLabels[key]);
@@ -87,10 +88,10 @@ function missingChecks(job, checks) {
   // Sem turno na vaga, disponibilidade e turno de estudo ficam sem conferir pelo mesmo motivo: um aviso só.
   if (!job.turno) missing.push("Turno da vaga não informado");
   else {
-    if (checks.schedule === null) missing.push("Disponibilidade não informada");
-    if (checks.study === null) missing.push("Turno de estudo não informado");
+    if (checks.disponibilidade === null) missing.push("Disponibilidade não informada");
+    if (checks.turno_estudo === null) missing.push("Turno de estudo não informado");
   }
-  if (checks.city === null) missing.push(job.cidade?.trim() ? "Cidade do estudante não informada" : "Cidade da vaga não informada");
+  if (checks.cidade === null) missing.push(job.cidade?.trim() ? "Cidade do estudante não informada" : "Cidade da vaga não informada");
   return missing;
 }
 
@@ -158,7 +159,8 @@ export default function EstudantePerfilPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [student, setStudent] = useState(null);
-  const [jobs, setJobs] = useState([]);
+  // { area_curso, compativeis, outras, sem_area } de GET /candidatos/:id/vagas-compativeis; null se não carregou.
+  const [compat, setCompat] = useState(null);
   const [error, setError] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [isIndicating, setIsIndicating] = useState(false);
@@ -166,14 +168,17 @@ export default function EstudantePerfilPage() {
 
   const load = useCallback(async () => {
     try {
-      const [studentResponse, jobsResponse] = await Promise.all([apiFetch(`/candidatos/${id}`), apiFetch("/vagas")]);
+      const [studentResponse, compatResponse] = await Promise.all([
+        apiFetch(`/candidatos/${id}`),
+        apiFetch(`/candidatos/${id}/vagas-compativeis`),
+      ]);
       if (studentResponse.status === 404 || studentResponse.status === 400) {
         setError("Estudante não encontrado. Ele pode ter sido excluído.");
         return;
       }
       if (!studentResponse.ok) throw new Error("Não foi possível carregar o perfil.");
       setStudent(await studentResponse.json());
-      if (jobsResponse.ok) setJobs(await jobsResponse.json());
+      setCompat(compatResponse.ok ? await compatResponse.json() : null);
     } catch (loadError) {
       setError(loadError.message);
     }
@@ -249,7 +254,7 @@ export default function EstudantePerfilPage() {
   const situation = studentSituation(student);
   const age = ageFrom(student.data_nascimento);
   const whatsapp = whatsappLink(student.telefone);
-  const matches = compatibleJobs(student, jobs);
+  const matches = compat?.compativeis ?? [];
 
   return (
     <section className="min-h-[calc(100vh-4rem)] px-4 py-6 sm:px-6 lg:px-8">
@@ -434,23 +439,32 @@ export default function EstudantePerfilPage() {
             </Section>
 
             <Section title="Vagas compatíveis" count={matches.length}>
-              {student.curso?.trim() && (
+              {compat?.area_curso && (
                 <p className="mb-3 text-xs text-slate-500">
-                  Vagas abertas ligadas ao curso, sem choque com a disponibilidade e o turno de estudo, e na cidade do estudante
-                  (home office vale para qualquer cidade). O que estiver em laranja não foi informado e precisa ser conferido.
+                  Vagas abertas da área {compat.area_curso.nome} (ou de área correlata), sem choque com a disponibilidade e o turno
+                  de estudo, e na cidade do estudante (home office vale para qualquer cidade). O que estiver em laranja não foi
+                  informado e precisa ser conferido.
                 </p>
               )}
-              {!student.curso?.trim() ? (
-                <p className="text-sm text-slate-500">Informe o curso do estudante em “Editar” para ver as vagas compatíveis.</p>
+              {!compat ? (
+                <p className="text-sm text-slate-500">Não foi possível carregar as vagas compatíveis.</p>
+              ) : !compat.area_curso ? (
+                <p className="text-sm text-slate-500">
+                  Não foi possível identificar a área do curso “{student.curso}”. Confira o nome do curso em “Editar” ou use
+                  “Indicar para vaga” para escolher a vaga.
+                </p>
               ) : matches.length === 0 ? (
                 <p className="text-sm text-slate-500">Nenhuma vaga aberta compatível no momento.</p>
               ) : (
                 <ul className="space-y-3">
-                  {matches.map(({ job, checks }) => (
+                  {matches.map(({ vaga: job, tipo, motivo, checks }) => (
                     <li key={job.id} className="rounded-md border border-slate-200 p-3">
                       <JobLine vaga={job} />
                       <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                        {["Curso", ...confirmedChecks(checks)].map((label) => (
+                        <span title={motivo} className="cursor-help rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-800">
+                          {tipo === "correlato" ? "Curso correlato" : "Curso"}
+                        </span>
+                        {confirmedChecks(checks).map((label) => (
                           <span key={label} className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-800">{label}</span>
                         ))}
                         {missingChecks(job, checks).map((label) => (
@@ -471,6 +485,14 @@ export default function EstudantePerfilPage() {
                     </li>
                   ))}
                 </ul>
+              )}
+              {compat?.sem_area > 0 && (
+                <p className="mt-3 border-t border-slate-100 pt-3 text-xs text-slate-500">
+                  <Link to="/vagas?area=nao-identificada" className="font-semibold text-marinho-700 hover:underline">
+                    {plural(compat.sem_area, "vaga aberta sem área identificada", "vagas abertas sem área identificada")}
+                  </Link>
+                  {" "}— não entram nesta lista até o RH conferir a área.
+                </p>
               )}
             </Section>
           </div>
