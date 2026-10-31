@@ -26,7 +26,7 @@ import { IndicateDialog } from "../components/IndicateForm.jsx";
 import Modal from "../components/Modal.jsx";
 import { kanbanStatusLabels, kanbanStatusStyles } from "../kanbanStatus.js";
 import { interviewFormatLabels, interviewStatus, interviewStatusBadge, interviewStatusLabels } from "../interviewStatus.js";
-import { ageFrom, availabilityText, formatMonthYear, studyShiftLabel, turnoVagaLabels } from "../estudante.js";
+import { ageFrom, availabilityText, formatMonthYear, modalidadeLabels, studyShiftLabel, turnoVagaLabels } from "../estudante.js";
 import { compatibleJobs, IN_PROCESS, nextInterview, profileAlerts, situationLabels, studentSituation, timeline } from "../perfil.js";
 import { formatPhone, getInitials, plural, whatsappLink } from "../text.js";
 import { formatCep, placeText } from "../cep.js";
@@ -73,6 +73,25 @@ function JobLine({ vaga }) {
       </div>
     </div>
   );
+}
+
+// Etiquetas das vagas compatíveis: o que foi conferido (verde) e o que falta informar (laranja).
+const checkLabels = { schedule: "Disponibilidade", study: "Turno de estudo", city: "Cidade" };
+
+function confirmedChecks(checks) {
+  return Object.keys(checkLabels).filter((key) => checks[key] === true).map((key) => checkLabels[key]);
+}
+
+function missingChecks(job, checks) {
+  const missing = [];
+  // Sem turno na vaga, disponibilidade e turno de estudo ficam sem conferir pelo mesmo motivo: um aviso só.
+  if (!job.turno) missing.push("Turno da vaga não informado");
+  else {
+    if (checks.schedule === null) missing.push("Disponibilidade não informada");
+    if (checks.study === null) missing.push("Turno de estudo não informado");
+  }
+  if (checks.city === null) missing.push(job.cidade?.trim() ? "Cidade do estudante não informada" : "Cidade da vaga não informada");
+  return missing;
 }
 
 const eventIcons = { indicado: Send, entrevista: CalendarClock, contratado: BadgeCheck, dispensado: UserX };
@@ -175,7 +194,8 @@ export default function EstudantePerfilPage() {
         "Não foi possível indicar o estudante.",
       );
       toast.success(`${student.nome_completo} foi indicado para "${job.titulo}".`);
-      window.dispatchEvent(new Event("dashboard:refresh"));
+      // Espera o perfil recarregar para a vaga sair da lista antes de liberar o botão (evita indicar duas vezes).
+      await load();
     } catch (indicateError) {
       toast.error(indicateError.message);
     } finally {
@@ -414,21 +434,31 @@ export default function EstudantePerfilPage() {
             </Section>
 
             <Section title="Vagas compatíveis" count={matches.length}>
-              <p className="mb-3 text-xs text-slate-500">
-                Vagas abertas ligadas ao curso
-                {student.disponibilidade?.length ? " e sem choque com a disponibilidade" : " (sem disponibilidade informada, o horário não é conferido)"}.
-              </p>
-              {matches.length === 0 ? (
+              {student.curso?.trim() && (
+                <p className="mb-3 text-xs text-slate-500">
+                  Vagas abertas ligadas ao curso, sem choque com a disponibilidade e o turno de estudo, e na cidade do estudante
+                  (home office vale para qualquer cidade). O que estiver em laranja não foi informado e precisa ser conferido.
+                </p>
+              )}
+              {!student.curso?.trim() ? (
+                <p className="text-sm text-slate-500">Informe o curso do estudante em “Editar” para ver as vagas compatíveis.</p>
+              ) : matches.length === 0 ? (
                 <p className="text-sm text-slate-500">Nenhuma vaga aberta compatível no momento.</p>
               ) : (
                 <ul className="space-y-3">
-                  {matches.map(({ job, schedule }) => (
+                  {matches.map(({ job, checks }) => (
                     <li key={job.id} className="rounded-md border border-slate-200 p-3">
                       <JobLine vaga={job} />
                       <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                        <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-800">Curso</span>
-                        {schedule === true && <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-800">Horário</span>}
+                        {["Curso", ...confirmedChecks(checks)].map((label) => (
+                          <span key={label} className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-800">{label}</span>
+                        ))}
+                        {missingChecks(job, checks).map((label) => (
+                          <span key={label} className="rounded-full bg-orange-50 px-2 py-0.5 text-[11px] font-bold text-orange-800 ring-1 ring-orange-200">{label}</span>
+                        ))}
                         {job.turno && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">{turnoVagaLabels[job.turno]}</span>}
+                        {job.modalidade && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">{modalidadeLabels[job.modalidade]}</span>}
+                        {placeText(job) && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">{placeText(job)}</span>}
                         <button
                           type="button"
                           disabled={indicatingJob === job.id}
