@@ -336,3 +336,112 @@ Migration `20261031120000_vaga_area_manual` (só `ADD COLUMN "area_manual" VARCH
 - **Commit no Git antes de cada subetapa**, para poder voltar se algo quebrar
 - Manter o padrão visual Tailwind existente; vermelho para ações destrutivas
 - Não reescrever arquivos inteiros sem necessidade; preferir alterações pontuais
+
+### 🟡 Dashboard repaginado — IMPLEMENTADO (02/11/2026); falta validar no navegador logado
+Build e lint OK. Conferido por screenshot (1440px e 390px) com dados do banco local injetados numa página temporária (já apagada), porque a sessão não tinha login no navegador. **Sem commit.** Sem mudança de schema.
+- **Backend:** cálculos saíram do `server.js` para `backend/src/dashboard.js`. O `GET /dashboard-metrics` aceita `?periodo=7d|30d|90d|mes|ano|12m` (padrão `30d`) ou `?de=&ate=` (AAAA-MM-DD, no fuso de São Paulo), além de `?empresa=<id>` e `?area=<id|nao-identificada>`; período inválido → 400. Os campos antigos continuam (`metrics`, `vagasEmAlerta`, `distribuicaoPorCurso`, `funnel`); `metrics.tempoMedioContratacaoDias` continua sendo de todo o histórico.
+  - Novos campos: `pendencias`, `periodo` (atual × período anterior equivalente: candidaturas, contratações, dispensas, vagas novas, tempo médio, taxa de contratação), `serie` (por dia, semana ou mês, conforme o tamanho do período), `conversao`, `rankingEmpresas`, `motivosDispensa`, `vagasPorArea`, `opcoes` (empresas e áreas dos filtros); `funnel[].itens` traz até 50 candidaturas por etapa.
+  - Carrega vagas e candidaturas e filtra em memória (a área da vaga é calculada em código).
+  - **Conversão aproximada:** só existe a etapa atual. Dispensados contam até a entrevista se tiveram data marcada; senão, só como contatados.
+  - **Datas antes de 05/10/2026 não são reais** (data da migration): o Dashboard mostra um aviso quando o período ou a comparação as inclui.
+- **Frontend:** `pages/Dashboard.jsx` e a pasta `src/dashboard/`.
+  - Filtros na URL (período, empresa, área), "Atualizado há…" e atualização automática a cada 5 min com a aba visível.
+  - Pendências clicáveis e 6 cards com variação contra o período anterior e mini linha.
+  - Painéis: evolução (séries liga/desliga e visão em tabela); agenda Hoje/Próximas; funil com "Etapa atual" (clique abre a lista da etapa) e "Conversão"; vagas em alerta; ranking de empresas (ordenável; o clique filtra); motivos de dispensa; cursos (clique abre Estudantes filtrado); vagas abertas por área (clique filtra).
+  - Os painéis usam `DashPanel` (cabeçalho branco); o `PanelCard` âmbar continua no Kanban.
+- `Estudantes` aceita `?curso=` e `?situacao=` na URL. `FunnelChart` e `CourseDonutChart` aceitam `onSelect`.
+- Testes de backend que leem o `/dashboard-metrics` (`test:etapa2a`, `test:etapas`, `test:agenda`) não foram rodados nesta sessão, porque gravam registros `[TESTE]` e precisam de aprovação.
+
+### 🟡 Bloco 1 — Histórico de etapas (02/11/2026); falta validar no navegador
+**Regra combinada com o usuário (02/11/2026):** toda novidade em que o usuário **preenche algo** precisa ser **opcional**, para não mudar o modo de trabalho atual. Execução por blocos, sem commits; migrations só de adição podem ser aplicadas no banco **local** mostrando o SQL; produção (Neon, Render, senha) fica com o usuário.
+
+Migration `20261102120000_historico_etapas` (só a tabela nova; aplicada **só no banco local**, não no Neon). `prisma migrate diff` banco × schema: sem diferença.
+- **`HistoricoEtapa`**: `aplicacao_id` (→ `Aplicacao`, `ON DELETE CASCADE`: o histórico sai junto com a candidatura), `de_status` (vazio = candidatura criada), `para_status`, `usuario_id` (→ `Usuario`, `SET NULL`), `created_at`; índice `(aplicacao_id, created_at)`. Candidaturas anteriores a 02/11/2026 não têm histórico (não houve importação retroativa).
+- **Gravação automática** (`src/historico.js`: `registrarEtapa`/`registrarEtapas`, sempre na mesma transação da mudança), sem nenhum campo novo para o usuário:
+  - cadastro de estudante com vaga e "Indicar para vaga" (∅ → Candidato Contatado);
+  - `PATCH /candidatos/:id` (Kanban; reagendar na mesma etapa não grava);
+  - `PATCH /entrevistas/:id` ("Realizada" → Em Teste e "Dispensar");
+  - `PATCH /vagas/:id` ao fechar (grava a etapa de onde cada um saiu).
+  - Mudança recusada (400/409) não grava nada.
+- **Perfil:** `GET /candidatos/:id` traz `aplicacoes[].historico` (com o nome de quem fez). A linha do tempo (`perfil.js` `timeline`) mostra "Movido para Enviado à Empresa / Em Teste", a data exata da dispensa, a etapa de origem e "por <usuário>".
+- **Dashboard:**
+  - conversão exata para quem tem histórico (`conversaoExata` diz quantas); as demais seguem estimadas;
+  - data da dispensa e "desde" da lista de cada etapa vêm do histórico;
+  - nova visão "Tempo por etapa" no funil (`tempoPorEtapa`: média de dias entre entrar e sair de cada etapa, saídas no período); `historicoDesde`.
+- Não mudou: Banco de Talentos continua usando `updated_at` como data da dispensa (o `GET /candidatos` não traz o histórico).
+- Testes: novo `npm run test:historico` (porta 3401, 24 casos, 0 sobras). 18 scripts passando.
+- **Antes de publicar:** aplicar a migration no Neon (`migrate deploy`), com aprovação.
+
+### 🟡 Bloco 2 — Motivos de dispensa padronizados (02/11/2026); falta validar no navegador
+Migration `20261102130000_motivo_categoria` (só `ADD COLUMN "motivo_categoria" VARCHAR(40)` opcional em `Aplicacao`; aplicada **só no banco local**, não no Neon).
+- **Categorias** em `backend/src/motivos.js` (id, nome e palavras-chave; a mesma lista de ids/nomes em `frontend/src/motivos.js`): perfil, reprovado_empresa, outra_proposta, desistiu, nao_compareceu, sem_retorno, distancia, horario, valor, documentacao, outro e vaga_encerrada.
+- **Opcional:** o texto livre do motivo continua obrigatório ao dispensar, como antes; a categoria é só uma sugestão clicável (`components/DismissalReasonField.jsx`) no modal do Kanban e no "Dispensar" do Calendário. Clicar preenche o texto se estiver vazio; clicar de novo desmarca.
+- **API:**
+  - `PATCH /candidatos/:id` e `PATCH /entrevistas/:id` (`dispensar`) aceitam `motivo_categoria` (ausente → `NULL`; id desconhecido → 400). Sair de Dispensado (ou "Realizada") limpa a categoria.
+  - Fechar vaga grava `vaga_encerrada` sozinho.
+- **Dashboard:** "Motivos de dispensa" agrupa pela categoria. Sem categoria (motivos antigos ou digitados sem clicar), classifica pelo texto **só na leitura** (`categorizarTexto`; nada é gravado) e marca como estimadas; sem palavra reconhecida, agrupa pelo texto.
+- Testes: novo `npm run test:motivos` (porta 3402, 24 casos, 0 sobras). 19 scripts passando.
+- **Antes de publicar:** aplicar a migration no Neon (`migrate deploy`), com aprovação.
+
+### 🟡 Recursos opcionais — todos os itens da lista de melhorias (02/11/2026); falta validar no navegador logado
+Pedido do usuário: "faça todas as modificações de uma vez", com tudo o que o usuário **preenche** sendo **opcional**. **Sem commit.**
+Migration `20261102140000_recursos_opcionais`: só adições (2 enums, 7 tabelas, colunas opcionais); aplicada **só no banco local**.
+- **Novas tabelas:**
+  - `Estagio` (1 por candidatura contratada) e `RelatorioEstagio`;
+  - `ParecerEmpresa`, `ModeloMensagem`, `Contato` (registro de contatos), `Atividade` (registro de atividades) e `Configuracao` (chave → JSON).
+- **Colunas novas (todas opcionais):**
+  - `Vaga`: `quantidade`, `prazo`, `responsavel_id`, `portal_token`, `arquivada_em`;
+  - `Empresa`: `arquivada_em`;
+  - `Estudante`: `etiquetas[]`, `origem`, `consentimento_em`, `anonimizado_em`, `arquivado_em`;
+  - `Aplicacao`: `ordem`, `remarcacao_pedida_em`, `remarcacao_mensagem`.
+
+O que foi feito (backend → telas):
+- **Pós-contratação** (`src/estagios.js`, `/estagios`): datas, TCE, seguro, supervisor, taxa de agenciamento, observações, encerramento e relatórios semestrais. Alertas: contrato terminando (30 dias), limite de 2 anos (60 dias), TCE pendente e relatório pendente. Tela: Contratações → "Dados do estágio", filtro "Pendências do estágio" e soma das taxas.
+- **Vaga:** quantidade ("X de Y contratados" no card e no modal de contratação), prazo (selo e notificação) e recrutador responsável (filtro "Minhas vagas"). `GET /usuarios/opcoes` alimenta o seletor.
+- **Kanban:**
+  - busca no quadro;
+  - ordem dos cartões salva (`PUT /vagas/:id/ordem`);
+  - seleção em massa (mover ou dispensar com um motivo; Em Entrevista fica de fora);
+  - "Sugerir candidatos" (`GET /vagas/:id/sugestoes`, mesma regra das vagas compatíveis);
+  - "Link para a empresa";
+  - selos de parecer da empresa e de pedido de remarcação;
+  - "Mensagem com modelo" no menu do cartão.
+- **Confirmação de presença sem login** (`/confirmar/:token`; token HMAC com a data da entrevista, que reagendar invalida): confirmar → Confirmada; "Preciso remarcar" grava o pedido, cria uma anotação e uma notificação. Reagendar limpa o pedido. O link entra pelo modelo de mensagem (`{link_confirmacao}`); a mensagem de WhatsApp antiga não mudou.
+- **Portal da empresa** (`/portal/:token`; token aleatório gerado e revogado pelo RH): mostra candidatos a partir de Enviado à Empresa, sem dispensados, sem telefone e sem e-mail, com o currículo. A empresa dá parecer (aprovar/talvez/não aprovar); a etapa não muda.
+- **Cadastro pelo site** (`/cadastro`): vagas públicas e formulário com aceite LGPD obrigatório para o candidato, campo anti-robô e limite por IP. **Desligado por padrão** (Configurações → Geral). Telefone já cadastrado não altera dados, só inscreve na vaga. O nome da empresa só aparece se a opção for ligada.
+- **Modelos de mensagem** (Configurações → Modelos; `/modelos`, `/modelos/contexto/:aplicacaoId`): variáveis `{primeiro_nome}` `{vaga}` `{data_entrevista}` `{link_confirmacao}`…; usados no Kanban, no perfil e no Calendário.
+- **Registro de contatos** (`/contatos`, componente `ContactLog`): no perfil do estudante e no menu "⋯" das empresas, com próximo contato que vira notificação.
+- **Notificações** (sino; `GET /notificacoes`, calculadas na hora; "lida" fica no navegador): entrevistas nas próximas 3h, pedidos de remarcação, vagas paradas, prazos, alertas de estágio, retornos combinados, pareceres e cadastros pelo site.
+- **Busca global** no topo (`GET /busca`): estudantes por nome, e-mail ou final do telefone, empresas e vagas. Enter com um Nº de vaga continua abrindo o Kanban.
+- **Administração** (só ADMIN): Configurações → Usuários (criar, editar, desativar, trocar senha) e Atividades (registro automático de toda alteração; usuários `@teste.local` ficam de fora). As configurações gerais também só são alteradas por ADMIN.
+- **Esqueci minha senha** (só aparece com o SMTP configurado): `POST /auth/esqueci` e `/auth/redefinir` (link de 1 hora, uso único) e tela `/redefinir-senha/:token`.
+- **Arquivar** vagas, empresas e estudantes (só esconde das listas; "Mostrar arquivados"). **Anonimizar** estudante (LGPD, só ADMIN, sem volta; mantém curso e candidaturas).
+- **Etiquetas** do estudante (campo no formulário, separadas por vírgula; filtro e selos), filtro de origem "Cadastro pelo site".
+- **Relatórios:** relatório por empresa (`/relatorios/empresa/:id`, imprimível) no menu da empresa; "Imprimir / PDF" no Dashboard; meta mensal (Configurações) com barra de progresso no Dashboard.
+- **Técnico:**
+  - `.github/workflows/ci.yml` (lint, build, migrations e todos os testes num Postgres temporário; **nunca rodou**: precisa de push);
+  - `npm run backup` (`scripts/backup.js`, usa o `pg_dump`, **não instalado nesta máquina**; ver variáveis no topo do arquivo);
+  - `backend/backups/` no `.gitignore`.
+- **Testes:** novo `npm run test:recursos` (porta 3403, 87 casos, 0 sobras, configurações restauradas). 20 scripts, 683 casos, todos passando.
+
+
+### 🟡 Avisos do sino no celular pelo Telegram (02/11/2026); falta criar o bot e testar com Telegram real
+Pedido do usuário: receber as notificações no celular. Escolha: **Telegram**, com **todos** os avisos do sino. É **opcional**: fica desligado sem `TELEGRAM_BOT_TOKEN`, e cada usuário conecta o próprio Telegram. **Sem commit.**
+Migration `20261102150000_telegram`: só adições. `Usuario` ganhou `telegram_chat_id`, `telegram_conectado_em`, `telegram_codigo` e `telegram_codigo_expira`, e foi criada a tabela `NotificacaoEnviada` (`usuario_id` + `chave`). Aplicada **só no banco local**.
+- **Avisos:** a montagem saiu da rota para `src/notificacoes.js` (`montarNotificacoes`), usada pelo sino e pelo Telegram. Os alertas de estágio ganharam `chave` sem a contagem de dias, para não repetir todo dia. O sino não mudou.
+- **Envio** (`src/telegram.js`, iniciado no `server.js`):
+  - a cada `TELEGRAM_INTERVALO_SEG` (padrão 120), manda só os avisos novos;
+  - a identidade do aviso é a chave (ou o id) mais a gravidade, então um aviso que piora chega de novo;
+  - até 15 avisos por rodada, o resto vira "+N avisos";
+  - sem som entre 22h e 7h;
+  - link "Abrir no painel" pelo `FRONTEND_URL` (sem link quando é localhost, que o Telegram recusa);
+  - histórico de envios limpo depois de 90 dias.
+- **Conexão:** Configurações → **Celular**; `GET/DELETE /telegram`, `POST /telegram/conectar` e `/telegram/teste`. O link `t.me/<bot>?start=<código>` vale 15 minutos e uma vez só. O bot lê as mensagens por long polling (`getUpdates`, sem webhook), então funciona no localhost.
+  - Os avisos já abertos na hora de conectar viram um resumo; depois disso, chega cada aviso novo.
+  - `/parar` desconecta. Se o usuário bloqueia o bot, ele é desconectado sozinho.
+- **Limites:**
+  - Só **uma** API pode ler o mesmo bot: use um bot para o local e outro para produção.
+  - No plano grátis do Render a API "dorme" sem acessos, e dormindo não manda avisos. Para manter acordada: um ping em `GET /` a cada 10 minutos (n8n ou UptimeRobot) ou o plano pago.
+- **Testes:** `npm run test:telegram` (porta 3404, com um Telegram falso na porta 3499; nada sai para o Telegram real). São 36 casos, 0 sobras. No total: 21 scripts, 726 casos, todos passando.
+
+Não feito (depende do usuário ou de serviço externo): migrations no Neon (agora 4, contando a do Telegram), bot do Telegram e `TELEGRAM_BOT_TOKEN` no Render, troca da senha do banco, SMTP no Render, Automação 2 do n8n, monitoramento de erros (Sentry, precisa de conta), leitura de currículo com IA (precisa de chave de API), atualização do Prisma 5 → 6+ (mudança grande), testes de tela automatizados com Playwright (precisa instalar navegadores) e paginação (o volume atual não exige).

@@ -2,6 +2,10 @@
 // Regra comum: campo ausente (undefined) não muda nada; null ou "" apaga o valor.
 const { areaPorId } = require("./compatibilidade");
 
+const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const ETIQUETAS_MAX = 15;
+const ETIQUETA_TAMANHO_MAX = 30;
+
 const turnosEstudo = new Set(["MANHA", "TARDE", "NOITE", "INTEGRAL", "EAD"]);
 const periodos = ["MANHA", "TARDE", "NOITE"];
 const turnosVaga = new Set(["MANHA", "TARDE", "INTEGRAL"]);
@@ -98,6 +102,19 @@ function camposEstudante(body) {
   if (endereco.erro) return endereco;
   Object.assign(data, endereco.data);
 
+  // Etiquetas livres (opcional): sem repetir (ignorando maiúsculas), até 15, cada uma com até 30 caracteres.
+  if (body.etiquetas !== undefined) {
+    const lista = body.etiquetas === null ? [] : body.etiquetas;
+    if (!Array.isArray(lista) || lista.some((etiqueta) => typeof etiqueta !== "string")) return erro("Etiquetas inválidas.");
+    const limpas = [];
+    for (const etiqueta of lista.map((item) => item.trim().replace(/\s+/g, " ")).filter(Boolean)) {
+      if (etiqueta.length > ETIQUETA_TAMANHO_MAX) return erro(`Cada etiqueta pode ter até ${ETIQUETA_TAMANHO_MAX} caracteres.`);
+      if (!limpas.some((item) => item.toLowerCase() === etiqueta.toLowerCase())) limpas.push(etiqueta);
+    }
+    if (limpas.length > ETIQUETAS_MAX) return erro(`Use no máximo ${ETIQUETAS_MAX} etiquetas.`);
+    data.etiquetas = limpas;
+  }
+
   return { data };
 }
 
@@ -137,7 +154,28 @@ function camposEndereco(body) {
 // corrigida pelo RH (id de src/areas.js; vazio = usa a área detectada).
 function camposVaga(body) {
   const data = {};
-  const { turno, horario, modalidade, sexo_preferencia, area_manual } = body;
+  const { turno, horario, modalidade, sexo_preferencia, area_manual, quantidade, prazo, responsavel_id } = body;
+
+  // Opcionais: quantas pessoas a empresa quer, prazo pedido (AAAA-MM-DD, pode ser no futuro) e recrutador responsável.
+  if (quantidade !== undefined) {
+    if (vazio(quantidade)) data.quantidade = null;
+    else if (Number.isInteger(Number(quantidade)) && Number(quantidade) >= 1 && Number(quantidade) <= 999) data.quantidade = Number(quantidade);
+    else return erro("Quantidade de vagas inválida (1 a 999).");
+  }
+  if (prazo !== undefined) {
+    if (vazio(prazo)) data.prazo = null;
+    else {
+      const partes = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(prazo));
+      const dia = partes && new Date(Date.UTC(Number(partes[1]), Number(partes[2]) - 1, Number(partes[3])));
+      if (!dia || dia.toISOString().slice(0, 10) !== String(prazo)) return erro("Prazo inválido: use uma data válida.");
+      data.prazo = dia;
+    }
+  }
+  if (responsavel_id !== undefined) {
+    if (vazio(responsavel_id)) data.responsavel_id = null;
+    else if (typeof responsavel_id === "string" && uuid.test(responsavel_id)) data.responsavel_id = responsavel_id;
+    else return erro("Recrutador responsável inválido.");
+  }
 
   if (area_manual !== undefined) {
     if (vazio(area_manual)) data.area_manual = null;

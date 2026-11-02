@@ -35,7 +35,8 @@ function StageTooltip({ active, payload }) {
   );
 }
 
-export default function FunnelChart({ data }) {
+// onSelect(etapa): clique na barra (o Dashboard abre a lista de candidatos da etapa).
+export default function FunnelChart({ data, onSelect }) {
   // Porcentagem de cada etapa em relação à soma das etapas do funil.
   const total = data.reduce((sum, stage) => sum + stage.total, 0);
   const stages = data.map((stage) => ({
@@ -53,7 +54,7 @@ export default function FunnelChart({ data }) {
           tickLine={false}
           axisLine={false}
           interval={0}
-          height={40}
+          height={52}
           tick={StageTick}
         />
         <YAxis
@@ -70,6 +71,8 @@ export default function FunnelChart({ data }) {
           radius={[4, 4, 0, 0]}
           maxBarSize={54}
           isAnimationActive={false}
+          cursor={onSelect ? "pointer" : undefined}
+          onClick={onSelect ? (bar) => onSelect(bar.payload ?? bar) : undefined}
         >
           {/* Texto próprio para o rótulo não quebrar linha em barras estreitas. */}
           <LabelList

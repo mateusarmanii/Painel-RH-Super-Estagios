@@ -12,6 +12,7 @@ import {
   KanbanSquare,
   MapPin,
   MessageCircle,
+  MessageSquareText,
   Phone,
   StickyNote,
   UserRound,
@@ -21,6 +22,8 @@ import {
   X,
 } from "lucide-react";
 import CompanyAvatar from "../components/CompanyAvatar.jsx";
+import DismissalReasonField, { dismissalPayload } from "../components/DismissalReasonField.jsx";
+import MessageTemplateDialog from "../components/MessageTemplateDialog.jsx";
 import InterviewFields, { interviewFormValues, interviewPayload } from "../components/InterviewFields.jsx";
 import { kanbanStatusLabels } from "../kanbanStatus.js";
 import { interviewFormatLabels, interviewStatusBadge, interviewStatusLabels } from "../interviewStatus.js";
@@ -47,7 +50,8 @@ function Detail({ icon: Icon, children }) {
 export default function InterviewPanel({ interview, conflicts, reminderVersion, onClose, onUpdated, onOpenProfile }) {
   const [mode, setMode] = useState(null); // null | "reagendar" | "dispensar"
   const [form, setForm] = useState(() => interviewFormValues(interview));
-  const [reason, setReason] = useState("");
+  const [reason, setReason] = useState({ text: "", category: null });
+  const [messaging, setMessaging] = useState(false);
   const [busy, setBusy] = useState(null);
 
   useEffect(() => {
@@ -93,11 +97,11 @@ export default function InterviewPanel({ interview, conflicts, reminderVersion, 
 
   function dismiss(event) {
     event.preventDefault();
-    if (!reason.trim()) {
+    if (!reason.text.trim()) {
       toast.error("Informe o motivo da dispensa.");
       return;
     }
-    act("dispensar", { acao: "dispensar", motivo_recusa: reason.trim() }, () => `${interview.estudante.nome_completo} foi dispensado.`);
+    act("dispensar", { acao: "dispensar", ...dismissalPayload(reason) }, () => `${interview.estudante.nome_completo} foi dispensado.`);
   }
 
   return (
@@ -201,7 +205,17 @@ export default function InterviewPanel({ interview, conflicts, reminderVersion, 
             <Detail icon={Clock}>Etapa no Kanban: {kanbanStatusLabels[interview.status_kanban]}</Detail>
             {interview.observacao && <Detail icon={StickyNote}>{interview.observacao}</Detail>}
             {interview.motivo_recusa && <Detail icon={UserX}>Motivo da dispensa: {interview.motivo_recusa}</Detail>}
+            {/* Pedido feito pelo link de confirmação; some ao reagendar. */}
+            {interview.remarcacao_pedida_em && (
+              <p className="rounded-md bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-800">
+                O candidato pediu para remarcar{interview.remarcacao_mensagem ? `: “${interview.remarcacao_mensagem}”` : "."}
+              </p>
+            )}
+            <button type="button" onClick={() => setMessaging(true)} className="inline-flex items-center gap-1.5 text-sm font-semibold text-marinho-700 hover:underline">
+              <MessageSquareText size={15} /> Mensagem com modelo
+            </button>
           </section>
+          {messaging && <MessageTemplateDialog applicationId={interview.id} onClose={() => setMessaging(false)} />}
 
           <ReminderSection
             target={{ entrevista_id: interview.id }}
@@ -224,19 +238,15 @@ export default function InterviewPanel({ interview, conflicts, reminderVersion, 
 
           {mode === "dispensar" && (
             <form onSubmit={dismiss} className="space-y-3 rounded-md border border-rose-200 bg-rose-50/40 p-4">
-              <label htmlFor="painel-motivo" className="block space-y-1.5">
-                <span className="text-sm font-bold text-rose-900">Motivo da dispensa</span>
-                <textarea
-                  id="painel-motivo"
-                  rows={3}
-                  maxLength={500}
-                  autoFocus
-                  value={reason}
-                  onChange={(event) => setReason(event.target.value)}
-                  placeholder="Ex.: não compareceu, aceitou outra proposta..."
-                  className="w-full resize-y rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-marinho-600 focus:ring-2 focus:ring-ambar-400/40"
-                />
-              </label>
+              <DismissalReasonField
+                id="painel-motivo"
+                value={reason}
+                onChange={setReason}
+                rows={3}
+                autoFocus
+                labelClassName="text-sm font-bold text-rose-900"
+                placeholder="Ex.: não compareceu, aceitou outra proposta..."
+              />
               <div className="flex justify-end gap-2">
                 <button type="button" onClick={() => setMode(null)} className={buttonSecondary}>Cancelar</button>
                 <button

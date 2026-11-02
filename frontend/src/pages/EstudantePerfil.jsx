@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import {
   AlertTriangle,
   ArrowLeft,
+  ArrowRightLeft,
   BadgeCheck,
   CalendarClock,
   ExternalLink,
@@ -12,7 +13,9 @@ import {
   Mail,
   MapPin,
   MessageCircle,
+  MessageSquareText,
   Pencil,
+  ShieldAlert,
   Phone,
   Send,
   StickyNote,
@@ -24,6 +27,9 @@ import { CurriculoManager } from "../components/CurriculoField.jsx";
 import EmptyState from "../components/EmptyState.jsx";
 import { IndicateDialog } from "../components/IndicateForm.jsx";
 import Modal from "../components/Modal.jsx";
+import ContactLog from "../components/ContactLog.jsx";
+import MessageTemplateDialog from "../components/MessageTemplateDialog.jsx";
+import { getUser } from "../session.js";
 import { kanbanStatusLabels, kanbanStatusStyles } from "../kanbanStatus.js";
 import { interviewFormatLabels, interviewStatus, interviewStatusBadge, interviewStatusLabels } from "../interviewStatus.js";
 import { ageFrom, availabilityText, formatMonthYear, modalidadeLabels, studyShiftLabel, turnoVagaLabels } from "../estudante.js";
@@ -95,12 +101,13 @@ function missingChecks(job, checks) {
   return missing;
 }
 
-const eventIcons = { indicado: Send, entrevista: CalendarClock, contratado: BadgeCheck, dispensado: UserX };
+const eventIcons = { indicado: Send, entrevista: CalendarClock, contratado: BadgeCheck, dispensado: UserX, etapa: ArrowRightLeft };
 const eventIconStyles = {
   indicado: "bg-sky-50 text-sky-700",
   entrevista: "bg-violet-50 text-violet-700",
   contratado: "bg-emerald-50 text-emerald-700",
   dispensado: "bg-rose-50 text-rose-700",
+  etapa: "bg-slate-100 text-slate-600",
 };
 
 function TimelineEvent({ event, showNote }) {
@@ -113,7 +120,13 @@ function TimelineEvent({ event, showNote }) {
     entrevista: "Entrevista",
     contratado: "Contratado",
     dispensado: "Dispensado",
+    etapa: `Movido para ${kanbanStatusLabels[event.to] ?? ""}`,
   };
+  // Etapa de origem (histórico) e quem fez a mudança, quando registrados.
+  const details = [
+    event.from && event.type !== "indicado" && `de ${kanbanStatusLabels[event.from]}`,
+    event.by && `por ${event.by}`,
+  ].filter(Boolean).join(" · ");
 
   return (
     <li className="relative flex gap-3 pb-5 last:pb-0">
@@ -131,6 +144,7 @@ function TimelineEvent({ event, showNote }) {
           <span className="text-xs text-slate-500">
             {event.type === "entrevista" ? dateTimeFormat.format(date) : dateFormat.format(date)}
           </span>
+          {details && <span className="text-xs text-slate-400">{details}</span>}
         </p>
         <p className="mt-0.5 truncate text-sm text-slate-600">
           {vaga?.titulo} · {vaga?.empresa?.nome}
@@ -165,6 +179,9 @@ export default function EstudantePerfilPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [isIndicating, setIsIndicating] = useState(false);
   const [indicatingJob, setIndicatingJob] = useState(null);
+  const [messaging, setMessaging] = useState(null);
+  const [isAnonymizing, setIsAnonymizing] = useState(false);
+  const isAdmin = getUser()?.papel === "ADMIN";
 
   const load = useCallback(async () => {
     try {
@@ -278,6 +295,15 @@ export default function EstudantePerfilPage() {
                 {student.instituicao_ensino && ` · ${student.instituicao_ensino}`}
               </p>
               <div className="mt-3 flex flex-wrap gap-1.5">
+                {student.origem === "FORMULARIO" && (
+                  <span className="rounded-full bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-800" title={student.consentimento_em ? `Cadastro pelo site; aceite LGPD em ${dateFormat.format(new Date(student.consentimento_em))}` : "Cadastro pelo site"}>
+                    Site
+                  </span>
+                )}
+                {student.anonimizado_em && <span className="rounded-full bg-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-700">Anonimizado (LGPD)</span>}
+                {student.etiquetas?.map((tag) => (
+                  <span key={tag} className="rounded-full bg-marinho-50 px-2.5 py-1 text-xs font-semibold text-marinho-800 ring-1 ring-marinho-100">{tag}</span>
+                ))}
                 {student.semestre_atual && <Chip>{student.semestre_atual}º semestre</Chip>}
                 {studyShiftLabel(student) && <Chip>Estuda: {studyShiftLabel(student)}</Chip>}
                 {student.disponibilidade?.length > 0 && <Chip>Disponível: {availabilityText(student.disponibilidade)}</Chip>}
@@ -367,6 +393,15 @@ export default function EstudantePerfilPage() {
                       <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${kanbanStatusStyles[application.status_kanban]}`}>
                         {kanbanStatusLabels[application.status_kanban]}
                       </span>
+                      <button
+                        type="button"
+                        onClick={() => setMessaging(application.id)}
+                        title="Mensagem com modelo"
+                        aria-label={`Mensagem com modelo sobre a vaga ${application.vaga?.titulo}`}
+                        className="grid size-9 place-items-center rounded-md text-marinho-700 hover:bg-marinho-50"
+                      >
+                        <MessageSquareText size={17} />
+                      </button>
                       <Link
                         to={`/kanban/${application.vaga_id}`}
                         title="Abrir Kanban da vaga"
@@ -419,6 +454,10 @@ export default function EstudantePerfilPage() {
 
             <Section title="Currículo">
               <CurriculoManager studentId={student.id} curriculo={student.curriculo} />
+            </Section>
+
+            <Section title="Contatos e anotações">
+              <ContactLog owner={{ estudante_id: student.id }} compact />
             </Section>
 
             <Section
@@ -495,9 +534,40 @@ export default function EstudantePerfilPage() {
                 </p>
               )}
             </Section>
+
+            {isAdmin && !student.anonimizado_em && (
+              <Section title="LGPD">
+                <p className="text-xs text-slate-500">
+                  A pedido do estudante, apaga nome, contatos, endereço, nascimento, anotações, etiquetas, currículo e registros de contato.
+                  Curso e candidaturas ficam (os números do painel não mudam). Não tem volta.
+                </p>
+                <button
+                  type="button"
+                  disabled={isAnonymizing}
+                  onClick={async () => {
+                    if (!window.confirm(`Anonimizar ${student.nome_completo}? Os dados pessoais serão apagados e não dá para desfazer.`)) return;
+                    setIsAnonymizing(true);
+                    try {
+                      await apiJson(`/candidatos/${student.id}/anonimizar`, { method: "POST" }, "Não foi possível anonimizar.");
+                      toast.success("Dados pessoais apagados.");
+                      await load();
+                    } catch (anonymizeError) {
+                      toast.error(anonymizeError.message);
+                    } finally {
+                      setIsAnonymizing(false);
+                    }
+                  }}
+                  className="mt-3 inline-flex h-9 items-center gap-1.5 rounded-md border border-rose-200 px-3 text-sm font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-50"
+                >
+                  <ShieldAlert size={15} /> {isAnonymizing ? "Anonimizando..." : "Anonimizar dados (LGPD)"}
+                </button>
+              </Section>
+            )}
           </div>
         </div>
       </div>
+
+      <MessageTemplateDialog applicationId={messaging} onClose={() => setMessaging(null)} />
 
       <Modal isOpen={isEditing} title="Editar estudante" onClose={() => setIsEditing(false)}>
         {isEditing && (

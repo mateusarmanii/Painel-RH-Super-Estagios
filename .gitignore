@@ -7,3 +7,5 @@ backend/uploads/
 # Backups do banco (guardar fora do projeto)
 *.dump
 *.sql.gz
+# Backups gerados por npm run backup (guardar também fora do projeto)
+backend/backups/

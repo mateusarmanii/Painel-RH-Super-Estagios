@@ -84,18 +84,29 @@ enum PapelUsuario {
 // Quem entra no painel. Sem cadastro público: usuários são criados com "npm run usuario:criar".
 // E-mail guardado sempre em minúsculas; a senha só como hash bcrypt.
 model Usuario {
-  id         String          @id @default(uuid()) @db.Uuid
-  nome       String
-  email      String          @unique
-  senha_hash String
-  papel      PapelUsuario    @default(RECRUTADOR)
-  ativo      Boolean         @default(true)
-  created_at DateTime        @default(now())
-  updated_at DateTime        @default(now()) @updatedAt
+  id                     String               @id @default(uuid()) @db.Uuid
+  nome                   String
+  email                  String               @unique
+  senha_hash             String
+  papel                  PapelUsuario         @default(RECRUTADOR)
+  ativo                  Boolean              @default(true)
+  created_at             DateTime             @default(now())
+  updated_at             DateTime             @default(now()) @updatedAt
+  // Notificações no celular pelo Telegram (opcional; cada usuário conecta o próprio). O código vale 15 min.
+  telegram_chat_id       String?              @unique @db.VarChar(32)
+  telegram_conectado_em  DateTime?
+  telegram_codigo        String?              @unique @db.VarChar(40)
+  telegram_codigo_expira DateTime?
+  notificacoes_enviadas  NotificacaoEnviada[]
   // Só do lado do Prisma (a chave estrangeira fica nas tabelas novas).
-  eventos    Evento[]
-  lembretes  LembreteEmail[]
-  arquivos   Arquivo[]
+  eventos                Evento[]
+  lembretes              LembreteEmail[]
+  arquivos               Arquivo[]
+  etapas                 HistoricoEtapa[]
+  vagas_responsavel      Vaga[]
+  modelos                ModeloMensagem[]
+  contatos               Contato[]
+  atividades             Atividade[]
 }
 
 // Compromisso do Calendário que não é entrevista (reunião, visita, prazo...).
@@ -169,17 +180,20 @@ model Arquivo {
 }
 
 model Empresa {
-  id               String   @id @default(uuid()) @db.Uuid
+  id               String    @id @default(uuid()) @db.Uuid
   nome             String
-  setor            String?  @default("Nao informado")
+  setor            String?   @default("Nao informado")
   nome_contato     String
   telefone_contato String
   email_contato    String?
   // Antiga (arquivo em backend/uploads/logos); não é mais usada desde a logo no banco (logo_arquivo_id).
   logo_url         String?
-  logo_arquivo_id  String?  @db.Uuid
-  logo_arquivo     Arquivo? @relation(fields: [logo_arquivo_id], references: [id], onDelete: SetNull)
+  logo_arquivo_id  String?   @db.Uuid
+  logo_arquivo     Arquivo?  @relation(fields: [logo_arquivo_id], references: [id], onDelete: SetNull)
+  // Só esconde das listas (opcional); a empresa continua valendo em todo o resto.
+  arquivada_em     DateTime?
   vagas            Vaga[]
+  contatos         Contato[]
 }
 
 model Estudante {
@@ -205,7 +219,16 @@ model Estudante {
   data_nascimento      DateTime?      @db.Date
   curriculo_arquivo_id String?        @db.Uuid
   curriculo            Arquivo?       @relation(fields: [curriculo_arquivo_id], references: [id], onDelete: SetNull)
+  // Etiquetas livres (ex.: "inglês avançado"), opcionais.
+  etiquetas            String[]       @default([])
+  // De onde veio o cadastro: vazio = painel; "FORMULARIO" = formulário público.
+  origem               String?        @db.VarChar(20)
+  // LGPD: quando o estudante aceitou o uso dos dados (formulário público) e quando foi anonimizado.
+  consentimento_em     DateTime?
+  anonimizado_em       DateTime?
+  arquivado_em         DateTime?
   aplicacoes           Aplicacao[]
+  contatos             Contato[]
 }
 
 model Vaga {
@@ -228,7 +251,15 @@ model Vaga {
   area_manual      String?          @db.VarChar(40)
   empresa_id       String           @db.Uuid
   created_at       DateTime         @default(now())
+  // Opcionais: quantas pessoas a empresa quer, prazo pedido e recrutador responsável.
+  quantidade       Int?
+  prazo            DateTime?        @db.Date
+  responsavel_id   String?          @db.Uuid
+  // Link do portal da empresa (gerado pelo RH quando quiser; apagar revoga o link).
+  portal_token     String?          @unique @db.VarChar(64)
+  arquivada_em     DateTime?
   empresa          Empresa          @relation(fields: [empresa_id], references: [id])
+  responsavel      Usuario?         @relation(fields: [responsavel_id], references: [id], onDelete: SetNull)
   aplicacoes       Aplicacao[]
 }
 
@@ -239,6 +270,13 @@ model Aplicacao {
   status_kanban        StatusKanban       @default(CANDIDATO_CONTATADO)
   data_hora_entrevista DateTime?
   motivo_recusa        String?
+  // Categoria opcional do motivo (id de src/motivos.js); o texto livre continua em motivo_recusa.
+  motivo_categoria     String?            @db.VarChar(40)
+  // Posição do cartão na coluna do Kanban (vazio = ordem de chegada).
+  ordem                Int?
+  // O candidato pediu para remarcar pelo link de confirmação (limpa ao reagendar).
+  remarcacao_pedida_em DateTime?
+  remarcacao_mensagem  String?
   data_aprovacao       DateTime?
   observacao           String?            @db.Text
   entrevista_status    EntrevistaStatus?
@@ -251,6 +289,148 @@ model Aplicacao {
   vaga                 Vaga               @relation(fields: [vaga_id], references: [id])
   estudante            Estudante          @relation(fields: [estudante_id], references: [id])
   lembretes            LembreteEmail[]
+  historico            HistoricoEtapa[]
+  estagio              Estagio?
+  pareceres            ParecerEmpresa[]
+  contatos             Contato[]
 
   @@unique([vaga_id, estudante_id])
+}
+
+// Cada mudança de etapa de uma candidatura (gravada automaticamente pela API; o usuário não preenche nada).
+// de_status vazio = candidatura criada. Começou a ser gravado em 02/11/2026: candidaturas anteriores não têm histórico.
+model HistoricoEtapa {
+  id           String        @id @default(uuid()) @db.Uuid
+  aplicacao_id String        @db.Uuid
+  de_status    StatusKanban?
+  para_status  StatusKanban
+  usuario_id   String?       @db.Uuid
+  created_at   DateTime      @default(now())
+  aplicacao    Aplicacao     @relation(fields: [aplicacao_id], references: [id], onDelete: Cascade)
+  usuario      Usuario?      @relation(fields: [usuario_id], references: [id], onDelete: SetNull)
+
+  @@index([aplicacao_id, created_at])
+}
+
+// Dados do estágio depois da contratação (1 por candidatura contratada). Todos os campos são opcionais.
+model Estagio {
+  id                String             @id @default(uuid()) @db.Uuid
+  aplicacao_id      String             @unique @db.Uuid
+  data_inicio       DateTime?          @db.Date
+  data_fim          DateTime?          @db.Date
+  tce_assinado      Boolean            @default(false)
+  seguro_apolice    String?            @db.VarChar(100)
+  supervisor        String?            @db.VarChar(100)
+  // Taxa cobrada da empresa por esta contratação (financeiro).
+  taxa_agenciamento Float?
+  observacoes       String?            @db.Text
+  encerrado_em      DateTime?          @db.Date
+  created_at        DateTime           @default(now())
+  updated_at        DateTime           @default(now()) @updatedAt
+  aplicacao         Aplicacao          @relation(fields: [aplicacao_id], references: [id], onDelete: Cascade)
+  relatorios        RelatorioEstagio[]
+}
+
+// Relatório semestral de atividades (Lei 11.788): número do semestre e data de entrega.
+model RelatorioEstagio {
+  id          String   @id @default(uuid()) @db.Uuid
+  estagio_id  String   @db.Uuid
+  numero      Int
+  entregue_em DateTime @db.Date
+  created_at  DateTime @default(now())
+  estagio     Estagio  @relation(fields: [estagio_id], references: [id], onDelete: Cascade)
+
+  @@unique([estagio_id, numero])
+}
+
+enum ParecerTipo {
+  APROVADO
+  TALVEZ
+  REPROVADO
+}
+
+// Parecer da empresa sobre um candidato, dado pelo portal da empresa. Não muda a etapa: o RH decide.
+model ParecerEmpresa {
+  id             String      @id @default(uuid()) @db.Uuid
+  aplicacao_id   String      @db.Uuid
+  parecer        ParecerTipo
+  comentario     String?     @db.Text
+  nome_avaliador String?     @db.VarChar(100)
+  created_at     DateTime    @default(now())
+  aplicacao      Aplicacao   @relation(fields: [aplicacao_id], references: [id], onDelete: Cascade)
+
+  @@index([aplicacao_id, created_at])
+}
+
+// Modelos de mensagem (WhatsApp/e-mail) com variáveis como {nome} e {vaga}.
+model ModeloMensagem {
+  id            String   @id @default(uuid()) @db.Uuid
+  titulo        String   @db.VarChar(80)
+  texto         String   @db.Text
+  criado_por_id String?  @db.Uuid
+  created_at    DateTime @default(now())
+  updated_at    DateTime @default(now()) @updatedAt
+  criado_por    Usuario? @relation(fields: [criado_por_id], references: [id], onDelete: SetNull)
+}
+
+enum TipoContato {
+  NOTA
+  LIGACAO
+  WHATSAPP
+  EMAIL
+  REUNIAO
+  SEM_RESPOSTA
+}
+
+// Registro de contatos e anotações (estudante ou empresa), com próximo contato opcional.
+model Contato {
+  id              String      @id @default(uuid()) @db.Uuid
+  estudante_id    String?     @db.Uuid
+  empresa_id      String?     @db.Uuid
+  aplicacao_id    String?     @db.Uuid
+  tipo            TipoContato @default(NOTA)
+  texto           String?     @db.Text
+  proximo_contato DateTime?   @db.Date
+  usuario_id      String?     @db.Uuid
+  created_at      DateTime    @default(now())
+  estudante       Estudante?  @relation(fields: [estudante_id], references: [id], onDelete: Cascade)
+  empresa         Empresa?    @relation(fields: [empresa_id], references: [id], onDelete: Cascade)
+  aplicacao       Aplicacao?  @relation(fields: [aplicacao_id], references: [id], onDelete: SetNull)
+  usuario         Usuario?    @relation(fields: [usuario_id], references: [id], onDelete: SetNull)
+
+  @@index([estudante_id, created_at])
+  @@index([empresa_id, created_at])
+}
+
+// Registro de atividades: cada alteração feita pela API (quem, o quê, quando). Gravado automaticamente.
+model Atividade {
+  id          String   @id @default(uuid()) @db.Uuid
+  usuario_id  String?  @db.Uuid
+  metodo      String   @db.VarChar(8)
+  caminho     String   @db.VarChar(200)
+  entidade    String?  @db.VarChar(30)
+  entidade_id String?  @db.Uuid
+  status      Int
+  created_at  DateTime @default(now())
+  usuario     Usuario? @relation(fields: [usuario_id], references: [id], onDelete: SetNull)
+
+  @@index([created_at])
+}
+
+// Configurações gerais do painel (meta mensal, formulário público...). Chave → valor em JSON.
+model Configuracao {
+  chave      String   @id @db.VarChar(60)
+  valor      Json
+  updated_at DateTime @default(now()) @updatedAt
+}
+
+// Avisos do sino já enviados pelo Telegram a cada usuário (para não repetir). Limpos depois de 90 dias.
+model NotificacaoEnviada {
+  usuario_id String   @db.Uuid
+  chave      String   @db.VarChar(300)
+  enviada_em DateTime @default(now())
+  usuario    Usuario  @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+
+  @@id([usuario_id, chave])
+  @@index([enviada_em])
 }

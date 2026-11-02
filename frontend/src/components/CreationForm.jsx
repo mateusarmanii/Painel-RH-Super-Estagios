@@ -54,6 +54,10 @@ const fieldSets = {
     { name: "cep", label: "CEP", type: "cep", optional: true, half: true },
     { name: "cidade", label: "Cidade", maxLength: 100, optional: true, half: true },
     { name: "bairro", label: "Bairro", maxLength: 100, optional: true, half: true },
+    // Opcionais: quantas pessoas a empresa quer, prazo pedido e recrutador responsável ("Minhas vagas").
+    { name: "quantidade", label: "Quantidade de vagas", type: "integer", min: "1", max: "999", placeholder: "Ex.: 2", optional: true, half: true },
+    { name: "prazo", label: "Prazo pedido pela empresa", type: "deadline", optional: true, half: true },
+    { name: "responsavel_id", label: "Recrutador responsável", type: "user", optional: true },
     // Uso interno: registra o pedido da empresa e não aparece em mensagens enviadas a candidatos.
     {
       name: "sexo_preferencia",
@@ -84,6 +88,8 @@ const fieldSets = {
     { name: "cep", label: "CEP", type: "cep", optional: true, half: true },
     { name: "cidade", label: "Cidade", maxLength: 100, optional: true, half: true, newRow: true },
     { name: "bairro", label: "Bairro", maxLength: 100, optional: true, half: true },
+    // Etiquetas livres, separadas por vírgula (ex.: "inglês avançado, tem CNH"); filtram a lista de Estudantes.
+    { name: "etiquetas", label: "Etiquetas", type: "tags", placeholder: "Ex.: inglês avançado, tem CNH", optional: true },
     // A vaga só é escolhida no cadastro; depois, as candidaturas são geridas pelo Kanban.
     { name: "vaga_id", label: "Vaga", type: "select", optionsKey: "vagas", createOnly: true, optional: true },
     {
@@ -100,9 +106,10 @@ const fieldSets = {
 // Valor do campo no formulário a partir do que veio da API.
 function toFormValue(field, value) {
   if (field.type === "checkboxes") return value ?? [];
+  if (field.type === "tags") return (value ?? []).join(", ");
   if (value == null) return "";
   if (field.type === "month") return toMonthInput(value);
-  if (field.type === "date") return toDateInput(value);
+  if (field.type === "date" || field.type === "deadline") return toDateInput(value);
   if (field.type === "cep") return formatCep(value);
   return String(value);
 }
@@ -110,6 +117,7 @@ function toFormValue(field, value) {
 // Valor enviado à API (opcional em branco vira null; o backend apaga o campo).
 function toPayloadValue(field, value) {
   if (field.type === "checkboxes") return value ?? [];
+  if (field.type === "tags") return (value ?? "").split(",").map((tag) => tag.trim()).filter(Boolean);
   const text = value ?? "";
   if (field.name === "valor") return Number(text);
   if (field.optional && text.trim() === "") return null;
@@ -121,6 +129,26 @@ function toPayloadValue(field, value) {
 function initialFormState(type, initialData) {
   const fields = fieldSets[type].filter((field) => !(initialData && field.createOnly));
   return Object.fromEntries(fields.map((field) => [field.name, toFormValue(field, initialData?.[field.name])]));
+}
+
+// Recrutador responsável (opcional): usuários ativos do painel.
+function UserSelect(selectProps) {
+  const [users, setUsers] = useState([]);
+  useEffect(() => {
+    let isCurrent = true;
+    apiJson("/usuarios/opcoes", {}, "")
+      .then((list) => isCurrent && setUsers(list))
+      .catch(() => {});
+    return () => {
+      isCurrent = false;
+    };
+  }, []);
+  return (
+    <select {...selectProps}>
+      <option value="">Ninguém em especial</option>
+      {users.map((user) => <option key={user.id} value={user.id}>{user.nome}</option>)}
+    </select>
+  );
 }
 
 // "Área detectada: X" (POST /vagas/area-detectada, atualizada enquanto o RH digita) e o seletor opcional para corrigir.
@@ -412,6 +440,8 @@ export default function CreationForm({ type, initialData, onSuccess }) {
                   </option>
                 ))}
               </select>
+            ) : field.type === "user" ? (
+              <UserSelect {...commonProps} />
             ) : field.type === "area" ? (
               <AreaField {...commonProps} titulo={form.titulo} descricao={form.descricao} empresaId={form.empresa_id} />
             ) : field.type === "cep" ? (
@@ -435,7 +465,7 @@ export default function CreationForm({ type, initialData, onSuccess }) {
             ) : (
               <input
                 {...commonProps}
-                type={field.type === "integer" ? "number" : field.type ?? "text"}
+                type={field.type === "integer" ? "number" : field.type === "deadline" ? "date" : field.type === "tags" ? "text" : field.type ?? "text"}
                 placeholder={field.placeholder}
                 pattern={field.pattern}
                 title={field.title}

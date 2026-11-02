@@ -1,7 +1,8 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { BarChart3, CalendarCheck2, Clock, Trophy, UserRoundCheck } from "lucide-react";
+import { BarChart3, BriefcaseBusiness, CalendarCheck2, Clock, Trophy, UserRoundCheck } from "lucide-react";
+import EstagioDialog, { EstagioBadges } from "../components/EstagioDialog.jsx";
 import ListToolbar from "../components/ListToolbar.jsx";
 import CompanyAvatar from "../components/CompanyAvatar.jsx";
 import EmptyState from "../components/EmptyState.jsx";
@@ -19,6 +20,7 @@ const monthShort = new Intl.DateTimeFormat("pt-BR", { month: "short" });
 const monthLong = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" });
 const monthName = new Intl.DateTimeFormat("pt-BR", { month: "long" });
 const decimal = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 });
+const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
 const periods = [
   { value: "mes", label: "Este mês" },
@@ -131,12 +133,19 @@ export default function ContratacoesPage() {
   const [search, setSearch] = useState("");
   const [period, setPeriod] = useState("12m");
   const [companyId, setCompanyId] = useState("");
+  // Dados do estágio (opcionais) por candidatura contratada, e o filtro "só com pendências".
+  const [internships, setInternships] = useState(() => new Map());
+  const [onlyPending, setOnlyPending] = useState(false);
+  const [editing, setEditing] = useState(null);
 
   const loadHires = useCallback(async () => {
     try {
-      const response = await apiFetch("/candidatos");
+      const [response, internshipsResponse] = await Promise.all([apiFetch("/candidatos"), apiFetch("/estagios")]);
       if (!response.ok) throw new Error("Não foi possível carregar as contratações.");
       setHires(toHires(await response.json()));
+      if (internshipsResponse.ok) {
+        setInternships(new Map((await internshipsResponse.json()).map((item) => [item.id, item.estagio])));
+      }
       setLoadError("");
     } catch (error) {
       setLoadError(error.message);
@@ -165,11 +174,12 @@ export default function ContratacoesPage() {
   const start = periodStart(period);
   const inPeriod = start ? ofCompany.filter((hire) => hireDate(hire) >= start) : ofCompany;
   const term = normalize(search);
-  const listed = term
-    ? inPeriod.filter((hire) =>
-        normalize(`${hire.estudante.nome_completo} ${hire.estudante.curso} ${hire.vaga?.titulo} ${hire.vaga?.empresa?.nome}`).includes(term),
-      )
-    : inPeriod;
+  const hasPending = (hire) => (internships.get(hire.id)?.situacao?.alertas ?? []).length > 0;
+  const listed = inPeriod
+    .filter((hire) => !term || normalize(`${hire.estudante.nome_completo} ${hire.estudante.curso} ${hire.vaga?.titulo} ${hire.vaga?.empresa?.nome}`).includes(term))
+    .filter((hire) => !onlyPending || hasPending(hire));
+  const pendingCount = ofCompany.filter(hasPending).length;
+  const fees = listed.map((hire) => internships.get(hire.id)?.taxa_agenciamento).filter((value) => typeof value === "number");
 
   const now = new Date();
   const thisMonth = ofCompany.filter((hire) => hireDate(hire) >= new Date(now.getFullYear(), now.getMonth(), 1)).length;
@@ -284,6 +294,16 @@ export default function ContratacoesPage() {
             <option value="">Todas as empresas</option>
             {companies.map((company) => <option key={company.id} value={company.id}>{company.nome}</option>)}
           </select>
+          {pendingCount > 0 && (
+            <button
+              type="button"
+              aria-pressed={onlyPending}
+              onClick={() => setOnlyPending((value) => !value)}
+              className={`h-10 rounded-md border px-3 text-sm font-semibold ${onlyPending ? "border-amber-300 bg-amber-50 text-amber-900" : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"}`}
+            >
+              Pendências do estágio ({pendingCount})
+            </button>
+          )}
         </ListToolbar>
 
         {isLoading ? (
@@ -313,6 +333,7 @@ export default function ContratacoesPage() {
             <p className="border-b border-slate-100 px-4 py-3 text-sm text-slate-600 sm:px-5">
               <strong className="font-extrabold text-marinho-900">{plural(listed.length, "contratação", "contratações")}</strong> · {periodLabel}, da
               mais recente para a mais antiga
+              {fees.length > 0 && <> · taxas de agenciamento: <strong className="text-marinho-900">{money.format(fees.reduce((sum, value) => sum + value, 0))}</strong></>}
             </p>
             <ul className="divide-y divide-slate-100">
               {listed.map((hire) => {
@@ -354,6 +375,16 @@ export default function ContratacoesPage() {
                           <p className="text-xs text-slate-500">{days < 1 ? "no mesmo dia da candidatura" : `${plural(days, "dia", "dias")} após a candidatura`}</p>
                         )}
                       </div>
+                      <div className="col-span-2 flex flex-wrap items-center gap-2 md:col-span-4 md:pl-[3.25rem]" onClick={(event) => event.stopPropagation()}>
+                        <EstagioBadges estagio={internships.get(hire.id)} compact />
+                        <button
+                          type="button"
+                          onClick={() => setEditing(hire)}
+                          className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-2 py-0.5 text-xs font-semibold text-marinho-700 hover:bg-marinho-50"
+                        >
+                          <BriefcaseBusiness size={12} /> Dados do estágio
+                        </button>
+                      </div>
                     </div>
                   </li>
                 );
@@ -362,6 +393,17 @@ export default function ContratacoesPage() {
           </div>
         )}
       </div>
+      {editing && (
+        <EstagioDialog
+          hire={editing}
+          estagio={internships.get(editing.id) ?? null}
+          onClose={() => setEditing(null)}
+          onSaved={(id, saved) => {
+            setInternships((current) => new Map(current).set(id, saved));
+            window.dispatchEvent(new Event("dashboard:refresh"));
+          }}
+        />
+      )}
     </section>
   );
 }

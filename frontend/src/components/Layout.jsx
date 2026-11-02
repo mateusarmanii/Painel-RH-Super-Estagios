@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import toast from "react-hot-toast";
+import { Link, useLocation } from "react-router-dom";
 import CreationForm from "./CreationForm.jsx";
+import GlobalSearch from "./GlobalSearch.jsx";
 import Modal from "./Modal.jsx";
+import NotificationBell from "./NotificationBell.jsx";
 import {
   BriefcaseBusiness,
   Building2,
@@ -15,12 +16,11 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
-  Search,
+  Settings,
   Users,
   UserRoundCheck,
   X,
 } from "lucide-react";
-import { apiFetch, OFFLINE_MESSAGE } from "../api.js";
 import { buttonPrimary } from "../ui.js";
 
 const navigationItems = [
@@ -32,6 +32,7 @@ const navigationItems = [
   { label: "Estudantes", path: "/estudantes", icon: GraduationCap },
   { label: "Banco de Talentos", path: "/banco-de-talentos", icon: Users },
   { label: "Contratações Efetivas", path: "/contratacoes", icon: UserRoundCheck },
+  { label: "Configurações", path: "/configuracoes", icon: Settings },
 ];
 
 // Título mostrado na barra superior de cada tela.
@@ -45,6 +46,8 @@ const pageTitles = [
   ["/estudantes", "Estudantes"],
   ["/banco-de-talentos", "Banco de Talentos"],
   ["/contratacoes", "Contratações efetivas"],
+  ["/configuracoes", "Configurações"],
+  ["/relatorios/empresa", "Relatório da empresa"],
 ];
 
 function pageTitle(pathname) {
@@ -55,52 +58,6 @@ function pageTitle(pathname) {
 function isActive(item, pathname) {
   if (item.path === "/") return pathname === "/";
   return [item.path, ...(item.also ?? [])].some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
-}
-
-function VagaSearch({ id, onDone }) {
-  const navigate = useNavigate();
-  const [numeroVaga, setNumeroVaga] = useState("");
-
-  // Abre o Kanban da vaga com o número informado.
-  async function handleSearch(event) {
-    event.preventDefault();
-    const codigo = numeroVaga.trim();
-    if (!codigo) return;
-
-    try {
-      const response = await apiFetch("/vagas");
-      if (!response.ok) throw new Error("Não foi possível buscar as vagas.");
-      const vaga = (await response.json()).find((item) => item.codigo_vaga === codigo);
-      if (!vaga) {
-        toast.error(`Nenhuma vaga com o Nº ${codigo}.`);
-        return;
-      }
-      setNumeroVaga("");
-      onDone?.();
-      navigate(`/kanban/${vaga.id}`);
-    } catch (searchError) {
-      toast.error(
-        searchError instanceof TypeError ? OFFLINE_MESSAGE : searchError.message,
-      );
-    }
-  }
-
-  return (
-    <form onSubmit={handleSearch} className="flex min-w-0 flex-1">
-      <label htmlFor={id} className="sr-only">Buscar vaga por número</label>
-      <div className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 focus-within:border-marinho-600 focus-within:ring-2 focus-within:ring-ambar-400/40">
-        <Search size={17} className="shrink-0 text-slate-500" />
-        <input
-          id={id}
-          value={numeroVaga}
-          onChange={(event) => setNumeroVaga(event.target.value)}
-          placeholder="Buscar vaga por Nº"
-          inputMode="numeric"
-          className="min-w-0 flex-1 bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-500"
-        />
-      </div>
-    </form>
-  );
 }
 
 export default function Layout({ children, user, onLogout }) {
@@ -155,7 +112,7 @@ export default function Layout({ children, user, onLogout }) {
 
       <aside
         aria-label="Menu principal"
-        className={`group/menu fixed inset-y-0 left-0 z-50 flex w-64 max-w-[85vw] flex-col overflow-x-hidden bg-marinho-900 text-slate-200 shadow-2xl transition-[transform,width] duration-200 ease-out lg:translate-x-0 ${
+        className={`group/menu print:hidden fixed inset-y-0 left-0 z-50 flex w-64 max-w-[85vw] flex-col overflow-x-hidden bg-marinho-900 text-slate-200 shadow-2xl transition-[transform,width] duration-200 ease-out lg:translate-x-0 ${
           isPinned ? "lg:w-64 lg:shadow-none" : "lg:w-16 lg:shadow-none lg:hover:w-64 lg:hover:shadow-2xl"
         } ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}`}
       >
@@ -181,12 +138,10 @@ export default function Layout({ children, user, onLogout }) {
           </button>
         </div>
 
-        {/* No celular a busca por Nº fica dentro do menu. */}
-        {pathname !== "/vagas" && (
-          <div className="px-4 pb-4 md:hidden">
-            <VagaSearch id="buscar-vaga-menu" onDone={() => setIsSidebarOpen(false)} />
-          </div>
-        )}
+        {/* No celular a busca fica dentro do menu. */}
+        <div className="px-4 pb-4 md:hidden">
+          <GlobalSearch id="buscar-menu" onDone={() => setIsSidebarOpen(false)} />
+        </div>
 
         <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 pb-6">
           {navigationItems.map((item) => {
@@ -240,7 +195,7 @@ export default function Layout({ children, user, onLogout }) {
         </button>
       </aside>
 
-      <header className={`fixed inset-x-0 top-0 z-30 flex h-16 items-center gap-3 border-b border-slate-200 bg-white px-3 shadow-sm transition-[left] duration-200 sm:px-6 ${isPinned ? "lg:left-64" : "lg:left-16"}`}>
+      <header className={`print:hidden fixed inset-x-0 top-0 z-30 flex h-16 items-center gap-3 border-b border-slate-200 bg-white px-3 shadow-sm transition-[left] duration-200 sm:px-6 ${isPinned ? "lg:left-64" : "lg:left-16"}`}>
         <button
           type="button"
           aria-label="Abrir menu"
@@ -255,10 +210,11 @@ export default function Layout({ children, user, onLogout }) {
           {pageTitle(pathname)}
         </h1>
 
-        {/* Na tela de Vagas a busca da própria página já procura por título e Nº. */}
-        <div className="mx-auto hidden w-full max-w-sm md:flex">
-          {pathname !== "/vagas" && <VagaSearch id="buscar-vaga" />}
+        <div className="mx-auto hidden w-full max-w-md md:flex">
+          <GlobalSearch id="buscar-topo" />
         </div>
+
+        <NotificationBell />
 
         <div className="relative shrink-0">
           <button
@@ -302,7 +258,7 @@ export default function Layout({ children, user, onLogout }) {
         </div>
       </header>
 
-      <main className={`min-h-screen pt-16 transition-[padding] duration-200 ${isPinned ? "lg:pl-64" : "lg:pl-16"}`}>{children}</main>
+      <main className={`min-h-screen pt-16 print:p-0 transition-[padding] duration-200 ${isPinned ? "lg:pl-64" : "lg:pl-16"}`}>{children}</main>
 
       <Modal isOpen={Boolean(creatingType)} title={creatingType?.title} onClose={() => setCreating(null)}>
         {creatingType && (

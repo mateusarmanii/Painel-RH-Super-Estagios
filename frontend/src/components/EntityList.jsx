@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
-import { Inbox, SearchX } from "lucide-react";
+import { Archive, ArchiveRestore, Inbox, SearchX } from "lucide-react";
 import LoadError from "./LoadError.jsx";
 import ActionMenu from "./ActionMenu.jsx";
 import CreationForm from "./CreationForm.jsx";
@@ -38,6 +38,8 @@ export default function EntityList({
   onDeleteBlocked,
   // Opcional: outra forma de um item bater com a busca (recebe o item e o texto digitado, sem espaços nas pontas).
   matchSearch,
+  // Opcional: arquivar (só esconde da lista). { field: "arquivada_em", bodyKey: "arquivada" } → PATCH /<endpoint>/:id/arquivo.
+  archive,
 }) {
   const [items, setItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -46,6 +48,7 @@ export default function EntityList({
   const [editingItem, setEditingItem] = useState(null);
   const [deletingItem, setDeletingItem] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
 
   const loadItems = useCallback(async () => {
     try {
@@ -67,7 +70,24 @@ export default function EntityList({
     return () => window.removeEventListener("dashboard:refresh", loadItems);
   }, [loadItems]);
 
-  const visibleItems = useMemo(() => (filterItems ? items.filter(filterItems) : items), [items, filterItems]);
+  const archivedCount = archive ? items.filter((item) => item[archive.field]).length : 0;
+  const visibleItems = useMemo(() => {
+    const active = archive && !showArchived ? items.filter((item) => !item[archive.field]) : items;
+    return filterItems ? active.filter(filterItems) : active;
+  }, [items, filterItems, archive, showArchived]);
+
+  async function toggleArchive(item) {
+    const archiving = !item[archive.field];
+    try {
+      const response = await apiFetch(`/${endpoint}/${item.id}/arquivo`, { method: "PATCH", body: { [archive.bodyKey]: archiving } });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.erro ?? "Não foi possível arquivar.");
+      setItems((current) => current.map((entry) => (entry.id === item.id ? { ...entry, [archive.field]: result[archive.field] } : entry)));
+      toast.success(archiving ? `${getName(item)} foi arquivad${entityLabel.article} (some da lista; “Mostrar arquivados” traz de volta).` : `${getName(item)} voltou para a lista.`);
+    } catch (archiveError) {
+      toast.error(archiveError.message);
+    }
+  }
 
   const filteredItems = useMemo(() => {
     const term = normalize(search.trim());
@@ -89,9 +109,24 @@ export default function EntityList({
           <ActionMenu
             label={`Ações para ${getName(item)}`}
             title={getName(item)}
-            items={getMenuItems(item, { edit: () => setEditingItem(item), remove: () => setDeletingItem(item) })}
+            items={[
+              ...getMenuItems(item, { edit: () => setEditingItem(item), remove: () => setDeletingItem(item) }),
+              ...(archive
+                ? [{
+                    key: "archive",
+                    label: item[archive.field] ? "Desarquivar" : "Arquivar",
+                    icon: item[archive.field] ? ArchiveRestore : Archive,
+                    onClick: () => toggleArchive(item),
+                  }]
+                : []),
+            ]}
           />
         </div>
+        {archive && item[archive.field] && (
+          <span className="mb-2 inline-flex w-fit items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
+            <Archive size={11} /> Arquivad{entityLabel.article}
+          </span>
+        )}
         {renderItem(item)}
       </article>
     );
@@ -148,6 +183,12 @@ export default function EntityList({
           exportDisabled={isLoading || Boolean(loadError) || filteredItems.length === 0}
         >
           {toolbarExtra}
+          {archivedCount > 0 && (
+            <label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-700">
+              <input type="checkbox" checked={showArchived} onChange={(event) => setShowArchived(event.target.checked)} className="size-4 accent-marinho-700" />
+              Mostrar arquivad{entityLabel.article}s ({archivedCount})
+            </label>
+          )}
         </ListToolbar>
 
         {isLoading ? (

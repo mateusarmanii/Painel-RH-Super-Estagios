@@ -1,0 +1,66 @@
+# Confere cada push e pull request: lint e build do frontend; schema, lint e testes do backend num Postgres temporário.
+# Não publica nada e não usa nenhum banco real (o banco existe só durante a execução).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npx --yes oxlint@1 src
+      - run: npm run build
+
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: superestagios_ci
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/superestagios_ci
+      JWT_SECRET: ci-segredo-apenas-para-testes-automaticos-0123456789
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npx prisma validate
+      - run: npx prisma migrate deploy
+      - run: npx --yes oxlint@1 src server.js
+      - name: Testes (todos os scripts test:*)
+        run: |
+          for script in $(node -e 'console.log(Object.keys(require("./package.json").scripts).filter((s) => s.startsWith("test:")).join(" "))'); do
+            echo "::group::$script"
+            npm run -s "$script"
+            echo "::endgroup::"
+          done

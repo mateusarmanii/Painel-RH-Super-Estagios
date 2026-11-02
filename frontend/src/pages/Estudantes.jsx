@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { FileText, Pencil, Send, SlidersHorizontal, Trash2, UserRound, X } from "lucide-react";
 import CandidaturaHistory from "../components/CandidaturaHistory.jsx";
 import EntityList from "../components/EntityList.jsx";
@@ -12,7 +12,8 @@ import { situationLabels, studentSituation } from "../perfil.js";
 import { formatCep } from "../cep.js";
 import { viewCurriculo } from "../curriculo.js";
 
-const EMPTY_FILTERS = { curso: "", instituicao: "", turno: "", semestreMinimo: "", situacao: "", curriculo: "", disponibilidade: [] };
+const EMPTY_FILTERS = { curso: "", instituicao: "", turno: "", semestreMinimo: "", situacao: "", curriculo: "", disponibilidade: [], etiqueta: "", origem: "" };
+const origemLabels = { FORMULARIO: "Cadastro pelo site", PAINEL: "Cadastro pelo painel" };
 
 const curriculoFilterLabels = { COM: "Com currículo", SEM: "Sem currículo" };
 
@@ -52,7 +53,7 @@ const csvExport = {
   ],
 };
 
-const getSearchText = (estudante) => `${estudante.nome_completo} ${estudante.curso} ${estudante.instituicao_ensino ?? ""}`;
+const getSearchText = (estudante) => `${estudante.nome_completo} ${estudante.curso} ${estudante.instituicao_ensino ?? ""} ${(estudante.etiquetas ?? []).join(" ")}`;
 // Busca só com dígitos (4 ou mais): também procura pelo final do telefone, ignorando a formatação ("7777" acha "(31) 98888-7777").
 const matchPhoneEnd = (estudante, term) => /^\d{4,}$/.test(term) && phoneDigits(estudante.telefone).endsWith(term);
 const getName = (estudante) => estudante.nome_completo;
@@ -67,6 +68,8 @@ function matchesFilters(estudante, filters) {
   if (filters.situacao && studentSituation(estudante) !== filters.situacao) return false;
   if (filters.curriculo && Boolean(estudante.curriculo) !== (filters.curriculo === "COM")) return false;
   if (filters.disponibilidade.length && !filters.disponibilidade.every((periodo) => estudante.disponibilidade?.includes(periodo))) return false;
+  if (filters.etiqueta && !(estudante.etiquetas ?? []).some((tag) => normalize(tag) === filters.etiqueta)) return false;
+  if (filters.origem && (estudante.origem === "FORMULARIO" ? "FORMULARIO" : "PAINEL") !== filters.origem) return false;
   return true;
 }
 
@@ -108,6 +111,12 @@ function renderEstudante(estudante) {
         </Link>
       </h2>
       <p className="mt-2 text-sm text-slate-600">{estudante.curso}</p>
+      {(estudante.etiquetas?.length > 0 || estudante.origem === "FORMULARIO") && (
+        <p className="mt-2 flex flex-wrap gap-1">
+          {estudante.origem === "FORMULARIO" && <span className="rounded-full bg-sky-50 px-2 py-0.5 text-[11px] font-semibold text-sky-800">Site</span>}
+          {estudante.etiquetas?.map((tag) => <span key={tag} className="rounded-full bg-marinho-50 px-2 py-0.5 text-[11px] font-semibold text-marinho-800">{tag}</span>)}
+        </p>
+      )}
       {estudante.instituicao_ensino && <p className="text-sm text-slate-500">{estudante.instituicao_ensino}</p>}
       {(estudante.disponibilidade?.length > 0 || estudante.previsao_formatura) && (
         <p className="mt-2 text-xs text-slate-500">
@@ -153,6 +162,7 @@ function Filters({ filters, onChange, students, visibleCount, isLoading }) {
   const [isOpen, setIsOpen] = useState(() => !window.matchMedia?.("(max-width: 639px)").matches);
   const courses = useMemo(() => courseOptions(students.map((student) => student.curso)), [students]);
   const institutions = useMemo(() => courseOptions(students.map((student) => student.instituicao_ensino)), [students]);
+  const tags = useMemo(() => courseOptions(students.flatMap((student) => student.etiquetas ?? [])), [students]);
   const set = (name) => (value) => onChange({ ...filters, [name]: value });
   const toggleAvailability = (periodo) =>
     onChange({
@@ -173,6 +183,8 @@ function Filters({ filters, onChange, students, visibleCount, isLoading }) {
     filters.semestreMinimo && { key: "semestre", label: `A partir do ${filters.semestreMinimo}º semestre`, clear: { semestreMinimo: "" } },
     filters.situacao && { key: "situacao", label: situationLabels[filters.situacao], clear: { situacao: "" } },
     filters.curriculo && { key: "curriculo", label: curriculoFilterLabels[filters.curriculo], clear: { curriculo: "" } },
+    filters.etiqueta && { key: "etiqueta", label: `Etiqueta: ${tags.find((t) => t.key === filters.etiqueta)?.label ?? filters.etiqueta}`, clear: { etiqueta: "" } },
+    filters.origem && { key: "origem", label: origemLabels[filters.origem], clear: { origem: "" } },
     ...filters.disponibilidade.map((periodo) => ({
       key: `disp-${periodo}`,
       label: `Disponível: ${periodoLabels[periodo]}`,
@@ -204,6 +216,18 @@ function Filters({ filters, onChange, students, visibleCount, isLoading }) {
             <option value="">Todos</option>
             {courses.map((course) => <option key={course.key} value={course.key}>{course.label}</option>)}
           </FilterSelect>
+          {tags.length > 0 && (
+            <FilterSelect id="filtro-etiqueta" label="Etiqueta" value={filters.etiqueta} onChange={set("etiqueta")}>
+              <option value="">Todas</option>
+              {tags.map((tag) => <option key={tag.key} value={tag.key}>{tag.label}</option>)}
+            </FilterSelect>
+          )}
+          {students.some((student) => student.origem === "FORMULARIO") && (
+            <FilterSelect id="filtro-origem" label="Origem" value={filters.origem} onChange={set("origem")}>
+              <option value="">Todas</option>
+              {Object.entries(origemLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            </FilterSelect>
+          )}
           <FilterSelect id="filtro-instituicao" label="Instituição" value={filters.instituicao} onChange={set("instituicao")}>
             <option value="">Todas</option>
             {institutions.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}
@@ -278,7 +302,13 @@ function Filters({ filters, onChange, students, visibleCount, isLoading }) {
 export default function EstudantesPage() {
   const navigate = useNavigate();
   const [indicating, setIndicating] = useState(null);
-  const [filters, setFilters] = useState(EMPTY_FILTERS);
+  // O Dashboard abre esta tela já filtrada: ?curso=<nome do curso> e ?situacao=EM_PROCESSO.
+  const [searchParams] = useSearchParams();
+  const [filters, setFilters] = useState(() => ({
+    ...EMPTY_FILTERS,
+    curso: normalize(searchParams.get("curso") ?? ""),
+    situacao: searchParams.get("situacao") in situationLabels ? searchParams.get("situacao") : "",
+  }));
   const hasFilters = JSON.stringify(filters) !== JSON.stringify(EMPTY_FILTERS);
 
   const getMenuItems = useCallback(
@@ -318,6 +348,7 @@ export default function EstudantesPage() {
         filterItems={hasFilters ? filterItems : undefined}
         renderHeader={renderHeader}
         getMenuItems={getMenuItems}
+        archive={{ field: "arquivado_em", bodyKey: "arquivado" }}
       />
       <Modal isOpen={Boolean(indicating)} title="Indicar para vaga" onClose={() => setIndicating(null)}>
         {indicating && (

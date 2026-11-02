@@ -154,6 +154,19 @@ router.delete("/:id/logo", async (req, res) => {
   }
 });
 
+// Arquivar (só esconde das listas; opcional): { arquivada: true | false }.
+router.patch("/:id/arquivo", async (req, res) => {
+  if (!uuidValido.test(req.params.id) || typeof req.body?.arquivada !== "boolean") return res.status(400).json({ erro: "Dados inválidos." });
+  try {
+    const empresa = await prisma.empresa.update({ where: { id: req.params.id }, data: { arquivada_em: req.body.arquivada ? new Date() : null }, select: { id: true, arquivada_em: true } });
+    return res.json(empresa);
+  } catch (error) {
+    if (error.code === "P2025") return res.status(404).json({ erro: "Empresa não encontrada." });
+    console.error("Erro ao arquivar empresa:", error);
+    return res.status(500).json({ erro: "Não foi possível arquivar a empresa." });
+  }
+});
+
 router.delete("/:id", async (req, res) => {
   const { id } = req.params;
 

@@ -6,12 +6,22 @@ import {
   ArrowRightLeft,
   BriefcaseBusiness,
   CalendarClock,
+  CalendarX2,
+  CheckSquare,
   FileText,
+  HelpCircle,
+  Lightbulb,
+  Link2,
   MessageSquarePlus,
+  MessageSquareText,
   MessageSquareX,
+  Search,
   StickyNote,
   Send,
+  ThumbsDown,
+  ThumbsUp,
   UserRound,
+  X,
 } from "lucide-react";
 import {
   closestCorners,
@@ -23,6 +33,7 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import {
+  arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   useSortable,
@@ -30,6 +41,9 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import ActionMenu from "../components/ActionMenu.jsx";
+import DismissalReasonField, { dismissalPayload } from "../components/DismissalReasonField.jsx";
+import MessageTemplateDialog from "../components/MessageTemplateDialog.jsx";
+import { SuggestionsDialog, PortalLinkDialog } from "../components/KanbanTools.jsx";
 import { IndicateDialog } from "../components/IndicateForm.jsx";
 import Modal from "../components/Modal.jsx";
 import PageHeader from "../components/PageHeader.jsx";
@@ -39,8 +53,8 @@ import { statusLabels, statusStyles } from "../vagaStatus.js";
 // IN_PROCESS_STATUSES: etapas "em andamento", dispensadas quando a vaga é fechada.
 import { dateTimeFormat, IN_PROCESS_STATUSES, kanbanStatusLabels } from "../kanbanStatus.js";
 import { apiFetch, apiJson } from "../api.js";
-import { getInitials, plural } from "../text.js";
-import { buttonDanger, buttonSecondary } from "../ui.js";
+import { getInitials, normalize, plural } from "../text.js";
+import { buttonDanger, buttonSecondary, inputBase } from "../ui.js";
 import { changeVagaStatus, closedVagaMessage, MOTIVO_VAGA_PREENCHIDA } from "../components/VagaStatusDialog.jsx";
 import CompanyAvatar from "../components/CompanyAvatar.jsx";
 import InterviewFields, { interviewFormValues, interviewPayload } from "../components/InterviewFields.jsx";
@@ -127,6 +141,7 @@ function CardMenu({ candidate, onAction }) {
           icon: MessageSquarePlus,
           onClick: () => onAction("note", candidate),
         },
+        { key: "message", label: "Mensagem com modelo", icon: MessageSquareText, onClick: () => onAction("message", candidate) },
         { key: "indicate", label: "Indicar para outra vaga", icon: Send, onClick: () => onAction("indicate", candidate) },
         {
           key: "move",
@@ -141,7 +156,14 @@ function CardMenu({ candidate, onAction }) {
   );
 }
 
-function StudentCard({ candidate, onAction }) {
+// Parecer da empresa dado pelo portal (só informa; o RH decide a etapa).
+const opinionBadges = {
+  APROVADO: { label: "Empresa aprovou", icon: ThumbsUp, style: "bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200" },
+  TALVEZ: { label: "Empresa: talvez", icon: HelpCircle, style: "bg-amber-50 text-amber-800 ring-1 ring-amber-200" },
+  REPROVADO: { label: "Empresa não aprovou", icon: ThumbsDown, style: "bg-rose-50 text-rose-800 ring-1 ring-rose-200" },
+};
+
+function StudentCard({ candidate, onAction, selectMode, selected, onToggleSelect }) {
   const {
     attributes,
     isDragging,
@@ -165,6 +187,16 @@ function StudentCard({ candidate, onAction }) {
       }`}
     >
       <div className="flex items-center gap-3">
+        {selectMode && (
+          <input
+            type="checkbox"
+            {...stopDrag}
+            checked={selected}
+            onChange={() => onToggleSelect(candidate.applicationId)}
+            aria-label={`Selecionar ${candidate.nome}`}
+            className="size-4 shrink-0 accent-marinho-700"
+          />
+        )}
         <span
           aria-label={`Iniciais: ${getInitials(candidate.nome)}`}
           className={`grid size-10 shrink-0 place-items-center rounded-full text-xs font-semibold ${candidate.avatar}`}
@@ -202,6 +234,17 @@ function StudentCard({ candidate, onAction }) {
         </div>
       )}
 
+      {candidate.remarcacao && candidate.coluna === "entrevista" && (
+        <p className="mt-2 flex items-start gap-1.5 rounded bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-800" title={candidate.remarcacaoMensagem ?? undefined}>
+          <CalendarX2 size={14} className="mt-px shrink-0" />
+          <span className="line-clamp-2">Pediu para remarcar{candidate.remarcacaoMensagem ? `: ${candidate.remarcacaoMensagem}` : ""}</span>
+        </p>
+      )}
+
+      {candidate.parecer && opinionBadges[candidate.parecer.parecer] && (
+        <OpinionBadge opinion={candidate.parecer} />
+      )}
+
       {candidate.observacao && (
         <p className="mt-3 flex items-start gap-1.5 rounded border-l-2 border-marinho-300 bg-slate-50 px-2 py-1 text-xs text-slate-700">
           <StickyNote size={14} className="mt-px shrink-0 text-marinho-500" aria-label="Observação" />
@@ -219,7 +262,17 @@ function StudentCard({ candidate, onAction }) {
   );
 }
 
-function KanbanColumn({ column, candidates, onAction }) {
+function OpinionBadge({ opinion }) {
+  const { label, icon: Icon, style } = opinionBadges[opinion.parecer];
+  return (
+    <p className={`mt-2 flex items-start gap-1.5 rounded px-2 py-1 text-xs font-semibold ${style}`} title={opinion.comentario ?? undefined}>
+      <Icon size={13} className="mt-px shrink-0" />
+      <span className="line-clamp-2">{label}{opinion.comentario ? `: “${opinion.comentario}”` : ""}</span>
+    </p>
+  );
+}
+
+function KanbanColumn({ column, candidates, onAction, selectMode, selectedIds, onToggleSelect }) {
   const { isOver, setNodeRef } = useDroppable({ id: column.id });
 
   return (
@@ -242,7 +295,14 @@ function KanbanColumn({ column, candidates, onAction }) {
       >
         <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
           {candidates.map((candidate) => (
-            <StudentCard key={candidate.applicationId} candidate={candidate} onAction={onAction} />
+            <StudentCard
+              key={candidate.applicationId}
+              candidate={candidate}
+              onAction={onAction}
+              selectMode={selectMode}
+              selected={selectedIds.has(candidate.applicationId)}
+              onToggleSelect={onToggleSelect}
+            />
           ))}
         </div>
       </SortableContext>
@@ -254,7 +314,7 @@ function KanbanColumn({ column, candidates, onAction }) {
 function MoveDetailsForm({ move, onConfirm, onCancel }) {
   const isInterview = move.destination.status === "ENTREVISTA_AGENDADA";
   const [interview, setInterview] = useState(() => interviewFormValues());
-  const [reason, setReason] = useState("");
+  const [reason, setReason] = useState({ text: "", category: null });
   const [isSaving, setIsSaving] = useState(false);
 
   async function handleSubmit(event) {
@@ -269,11 +329,11 @@ function MoveDetailsForm({ move, onConfirm, onCancel }) {
       }
       details = payload.body;
     } else {
-      if (!reason.trim()) {
+      if (!reason.text.trim()) {
         toast.error("Informe o motivo da dispensa.");
         return;
       }
-      details = { motivo_recusa: reason.trim() };
+      details = dismissalPayload(reason);
     }
 
     setIsSaving(true);
@@ -291,19 +351,7 @@ function MoveDetailsForm({ move, onConfirm, onCancel }) {
       {isInterview ? (
         <InterviewFields idPrefix="kanban-entrevista" values={interview} onChange={setInterview} />
       ) : (
-        <label htmlFor="kanban-move-detail" className="block space-y-1.5">
-          <span className="text-sm font-medium text-slate-700">Motivo da dispensa</span>
-          <textarea
-            id="kanban-move-detail"
-            required
-            rows={4}
-            maxLength={500}
-            value={reason}
-            onChange={(event) => setReason(event.target.value)}
-            placeholder="Ex.: perfil não aderente à vaga, aceitou outra proposta..."
-            className="w-full resize-y rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-marinho-600 focus:ring-2 focus:ring-ambar-400/40"
-          />
-        </label>
+        <DismissalReasonField id="kanban-move-detail" value={reason} onChange={setReason} />
       )}
 
       <div className="flex justify-end gap-2 pt-2">
@@ -415,7 +463,7 @@ function NoteForm({ candidate, onSaved, onCancel }) {
 
 // Depois de mover alguém para "Contratado": oferece encerrar a vaga (mesmo fluxo de "Fechar vaga", com o motivo
 // "Vaga preenchida" para quem ainda estava em andamento).
-function HiredDialog({ candidate, vaga, inProcess, onKeepOpen, onClosed }) {
+function HiredDialog({ candidate, vaga, inProcess, hiredCount, onKeepOpen, onClosed }) {
   const [isSaving, setIsSaving] = useState(false);
 
   async function closeVaga() {
@@ -436,6 +484,12 @@ function HiredDialog({ candidate, vaga, inProcess, onKeepOpen, onClosed }) {
         <strong className="font-semibold text-marinho-900">{candidate.nome}</strong> foi contratado para a vaga{" "}
         <strong className="font-semibold text-marinho-900">{vaga.titulo}</strong>. Deseja encerrar a vaga?
       </p>
+      {vaga.quantidade > 1 && (
+        <p className={`rounded-md px-3 py-2 text-sm font-semibold ${hiredCount >= vaga.quantidade ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-900"}`}>
+          {hiredCount} de {vaga.quantidade} contratados nesta vaga.
+          {hiredCount < vaga.quantidade && " Ainda faltam pessoas: talvez seja melhor manter aberta."}
+        </p>
+      )}
       <p className="rounded-md bg-slate-50 p-3 text-sm text-slate-700">
         {inProcess
           ? `Ao encerrar, ${plural(inProcess, "candidato em andamento será dispensado", "candidatos em andamento serão dispensados")} com o motivo "${MOTIVO_VAGA_PREENCHIDA}".`
@@ -546,6 +600,9 @@ function toCandidate(application, index) {
     motivo: application.motivo_recusa,
     observacao: application.observacao,
     curriculo: application.estudante.curriculo ?? null,
+    parecer: application.pareceres?.[0] ?? null,
+    remarcacao: application.remarcacao_pedida_em ?? null,
+    remarcacaoMensagem: application.remarcacao_mensagem ?? null,
     avatar: avatarStyles[index % avatarStyles.length],
   };
 }
@@ -561,6 +618,14 @@ function KanbanBoard({ vagaId }) {
   const [noting, setNoting] = useState(null);
   const [hired, setHired] = useState(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [search, setSearch] = useState("");
+  const [messaging, setMessaging] = useState(null);
+  const [tool, setTool] = useState(null); // null | "sugestoes" | "portal"
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [bulkDismiss, setBulkDismiss] = useState(false);
+  const [bulkReason, setBulkReason] = useState({ text: "", category: null });
+  const [isBulkSaving, setIsBulkSaving] = useState(false);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
@@ -609,7 +674,7 @@ function KanbanBoard({ vagaId }) {
   }
 
   // Envia o PATCH; em caso de erro, devolve o cartão à coluna de origem. Retorna true se salvou.
-  async function saveMove({ candidate, destination }, details = {}) {
+  async function saveMove({ candidate, destination }, details = {}, { quiet = false } = {}) {
     try {
       const result = await apiJson(
         `/candidatos/${candidate.id}`,
@@ -627,11 +692,11 @@ function KanbanBoard({ vagaId }) {
         entrevistaStatus: interviewStatus(result),
         motivo: result.motivo_recusa,
       });
-      toast.success(`Candidatura de ${candidate.nome} movida para "${destination.title}".`);
+      if (!quiet) toast.success(`Candidatura de ${candidate.nome} movida para "${destination.title}".`);
       if (result.conflitos?.length) toast(conflictWarning(candidate.nome, result.conflitos), { icon: "⚠️", duration: 8000 });
       window.dispatchEvent(new Event("dashboard:refresh"));
       // Contratou (arrastando ou pelo "⋯"): pergunta se a vaga deve ser encerrada.
-      if (result.status_kanban === "APROVADO" && vaga && vaga.status !== "FECHADA") setHired(candidate);
+      if (!quiet && result.status_kanban === "APROVADO" && vaga && vaga.status !== "FECHADA") setHired(candidate);
       return true;
     } catch (updateError) {
       placeCandidate(candidate.applicationId, { status: candidate.status, coluna: candidate.coluna });
@@ -653,11 +718,55 @@ function KanbanBoard({ vagaId }) {
       columns.find((column) => column.id === over.id) ??
       columns.find((column) => column.id === targetCandidate?.coluna);
 
-    if (!draggedCandidate || !destination || draggedCandidate.coluna === destination.id) {
+    if (!draggedCandidate || !destination) return;
+
+    // Mesma coluna: só muda a posição (a ordem é salva; se falhar, nada mais muda).
+    if (draggedCandidate.coluna === destination.id) {
+      if (!targetCandidate || targetCandidate.applicationId === draggedCandidate.applicationId) return;
+      const reordered = arrayMove(candidates, candidates.indexOf(draggedCandidate), candidates.indexOf(targetCandidate));
+      setCandidates(reordered);
+      apiFetch(`/vagas/${vagaId}/ordem`, { method: "PUT", body: { ids: reordered.map((candidate) => candidate.applicationId) } })
+        .then((response) => {
+          if (!response.ok) toast.error("Não foi possível salvar a nova ordem.");
+        })
+        .catch(() => toast.error("Não foi possível salvar a nova ordem."));
       return;
     }
 
     requestMove(draggedCandidate, destination);
+  }
+
+  function toggleSelect(applicationId) {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(applicationId)) next.delete(applicationId);
+      else next.add(applicationId);
+      return next;
+    });
+  }
+
+  function leaveSelectMode() {
+    setSelectMode(false);
+    setSelectedIds(new Set());
+  }
+
+  // Ações em massa: move os selecionados um por um (mesmas regras do arrastar). Entrevista pede a data de cada um,
+  // por isso não entra; Dispensado usa um motivo só para todos.
+  async function bulkMove(destination, details = {}) {
+    const chosen = candidates.filter((candidate) => selectedIds.has(candidate.applicationId) && candidate.coluna !== destination.id);
+    if (!chosen.length) return;
+    setIsBulkSaving(true);
+    let saved = 0;
+    for (const candidate of chosen) {
+      placeCandidate(candidate.applicationId, { status: destination.status, coluna: destination.id });
+      if (await saveMove({ candidate, destination }, details, { quiet: true })) saved++;
+    }
+    setIsBulkSaving(false);
+    if (saved) toast.success(`${plural(saved, "candidatura movida", "candidaturas movidas")} para "${destination.title}".`);
+    if (saved < chosen.length) toast.error(`${plural(chosen.length - saved, "candidatura não foi movida", "candidaturas não foram movidas")}.`);
+    leaveSelectMode();
+    setBulkDismiss(false);
+    setBulkReason({ text: "", category: null });
   }
 
   // Usado ao arrastar e pelo "Mover para…" do menu do cartão.
@@ -679,6 +788,7 @@ function KanbanBoard({ vagaId }) {
     if (action === "profile") navigate(`/estudantes/${candidate.id}`);
     if (action === "indicate") setIndicating(candidate);
     if (action === "note") setNoting(candidate);
+    if (action === "message") setMessaging(candidate);
     if (action === "move") requestMove(candidate, payload);
   }
 
@@ -694,6 +804,11 @@ function KanbanBoard({ vagaId }) {
     setPendingMove(null);
     return saved;
   }
+
+  const searchTerm = normalize(search);
+  const visibleCandidates = searchTerm
+    ? candidates.filter((candidate) => normalize(`${candidate.nome} ${candidate.curso}`).includes(searchTerm))
+    : candidates;
 
   return (
     <section className="flex h-[calc(100vh-4rem)] min-h-[32rem] flex-col">
@@ -720,8 +835,58 @@ function KanbanBoard({ vagaId }) {
             )}
           </div>
         </div>
-        {isLoading && <span className="text-sm text-slate-500">Carregando...</span>}
+        <div className="flex flex-wrap items-center gap-2">
+          {isLoading && <span className="text-sm text-slate-500">Carregando...</span>}
+          <label className="flex h-9 w-48 items-center gap-2 rounded-md border border-slate-300 bg-white px-2.5 focus-within:border-marinho-600">
+            <Search size={15} className="shrink-0 text-slate-400" />
+            <span className="sr-only">Buscar no quadro</span>
+            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar no quadro" className="min-w-0 flex-1 bg-transparent text-sm outline-none" />
+          </label>
+          <button type="button" onClick={() => setTool("sugestoes")} className={`${buttonSecondary} h-9 px-3`} title="Estudantes compatíveis que ainda não estão na vaga">
+            <Lightbulb size={15} /> Sugerir candidatos
+          </button>
+          <button type="button" onClick={() => setTool("portal")} className={`${buttonSecondary} h-9 px-3`} title="Link para a empresa ver os candidatos e dar parecer">
+            <Link2 size={15} /> Link para a empresa
+          </button>
+          <button
+            type="button"
+            onClick={() => (selectMode ? leaveSelectMode() : setSelectMode(true))}
+            aria-pressed={selectMode}
+            className={`${buttonSecondary} h-9 px-3 ${selectMode ? "border-marinho-400 bg-marinho-50" : ""}`}
+          >
+            <CheckSquare size={15} /> {selectMode ? "Cancelar seleção" : "Selecionar"}
+          </button>
+        </div>
       </header>
+
+      {selectMode && (
+        <div className="mx-4 mb-3 flex flex-wrap items-center gap-2 rounded-md border border-marinho-200 bg-marinho-50 px-3 py-2 text-sm sm:mx-7">
+          <span className="font-semibold text-marinho-900">{plural(selectedIds.size, "selecionado", "selecionados")}</span>
+          <select
+            value=""
+            disabled={!selectedIds.size || isBulkSaving}
+            onChange={(event) => {
+              const destination = columns.find((column) => column.id === event.target.value);
+              if (destination?.status === "RECUSADO") setBulkDismiss(true);
+              else if (destination) bulkMove(destination);
+            }}
+            className={`${inputBase} h-8 w-auto`}
+            aria-label="Mover selecionados para"
+          >
+            <option value="">Mover para…</option>
+            {columns.filter((column) => column.status !== "ENTREVISTA_AGENDADA").map((column) => <option key={column.id} value={column.id}>{column.title}</option>)}
+          </select>
+          <button
+            type="button"
+            onClick={() => setSelectedIds(new Set(visibleCandidates.map((candidate) => candidate.applicationId)))}
+            className="text-xs font-bold text-marinho-700 hover:underline"
+          >
+            Selecionar todos os visíveis
+          </button>
+          {isBulkSaving && <span className="text-xs text-slate-500">Salvando...</span>}
+          <span className="ml-auto text-xs text-slate-500">Em Entrevista fica de fora: cada um precisa de uma data.</span>
+        </div>
+      )}
 
       {error ? (
         <div className="mx-5 sm:mx-7">
@@ -742,8 +907,11 @@ function KanbanBoard({ vagaId }) {
                 <KanbanColumn
                   key={column.id}
                   column={column}
-                  candidates={candidates.filter((candidate) => candidate.coluna === column.id)}
+                  candidates={visibleCandidates.filter((candidate) => candidate.coluna === column.id)}
                   onAction={handleCardAction}
+                  selectMode={selectMode}
+                  selectedIds={selectedIds}
+                  onToggleSelect={toggleSelect}
                 />
               ))}
             </div>
@@ -774,6 +942,7 @@ function KanbanBoard({ vagaId }) {
             candidate={hired}
             vaga={vaga}
             inProcess={candidates.filter((candidate) => IN_PROCESS_STATUSES.includes(candidate.status)).length}
+            hiredCount={candidates.filter((candidate) => candidate.status === "APROVADO").length}
             onKeepOpen={() => setHired(null)}
             onClosed={() => {
               setHired(null);
@@ -796,6 +965,34 @@ function KanbanBoard({ vagaId }) {
             onCancel={() => setNoting(null)}
           />
         )}
+      </Modal>
+
+      <MessageTemplateDialog applicationId={messaging?.applicationId} onClose={() => setMessaging(null)} />
+
+      {tool === "sugestoes" && (
+        <SuggestionsDialog vagaId={vagaId} onClose={() => setTool(null)} onAdded={() => setReloadKey((current) => current + 1)} />
+      )}
+      {tool === "portal" && vaga && (
+        <PortalLinkDialog vaga={vaga} onClose={() => setTool(null)} onChanged={(token) => setVaga((current) => ({ ...current, portal_token: token }))} />
+      )}
+
+      <Modal isOpen={bulkDismiss} title={`Dispensar ${plural(selectedIds.size, "candidato", "candidatos")}`} onClose={() => setBulkDismiss(false)}>
+        <form
+          className="space-y-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (!bulkReason.text.trim()) return;
+            bulkMove(columns.find((column) => column.status === "RECUSADO"), dismissalPayload(bulkReason));
+          }}
+        >
+          <DismissalReasonField id="kanban-bulk-motivo" value={bulkReason} onChange={setBulkReason} />
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => setBulkDismiss(false)} className={buttonSecondary}>Cancelar</button>
+            <button type="submit" disabled={isBulkSaving || !bulkReason.text.trim()} className={buttonDanger}>
+              <X size={15} /> {isBulkSaving ? "Dispensando..." : "Dispensar todos"}
+            </button>
+          </div>
+        </form>
       </Modal>
 
       <Modal isOpen={Boolean(indicating)} title="Indicar para outra vaga" onClose={() => setIndicating(null)}>

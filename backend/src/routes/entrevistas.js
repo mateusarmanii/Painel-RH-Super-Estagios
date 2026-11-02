@@ -9,6 +9,8 @@ const {
   statusDaEntrevista,
 } = require("../agenda");
 const { fimDoEvento, selectEvento } = require("../eventos");
+const { registrarEtapa } = require("../historico");
+const { lerCategoria } = require("../motivos");
 
 const router = express.Router();
 const HORA_MS = 60 * 60 * 1000;
@@ -26,6 +28,9 @@ const camposDaEntrevista = {
   entrevista_local: true,
   entrevista_duracao: true,
   entrevistador: true,
+  // Pedido de remarcação feito pelo link de confirmação (some ao reagendar).
+  remarcacao_pedida_em: true,
+  remarcacao_mensagem: true,
   estudante: { select: { id: true, nome_completo: true, curso: true, telefone: true, email: true } },
   vaga: {
     select: {
@@ -170,10 +175,11 @@ router.patch("/:id", async (req, res) => {
       if (novaData <= new Date()) return res.status(400).json({ erro: "Escolha uma data e hora no futuro." });
       const detalhes = camposEntrevista(req.body);
       if (detalhes.erro) return res.status(400).json({ erro: detalhes.erro });
-      data = { ...detalhes.data, data_hora_entrevista: novaData, entrevista_status: "AGUARDANDO" };
+      // Reagendar atende o pedido de remarcação feito pelo link de confirmação.
+      data = { ...detalhes.data, data_hora_entrevista: novaData, entrevista_status: "AGUARDANDO", remarcacao_pedida_em: null, remarcacao_mensagem: null };
     } else if (acao === "realizada") {
       if (!jaAconteceu) return res.status(409).json({ erro: "A entrevista ainda não começou." });
-      data = { entrevista_status: "REALIZADA", status_kanban: "EM_TESTE", motivo_recusa: null };
+      data = { entrevista_status: "REALIZADA", status_kanban: "EM_TESTE", motivo_recusa: null, motivo_categoria: null };
     } else if (acao === "nao_compareceu") {
       if (!jaAconteceu) return res.status(409).json({ erro: "A entrevista ainda não começou." });
       data = { entrevista_status: "NAO_COMPARECEU" };
@@ -181,15 +187,25 @@ router.patch("/:id", async (req, res) => {
       const motivo = typeof motivo_recusa === "string" ? motivo_recusa.trim() : "";
       if (!motivo) return res.status(400).json({ erro: "Informe o motivo da dispensa." });
       if (motivo.length > 500) return res.status(400).json({ erro: "O motivo pode ter no máximo 500 caracteres." });
+      // Categoria: opcional (sugestões da tela).
+      const categoria = lerCategoria(req.body?.motivo_categoria);
+      if (categoria.erro) return res.status(400).json({ erro: categoria.erro });
       data = {
         status_kanban: "RECUSADO",
         motivo_recusa: motivo,
+        motivo_categoria: categoria.valor,
         data_aprovacao: null,
         entrevista_status: statusAoSairDaEntrevista(atual.entrevista_status, "RECUSADO"),
       };
     }
 
-    const entrevista = comStatus(await prisma.aplicacao.update({ where: { id }, data, select: camposDaEntrevista }));
+    // "Realizada" e "Dispensar" mudam a etapa: o histórico é gravado junto.
+    const entrevista = comStatus(await prisma.$transaction(async (transaction) => {
+      if (data.status_kanban) {
+        await registrarEtapa(transaction, { aplicacaoId: id, de: atual.status_kanban, para: data.status_kanban }, req.usuario.id);
+      }
+      return transaction.aplicacao.update({ where: { id }, data, select: camposDaEntrevista });
+    }));
     const conflitos = acao === "reagendar"
       ? await conflitosDoEstudante(prisma, {
         estudanteId: atual.estudante_id,

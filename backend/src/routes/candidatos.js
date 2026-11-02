@@ -6,6 +6,9 @@ const { camposEntrevista, conflitosDoEstudante, statusAoSairDaEntrevista } = req
 const { ETAPAS, ETAPA_INICIAL } = require("../etapas");
 const { RESUMO_ARQUIVO, receberArquivo, gravarArquivo, apagarArquivo, enviarArquivo } = require("../arquivos");
 const { separarVagas } = require("../compatibilidade");
+const { registrarEtapa, selectHistorico } = require("../historico");
+const { lerCategoria } = require("../motivos");
+const { exigirAdmin } = require("./admin");
 
 const router = express.Router();
 // AGUARDANDO_RETORNO ("Em análise") saiu das telas e não é mais aceito (veja src/etapas.js).
@@ -92,6 +95,8 @@ router.get("/:id", async (req, res) => {
                 empresa: { select: { id: true, nome: true, logo_arquivo_id: true } },
               },
             },
+            // Mudanças de etapa (gravadas desde 02/11/2026), da mais antiga para a mais recente.
+            historico: selectHistorico,
           },
         },
       },
@@ -241,6 +246,9 @@ router.patch("/:id", async (req, res) => {
   if (status_kanban === "RECUSADO" && !motivo) {
     return res.status(400).json({ erro: "Informe o motivo da dispensa." });
   }
+  // Categoria do motivo: opcional (sugestões da tela); o texto livre continua obrigatório ao dispensar.
+  const categoria = lerCategoria(req.body?.motivo_categoria);
+  if (categoria.erro) return res.status(400).json({ erro: categoria.erro });
 
   const detalhes = status_kanban === "ENTREVISTA_AGENDADA" ? camposEntrevista(req.body) : { data: {} };
   if (detalhes.erro) return res.status(400).json({ erro: detalhes.erro });
@@ -266,29 +274,35 @@ router.patch("/:id", async (req, res) => {
     // A data da entrevista fica no histórico mesmo após mudar de coluna; o motivo só vale enquanto RECUSADO.
     if (status_kanban === "ENTREVISTA_AGENDADA") {
       // Agendar (ou reagendar) começa sempre como "Aguardando" confirmação.
-      Object.assign(data, detalhes.data, { data_hora_entrevista: dataEntrevista, entrevista_status: "AGUARDANDO" });
+      Object.assign(data, detalhes.data, { data_hora_entrevista: dataEntrevista, entrevista_status: "AGUARDANDO", remarcacao_pedida_em: null, remarcacao_mensagem: null });
     } else if (aplicacao.status_kanban === "ENTREVISTA_AGENDADA") {
       data.entrevista_status = statusAoSairDaEntrevista(aplicacao.entrevista_status, status_kanban);
     }
     data.motivo_recusa = status_kanban === "RECUSADO" ? motivo : null;
+    data.motivo_categoria = status_kanban === "RECUSADO" ? categoria.valor : null;
 
-    const atualizada = await prisma.aplicacao.update({
-      where: { id: aplicacao.id },
-      data,
-      select: {
-        id: true,
-        estudante_id: true,
-        vaga_id: true,
-        status_kanban: true,
-        data_hora_entrevista: true,
-        motivo_recusa: true,
-        data_aprovacao: true,
-        entrevista_status: true,
-        entrevista_formato: true,
-        entrevista_local: true,
-        entrevista_duracao: true,
-        entrevistador: true,
-      },
+    // A mudança e o histórico de etapas são gravados juntos.
+    const atualizada = await prisma.$transaction(async (transaction) => {
+      await registrarEtapa(transaction, { aplicacaoId: aplicacao.id, de: aplicacao.status_kanban, para: status_kanban }, req.usuario.id);
+      return transaction.aplicacao.update({
+        where: { id: aplicacao.id },
+        data,
+        select: {
+          id: true,
+          estudante_id: true,
+          vaga_id: true,
+          status_kanban: true,
+          data_hora_entrevista: true,
+          motivo_recusa: true,
+          motivo_categoria: true,
+          data_aprovacao: true,
+          entrevista_status: true,
+          entrevista_formato: true,
+          entrevista_local: true,
+          entrevista_duracao: true,
+          entrevistador: true,
+        },
+      });
     });
 
     // Aviso (não bloqueia): o estudante já tem outra entrevista nesse horário.
@@ -361,9 +375,13 @@ router.post("/:id/candidaturas", async (req, res) => {
       return res.status(409).json({ erro: "A vaga selecionada não está aberta." });
     }
 
-    const candidatura = await prisma.aplicacao.create({
-      data: { estudante_id: id, vaga_id, status_kanban: ETAPA_INICIAL },
-      include: { vaga: { select: { codigo_vaga: true, titulo: true, empresa: { select: { id: true, nome: true, logo_arquivo_id: true } } } } },
+    const candidatura = await prisma.$transaction(async (transaction) => {
+      const criada = await transaction.aplicacao.create({
+        data: { estudante_id: id, vaga_id, status_kanban: ETAPA_INICIAL },
+        include: { vaga: { select: { codigo_vaga: true, titulo: true, empresa: { select: { id: true, nome: true, logo_arquivo_id: true } } } } },
+      });
+      await registrarEtapa(transaction, { aplicacaoId: criada.id, de: null, para: ETAPA_INICIAL }, req.usuario.id);
+      return criada;
     });
 
     return res.status(201).json(candidatura);
@@ -426,7 +444,7 @@ router.post("/", async (req, res) => {
         }
       }
 
-      return transaction.estudante.create({
+      const criado = await transaction.estudante.create({
         data: {
           nome_completo,
           telefone,
@@ -441,6 +459,10 @@ router.post("/", async (req, res) => {
         },
         include: { aplicacoes: true },
       });
+      for (const aplicacao of criado.aplicacoes) {
+        await registrarEtapa(transaction, { aplicacaoId: aplicacao.id, de: null, para: ETAPA_INICIAL }, req.usuario.id);
+      }
+      return criado;
     });
 
     return res.status(201).json(candidato);
@@ -506,6 +528,59 @@ router.put("/:id", async (req, res) => {
 
     console.error("Erro ao atualizar candidato:", error);
     return res.status(500).json({ erro: "Não foi possível atualizar o candidato." });
+  }
+});
+
+// Arquivar (só esconde das listas; opcional): { arquivado: true | false }.
+router.patch("/:id/arquivo", async (req, res) => {
+  if (!uuidValido.test(req.params.id) || typeof req.body?.arquivado !== "boolean") return res.status(400).json({ erro: "Dados inválidos." });
+  try {
+    const estudante = await prisma.estudante.update({ where: { id: req.params.id }, data: { arquivado_em: req.body.arquivado ? new Date() : null }, select: { id: true, arquivado_em: true } });
+    return res.json(estudante);
+  } catch (error) {
+    if (error.code === "P2025") return res.status(404).json({ erro: "Candidato não encontrado." });
+    console.error("Erro ao arquivar estudante:", error);
+    return res.status(500).json({ erro: "Não foi possível arquivar o estudante." });
+  }
+});
+
+// LGPD: anonimiza o estudante a pedido dele (só ADMIN). Apaga nome, contatos, endereço, nascimento, anotações,
+// etiquetas, currículo e os registros de contato; mantém curso e candidaturas (os números do painel não mudam).
+// Não tem volta.
+router.post("/:id/anonimizar", exigirAdmin, async (req, res) => {
+  if (!uuidValido.test(req.params.id)) return res.status(400).json({ erro: "ID de candidato inválido." });
+  try {
+    const estudante = await prisma.estudante.findUnique({ where: { id: req.params.id }, select: { id: true, curriculo_arquivo_id: true, anonimizado_em: true } });
+    if (!estudante) return res.status(404).json({ erro: "Candidato não encontrado." });
+    if (estudante.anonimizado_em) return res.status(409).json({ erro: "Este estudante já foi anonimizado." });
+    await prisma.$transaction(async (transaction) => {
+      await transaction.estudante.update({
+        where: { id: estudante.id },
+        data: {
+          nome_completo: "Estudante anonimizado",
+          telefone: "",
+          email: null,
+          instituicao_ensino: null,
+          link_curriculo: null,
+          endereco: null,
+          cep: null,
+          cidade: null,
+          bairro: null,
+          data_nascimento: null,
+          anotacoes_recrutador: null,
+          etiquetas: [],
+          curriculo_arquivo_id: null,
+          anonimizado_em: new Date(),
+        },
+      });
+      await apagarArquivo(transaction, estudante.curriculo_arquivo_id);
+      await transaction.contato.deleteMany({ where: { estudante_id: estudante.id } });
+      await transaction.aplicacao.updateMany({ where: { estudante_id: estudante.id }, data: { observacao: null } });
+    });
+    return res.json({ mensagem: "Dados pessoais apagados." });
+  } catch (error) {
+    console.error("Erro ao anonimizar estudante:", error);
+    return res.status(500).json({ erro: "Não foi possível anonimizar o estudante." });
   }
 });
 

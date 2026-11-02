@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Eye, EyeOff, LogIn } from "lucide-react";
 import { apiJson } from "../api.js";
 import { saveSession } from "../session.js";
@@ -11,6 +11,33 @@ export default function LoginPage({ onLogin }) {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // "Esqueci minha senha" só aparece quando o envio de e-mail está configurado na API.
+  const [canReset, setCanReset] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+  const [resetMessage, setResetMessage] = useState("");
+
+  useEffect(() => {
+    apiJson("/auth/esqueci/disponivel", undefined, "")
+      .then((result) => setCanReset(Boolean(result.disponivel)))
+      .catch(() => {});
+  }, []);
+
+  async function requestReset() {
+    if (!email.trim()) {
+      setError("Digite seu e-mail acima e clique de novo em “Esqueci minha senha”.");
+      return;
+    }
+    setIsResetting(true);
+    setError("");
+    try {
+      const result = await apiJson("/auth/esqueci", { method: "POST", body: { email } }, "Não foi possível enviar o e-mail.");
+      setResetMessage(result.mensagem);
+    } catch (resetError) {
+      setError(resetError.message);
+    } finally {
+      setIsResetting(false);
+    }
+  }
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -90,9 +117,23 @@ export default function LoginPage({ onLogin }) {
             </p>
           )}
 
+          {resetMessage && (
+            <p role="status" className="mt-4 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{resetMessage}</p>
+          )}
+
           <button type="submit" disabled={isSubmitting || !email.trim() || !senha} className={`${buttonPrimary} mt-6 h-11 w-full`}>
             <LogIn size={17} /> {isSubmitting ? "Entrando..." : "Entrar"}
           </button>
+          {canReset && (
+            <button
+              type="button"
+              onClick={requestReset}
+              disabled={isResetting}
+              className="mt-3 w-full text-center text-sm font-semibold text-marinho-700 underline-offset-2 hover:underline disabled:opacity-50"
+            >
+              {isResetting ? "Enviando..." : "Esqueci minha senha"}
+            </button>
+          )}
         </form>
 
         <p className="mt-6 text-center text-xs text-marinho-200">Acesso restrito à equipe da Super Estágios.</p>

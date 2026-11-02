@@ -10,18 +10,19 @@ const entrevistasRoutes = require("./src/routes/entrevistas");
 const eventosRoutes = require("./src/routes/eventos");
 const lembretesRoutes = require("./src/routes/lembretes");
 const authRoutes = require("./src/routes/auth");
-const { DIA_MS, DIAS_PARA_ALERTA, aparaTextos } = require("./src/utils");
-const { ETAPAS_EM_PROCESSO, ETAPAS_AVANCADAS } = require("./src/etapas");
-
-// Rótulos de reserva do funil (o frontend usa os mesmos nomes do Kanban).
-const rotulosDoFunil = {
-  CANDIDATO_CONTATADO: "Candidato contatado",
-  ENVIADO_EMPRESA: "Enviado à empresa",
-  ENTREVISTA_AGENDADA: "Em entrevista",
-  EM_TESTE: "Em teste",
-  APROVADO: "Contratado",
-};
+const { aparaTextos } = require("./src/utils");
+const { montarDashboard } = require("./src/dashboard");
 const arquivosRoutes = require("./src/routes/arquivos");
+const publicoRoutes = require("./src/routes/publico");
+const estagiosRoutes = require("./src/routes/estagios");
+const contatosRoutes = require("./src/routes/contatos");
+const modelosRoutes = require("./src/routes/modelos");
+const adminRoutes = require("./src/routes/admin");
+const notificacoesRoutes = require("./src/routes/notificacoes");
+const relatoriosRoutes = require("./src/routes/relatorios");
+const telegramRoutes = require("./src/routes/telegram");
+const { iniciarTelegram, pararTelegram } = require("./src/telegram");
+const { registrarAtividades } = require("./src/atividades");
 const { exigirLogin, segredoJwt } = require("./src/auth");
 
 // Confere o JWT_SECRET já na subida (sem ele a API não sobe).
@@ -60,124 +61,19 @@ app.get("/", (_req, res) => {
 
 // Login é público; daqui para baixo, toda rota exige o token (401 sem token ou com token inválido).
 app.use("/auth", authRoutes);
+// Links públicos (formulário, confirmação de presença, portal da empresa), com limite de requisições.
+app.use("/publico", publicoRoutes);
 app.use(exigirLogin);
+// Registro de atividades: toda alteração feita por um usuário logado (automático).
+app.use(registrarAtividades);
 
-// Agrupa ignorando maiúsculas, acentos e espaços extras; exibe a grafia mais usada (empate: ordem alfabética).
-function agruparPorCurso(cursos) {
-  const grupos = new Map();
-
-  for (const curso of cursos) {
-    const grafia = curso.trim().replace(/\s+/g, " ");
-    const chave = grafia.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
-    const grupo = grupos.get(chave) ?? { total: 0, grafias: new Map() };
-    grupo.total += 1;
-    grupo.grafias.set(grafia, (grupo.grafias.get(grafia) ?? 0) + 1);
-    grupos.set(chave, grupo);
-  }
-
-  return [...grupos.values()]
-    .map(({ total, grafias }) => ({
-      curso: [...grafias].sort(([a, totalA], [b, totalB]) => totalB - totalA || a.localeCompare(b, "pt-BR"))[0][0],
-      total,
-    }))
-    .sort((a, b) => b.total - a.total || a.curso.localeCompare(b.curso, "pt-BR"));
-}
-
-app.get("/dashboard-metrics", async (_req, res) => {
-  const agora = new Date();
-
+// Dashboard: ?periodo=7d|30d|90d|mes|ano|12m (padrão 30d) ou ?de=&ate= (AAAA-MM-DD), mais ?empresa=<id> e ?area=<id>.
+// Os cálculos ficam em src/dashboard.js.
+app.get("/dashboard-metrics", async (req, res) => {
   try {
-    const [
-      openJobs,
-      candidatesInProcess,
-      partnerCompanies,
-      scheduledInterviews,
-      grouped,
-      contratacoes,
-      vagasEmAlerta,
-      cursos,
-    ] =
-      await Promise.all([
-        prisma.vaga.count({ where: { status: "ABERTA" } }),
-        prisma.aplicacao.count({
-          where: { status_kanban: { notIn: ["APROVADO", "RECUSADO"] } },
-        }),
-        prisma.empresa.count(),
-        // Entrevistas agendadas = futuras e ainda em aberto (mesma conta do quadro "Olá, o RH tem" e da Agenda).
-        prisma.aplicacao.count({
-          where: {
-            status_kanban: "ENTREVISTA_AGENDADA",
-            data_hora_entrevista: { gt: agora },
-            OR: [{ entrevista_status: null }, { entrevista_status: { in: ["AGUARDANDO", "CONFIRMADA"] } }],
-          },
-        }),
-        prisma.aplicacao.groupBy({
-          by: ["status_kanban"],
-          _count: { _all: true },
-        }),
-        prisma.aplicacao.findMany({
-          where: { status_kanban: "APROVADO", data_aprovacao: { not: null } },
-          select: { created_at: true, data_aprovacao: true },
-        }),
-        prisma.vaga.findMany({
-          where: {
-            status: "ABERTA",
-            created_at: { lt: new Date(agora.getTime() - DIAS_PARA_ALERTA * DIA_MS) },
-            aplicacoes: { none: { status_kanban: { in: ETAPAS_AVANCADAS } } },
-          },
-          orderBy: { created_at: "asc" },
-          select: {
-            id: true,
-            codigo_vaga: true,
-            titulo: true,
-            created_at: true,
-            empresa: { select: { id: true, nome: true, logo_arquivo_id: true } },
-            _count: { select: { aplicacoes: true } },
-          },
-        }),
-        prisma.estudante.findMany({ select: { curso: true } }),
-      ]);
-
-    const countsByStatus = new Map(
-      grouped.map((item) => [item.status_kanban, item._count._all]),
-    );
-
-    // Dias entre a criação da candidatura e a aprovação (contratação); null se ainda não houver contratações.
-    const tempoMedioContratacaoDias = contratacoes.length
-      ? Math.round(
-          (contratacoes.reduce(
-            (total, { created_at, data_aprovacao }) => total + (data_aprovacao - created_at),
-            0,
-          ) / contratacoes.length / DIA_MS) * 10,
-        ) / 10
-      : null;
-
-    return res.json({
-      metrics: {
-        openJobs,
-        candidatesInProcess,
-        partnerCompanies,
-        scheduledInterviews,
-        tempoMedioContratacaoDias,
-        totalContratacoes: contratacoes.length,
-      },
-      vagasEmAlerta: vagasEmAlerta.map((vaga) => ({
-        id: vaga.id,
-        codigo_vaga: vaga.codigo_vaga,
-        titulo: vaga.titulo,
-        empresa: vaga.empresa.nome,
-        created_at: vaga.created_at,
-        diasAberta: Math.floor((agora - vaga.created_at) / DIA_MS),
-        totalCandidaturas: vaga._count.aplicacoes,
-      })),
-      distribuicaoPorCurso: agruparPorCurso(cursos.map((item) => item.curso)),
-      // Etapas do processo até a contratação, na ordem do Kanban (Dispensado não entra no funil).
-      funnel: [...ETAPAS_EM_PROCESSO, "APROVADO"].map((status) => ({
-        status,
-        label: rotulosDoFunil[status],
-        total: countsByStatus.get(status) ?? 0,
-      })),
-    });
+    const resultado = await montarDashboard(req.query);
+    if (resultado.erro) return res.status(400).json({ erro: resultado.erro });
+    return res.json(resultado);
   } catch (error) {
     console.error("Erro ao carregar métricas do dashboard:", error);
     return res.status(500).json({ erro: "Não foi possível carregar as métricas." });
@@ -190,6 +86,13 @@ app.use("/candidatos", candidatosRoutes);
 app.use("/entrevistas", entrevistasRoutes);
 app.use("/eventos", eventosRoutes);
 app.use("/lembretes", lembretesRoutes);
+app.use("/estagios", estagiosRoutes);
+app.use("/contatos", contatosRoutes);
+app.use("/modelos", modelosRoutes);
+app.use("/relatorios", relatoriosRoutes);
+app.use("/telegram", telegramRoutes);
+app.use(adminRoutes);
+app.use(notificacoesRoutes);
 
 // Erros que escapam das rotas (JSON malformado...): resposta curta em JSON, sem detalhes internos.
 app.use((error, _req, res, _next) => {
@@ -201,9 +104,12 @@ app.use((error, _req, res, _next) => {
 
 const server = app.listen(port, () => {
   console.log(`API disponível em http://localhost:${port}`);
+  // Avisos do sino no Telegram (só com TELEGRAM_BOT_TOKEN). Ver src/telegram.js.
+  iniciarTelegram();
 });
 
 async function shutdown() {
+  pararTelegram();
   server.close(async () => {
     await prisma.$disconnect();
     process.exit(0);

@@ -1,6 +1,8 @@
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { BriefcaseBusiness, Mail, MessageCircle, Pencil, Trash2 } from "lucide-react";
+import { BriefcaseBusiness, FileBarChart2, Mail, MessageCircle, NotebookPen, Pencil, Trash2 } from "lucide-react";
+import ContactLog from "../components/ContactLog.jsx";
+import Modal from "../components/Modal.jsx";
 import CompanyAvatar from "../components/CompanyAvatar.jsx";
 import EntityList from "../components/EntityList.jsx";
 import PageHeader from "../components/PageHeader.jsx";
@@ -126,9 +128,11 @@ const getSearchText = (empresa) => `${empresa.nome} ${empresa.setor ?? ""} ${emp
 const getName = (empresa) => empresa.nome;
 const renderEmpresaSemVaga = (empresa) => renderEmpresa(empresa, { showLastJob: true });
 
+// Menu "⋯" da empresa, com o registro de contatos (CRM, opcional) e o relatório para o cliente.
 function useEmpresaMenu() {
   const navigate = useNavigate();
-  return useCallback(
+  const [contactsOf, setContactsOf] = useState(null);
+  const getMenuItems = useCallback(
     (empresa, { edit, remove }) => [
       {
         key: "jobs",
@@ -136,12 +140,22 @@ function useEmpresaMenu() {
         icon: BriefcaseBusiness,
         onClick: () => navigate(toVagas(empresa), { state: { empresaNome: empresa.nome } }),
       },
+      { key: "contacts", label: "Contatos e anotações", icon: NotebookPen, onClick: () => setContactsOf(empresa) },
+      { key: "report", label: "Relatório da empresa", icon: FileBarChart2, onClick: () => navigate(`/relatorios/empresa/${empresa.id}`) },
       { key: "edit", label: "Editar", icon: Pencil, onClick: edit },
       { key: "delete", label: "Excluir", icon: Trash2, danger: true, onClick: remove },
     ],
     [navigate],
   );
+  const contactsModal = (
+    <Modal isOpen={Boolean(contactsOf)} title={contactsOf ? `Contatos · ${contactsOf.nome}` : ""} onClose={() => setContactsOf(null)}>
+      {contactsOf && <ContactLog key={contactsOf.id} owner={{ empresa_id: contactsOf.id }} />}
+    </Modal>
+  );
+  return { getMenuItems, contactsModal };
 }
+
+const archiveEmpresa = { field: "arquivada_em", bodyKey: "arquivada" };
 
 function renderCount({ items, isLoading }) {
   return (
@@ -155,9 +169,11 @@ function renderCount({ items, isLoading }) {
 }
 
 export function EmpresasPage() {
-  const getMenuItems = useEmpresaMenu();
+  const { getMenuItems, contactsModal } = useEmpresaMenu();
   return (
+    <>
     <EntityList
+      archive={archiveEmpresa}
       type="empresa"
       endpoint="empresas"
       entityLabel={{ singular: "empresa", plural: "empresas", article: "a" }}
@@ -169,6 +185,8 @@ export function EmpresasPage() {
       renderHeader={renderCount}
       getMenuItems={getMenuItems}
     />
+    {contactsModal}
+    </>
   );
 }
 
@@ -199,9 +217,11 @@ function renderSemVagaHeader({ items, isLoading }) {
 }
 
 export function EmpresasSemVagaPage() {
-  const getMenuItems = useEmpresaMenu();
+  const { getMenuItems, contactsModal } = useEmpresaMenu();
   return (
+    <>
     <EntityList
+      archive={archiveEmpresa}
       type="empresa"
       endpoint="empresas"
       entityLabel={{ singular: "empresa", plural: "empresas", article: "a" }}
@@ -215,5 +235,7 @@ export function EmpresasSemVagaPage() {
       filterItems={hasNoOpenJob}
       getMenuItems={getMenuItems}
     />
+    {contactsModal}
+    </>
   );
 }

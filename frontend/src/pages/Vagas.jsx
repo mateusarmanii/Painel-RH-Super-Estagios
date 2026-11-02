@@ -26,6 +26,7 @@ import { csvDate, csvDecimal } from "../csv.js";
 import { normalize, plural } from "../text.js";
 import { buttonDanger, buttonPrimary, buttonSecondary } from "../ui.js";
 import { apiFetch } from "../api.js";
+import { getUser } from "../session.js";
 import { modalidadeLabels, sexoPreferenciaLabels, turnoVagaLabels } from "../estudante.js";
 import { formatCep, placeText } from "../cep.js";
 
@@ -120,6 +121,18 @@ function AreaLine({ area }) {
   );
 }
 
+const deadlineFormat = new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC", day: "2-digit", month: "2-digit" });
+
+// Prazo pedido pela empresa (opcional): vermelho se venceu, âmbar se faltam até 3 dias.
+function DeadlineTag({ vaga }) {
+  if (!vaga.prazo || vaga.status !== "ABERTA") return null;
+  const today = new Date(new Date().toISOString().slice(0, 10));
+  const days = Math.round((new Date(vaga.prazo) - today) / 86400000);
+  const style = days < 0 ? "bg-rose-50 text-rose-700" : days <= 3 ? "bg-amber-50 text-amber-800" : "bg-slate-100 text-slate-700";
+  const text = days < 0 ? `Prazo vencido (${deadlineFormat.format(new Date(vaga.prazo))})` : days === 0 ? "Prazo hoje" : `Prazo ${deadlineFormat.format(new Date(vaga.prazo))}`;
+  return <span className={`${tagBase} ${style}`} title="Prazo pedido pela empresa">{text}</span>;
+}
+
 function renderVaga(vaga) {
   const total = vaga.resumo?.total ?? 0;
   const place = placeText(vaga);
@@ -161,6 +174,17 @@ function renderVaga(vaga) {
           </span>
         )}
         <AgeTag vaga={vaga} />
+        <DeadlineTag vaga={vaga} />
+        {vaga.quantidade > 1 && (
+          <span className={`${tagBase} bg-slate-100 text-slate-700`} title="Contratados / pessoas pedidas pela empresa">
+            {vaga.resumo?.por_etapa?.APROVADO ?? 0} de {vaga.quantidade} contratados
+          </span>
+        )}
+        {vaga.responsavel && (
+          <span className={`${tagBase} bg-slate-100 text-slate-700`} title="Recrutador responsável">
+            <Users size={13} /> {vaga.responsavel.nome}
+          </span>
+        )}
       </div>
 
       <MiniFunnel resumo={vaga.resumo} />
@@ -371,6 +395,9 @@ export default function VagasPage() {
   const empresaNome = location.state?.empresaNome ?? fetchedNames[empresaId];
   const [view, setView] = useState(readView);
   const [statusFilter, setStatusFilter] = useState("ABERTA");
+  // "Minhas vagas": só as que têm o usuário logado como recrutador responsável (opcional).
+  const [onlyMine, setOnlyMine] = useState(false);
+  const myId = getUser()?.id;
   const [statusAction, setStatusAction] = useState(null); // { vaga, status: "FECHADA" | "SUSPENSA" }
   const [blocked, setBlocked] = useState(null); // { vaga, message }
 
@@ -398,8 +425,9 @@ export default function VagasPage() {
     (vaga) =>
       (!empresaId || vaga.empresa_id === empresaId) &&
       (statusFilter === "TODAS" || vaga.status === statusFilter) &&
-      (!onlyWithoutArea || !hasArea(vaga)),
-    [empresaId, statusFilter, onlyWithoutArea],
+      (!onlyWithoutArea || !hasArea(vaga)) &&
+      (!onlyMine || vaga.responsavel_id === myId),
+    [empresaId, statusFilter, onlyWithoutArea, onlyMine, myId],
   );
 
   async function reopen(vaga) {
@@ -450,11 +478,24 @@ export default function VagasPage() {
               onChange={setOnlyWithoutArea}
               items={ofCompany.filter((vaga) => statusFilter === "TODAS" || vaga.status === statusFilter)}
             />
+            {allItems.some((vaga) => vaga.responsavel_id === myId) && (
+              <button
+                type="button"
+                aria-pressed={onlyMine}
+                onClick={() => setOnlyMine((value) => !value)}
+                className={`inline-flex h-10 items-center gap-1.5 rounded-md border px-3 text-sm font-semibold transition-colors ${
+                  onlyMine ? "border-marinho-400 bg-marinho-50 text-marinho-900" : "border-slate-300 bg-white text-marinho-800 hover:bg-marinho-50"
+                }`}
+              >
+                Minhas vagas
+                <span className="text-xs tabular-nums text-slate-400">{allItems.filter((vaga) => vaga.responsavel_id === myId).length}</span>
+              </button>
+            )}
           </div>
         </>
       );
     },
-    [empresaId, empresaNome, statusFilter, onlyWithoutArea, setOnlyWithoutArea],
+    [empresaId, empresaNome, statusFilter, onlyWithoutArea, setOnlyWithoutArea, onlyMine, myId],
   );
 
   return (
@@ -482,6 +523,7 @@ export default function VagasPage() {
       toolbarExtra={!empresaId && <ViewToggle view={view} onChange={setView} />}
       groupItems={!empresaId && view === "empresa" ? groupByEmpresa : undefined}
       getMenuItems={getMenuItems}
+      archive={{ field: "arquivada_em", bodyKey: "arquivada" }}
       onDeleteBlocked={(vaga, message) => setBlocked({ vaga, message })}
     />
 

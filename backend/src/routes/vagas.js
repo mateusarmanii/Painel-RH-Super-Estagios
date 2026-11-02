@@ -3,7 +3,9 @@ const prisma = require("../prisma");
 const { uuidValido, pluralizar, resumirVaga } = require("../utils");
 const { camposVaga } = require("../campos");
 const { RESUMO_ARQUIVO } = require("../arquivos");
-const { areaDaVaga, listaAreas } = require("../compatibilidade");
+const { areaDaVaga, listaAreas, separarVagas } = require("../compatibilidade");
+const { registrarEtapas } = require("../historico");
+const { novoTokenPortal } = require("../tokens");
 
 const router = express.Router();
 const statusVagaValidos = new Set(["ABERTA", "FECHADA", "SUSPENSA"]);
@@ -12,7 +14,7 @@ const codigoVagaValido = /^\d{5,6}$/;
 router.get("/", async (_req, res) => {
   try {
     const vagas = await prisma.vaga.findMany({
-      include: { empresa: true, aplicacoes: { select: { status_kanban: true } } },
+      include: { empresa: true, responsavel: { select: { id: true, nome: true } }, aplicacoes: { select: { status_kanban: true } } },
     });
     // Ordem numérica do Nº: com códigos de 5 e 6 dígitos, a ordem de texto poria "100001" antes de "12345".
     vagas.sort((a, b) => Number(a.codigo_vaga) - Number(b.codigo_vaga));
@@ -81,8 +83,11 @@ router.get("/:vagaId/candidatos", async (req, res) => {
             curriculo: { select: RESUMO_ARQUIVO },
           },
         },
+        // Último parecer da empresa (portal da empresa), só para mostrar no cartão.
+        pareceres: { orderBy: { created_at: "desc" }, take: 1, select: { parecer: true, comentario: true, nome_avaliador: true, created_at: true } },
       },
-      orderBy: { created_at: "asc" },
+      // Ordem salva no Kanban (arrastar dentro da coluna); sem ordem, a de chegada.
+      orderBy: [{ ordem: { sort: "asc", nulls: "last" } }, { created_at: "asc" }],
     });
 
     return res.json(aplicacoes);
@@ -167,11 +172,18 @@ router.patch("/:id", async (req, res) => {
         },
         data: { entrevista_status: "CANCELADA" },
       });
-      // updated_at (preenchido automaticamente) fica como a data da dispensa.
+      // updated_at (preenchido automaticamente) fica como a data da dispensa; o histórico guarda de que etapa saíram.
+      const emAberto = { vaga_id: id, status_kanban: { notIn: ["APROVADO", "RECUSADO"] } };
+      const antes = await transaction.aplicacao.findMany({ where: emAberto, select: { id: true, status_kanban: true } });
       const dispensadas = await transaction.aplicacao.updateMany({
-        where: { vaga_id: id, status_kanban: { notIn: ["APROVADO", "RECUSADO"] } },
-        data: { status_kanban: "RECUSADO", motivo_recusa: motivo || MOTIVO_PADRAO_FECHAMENTO, data_aprovacao: null },
+        where: { id: { in: antes.map((aplicacao) => aplicacao.id) } },
+        data: { status_kanban: "RECUSADO", motivo_recusa: motivo || MOTIVO_PADRAO_FECHAMENTO, motivo_categoria: "vaga_encerrada", data_aprovacao: null },
       });
+      await registrarEtapas(
+        transaction,
+        antes.map((aplicacao) => ({ aplicacaoId: aplicacao.id, de: aplicacao.status_kanban, para: "RECUSADO" })),
+        req.usuario.id,
+      );
       return { vaga, dispensados: dispensadas.count, entrevistasCanceladas: entrevistas.count };
     });
 
@@ -231,6 +243,103 @@ router.put("/:id", async (req, res) => {
 
     console.error("Erro ao atualizar vaga:", error);
     return res.status(500).json({ erro: "Não foi possível atualizar a vaga." });
+  }
+});
+
+// ---------- Recursos opcionais da vaga ----------
+
+// Link do portal da empresa: POST gera (ou troca) o link; DELETE desativa. O link antigo deixa de valer na hora.
+router.post("/:id/portal", async (req, res) => {
+  if (!uuidValido.test(req.params.id)) return res.status(400).json({ erro: "ID de vaga inválido." });
+  try {
+    const vaga = await prisma.vaga.update({ where: { id: req.params.id }, data: { portal_token: novoTokenPortal() }, select: { id: true, portal_token: true } });
+    return res.json(vaga);
+  } catch (error) {
+    if (error.code === "P2025") return res.status(404).json({ erro: "Vaga não encontrada." });
+    console.error("Erro ao gerar link do portal:", error);
+    return res.status(500).json({ erro: "Não foi possível gerar o link." });
+  }
+});
+
+router.delete("/:id/portal", async (req, res) => {
+  if (!uuidValido.test(req.params.id)) return res.status(400).json({ erro: "ID de vaga inválido." });
+  try {
+    await prisma.vaga.update({ where: { id: req.params.id }, data: { portal_token: null } });
+    return res.status(204).end();
+  } catch (error) {
+    if (error.code === "P2025") return res.status(404).json({ erro: "Vaga não encontrada." });
+    console.error("Erro ao desativar link do portal:", error);
+    return res.status(500).json({ erro: "Não foi possível desativar o link." });
+  }
+});
+
+// Estudantes compatíveis com a vaga que ainda não estão nela (mesma regra das "Vagas compatíveis" do perfil).
+// Contratados e anonimizados ficam de fora.
+router.get("/:id/sugestoes", async (req, res) => {
+  if (!uuidValido.test(req.params.id)) return res.status(400).json({ erro: "ID de vaga inválido." });
+  try {
+    const vaga = await prisma.vaga.findUnique({ where: { id: req.params.id }, include: { empresa: { select: { setor: true } } } });
+    if (!vaga) return res.status(404).json({ erro: "Vaga não encontrada." });
+    if (vaga.status !== "ABERTA") return res.json({ sugestoes: [], vagaFechada: true });
+    const estudantes = await prisma.estudante.findMany({
+      where: { anonimizado_em: null, aplicacoes: { none: { status_kanban: "APROVADO" } } },
+      select: {
+        id: true, nome_completo: true, curso: true, instituicao_ensino: true, semestre_atual: true, turno_estudo: true,
+        horario_estudo: true, disponibilidade: true, cidade: true, etiquetas: true, aplicacoes: { select: { vaga_id: true } },
+      },
+    });
+    const sugestoes = estudantes
+      .map((estudante) => {
+        const compativel = separarVagas(estudante, [vaga]).compativeis[0];
+        if (!compativel) return null;
+        const { id, nome_completo, curso, instituicao_ensino, semestre_atual, turno_estudo, disponibilidade, cidade, etiquetas } = estudante;
+        const confirmados = Object.values(compativel.checks).filter((valor) => valor === true).length;
+        return {
+          estudante: { id, nome_completo, curso, instituicao_ensino, semestre_atual, turno_estudo, disponibilidade, cidade, etiquetas },
+          tipo: compativel.tipo,
+          motivo: compativel.motivo,
+          checks: compativel.checks,
+          confirmados,
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b) => Number(a.tipo === "correlato") - Number(b.tipo === "correlato") || b.confirmados - a.confirmados
+        || a.estudante.nome_completo.localeCompare(b.estudante.nome_completo, "pt-BR"))
+      .slice(0, 50);
+    return res.json({ sugestoes });
+  } catch (error) {
+    console.error("Erro ao sugerir candidatos:", error);
+    return res.status(500).json({ erro: "Não foi possível sugerir candidatos." });
+  }
+});
+
+// Ordem dos cartões no Kanban: { ids: [aplicacaoId, ...] } na ordem desejada (todas da vaga; vale para qualquer coluna).
+router.put("/:id/ordem", async (req, res) => {
+  const ids = req.body?.ids;
+  if (!uuidValido.test(req.params.id) || !Array.isArray(ids) || ids.length > 1000 || !ids.every((id) => uuidValido.test(id))) {
+    return res.status(400).json({ erro: "Ordem inválida." });
+  }
+  try {
+    const daVaga = await prisma.aplicacao.count({ where: { id: { in: ids }, vaga_id: req.params.id } });
+    if (daVaga !== new Set(ids).size) return res.status(400).json({ erro: "Há candidaturas que não são desta vaga." });
+    await prisma.$transaction(ids.map((id, ordem) => prisma.aplicacao.update({ where: { id }, data: { ordem } })));
+    return res.status(204).end();
+  } catch (error) {
+    console.error("Erro ao salvar ordem:", error);
+    return res.status(500).json({ erro: "Não foi possível salvar a ordem." });
+  }
+});
+
+// Arquivar (só esconde das listas; opcional): { arquivada: true | false }.
+router.patch("/:id/arquivo", async (req, res) => {
+  if (!uuidValido.test(req.params.id) || typeof req.body?.arquivada !== "boolean") return res.status(400).json({ erro: "Dados inválidos." });
+  try {
+    const vaga = await prisma.vaga.update({ where: { id: req.params.id }, data: { arquivada_em: req.body.arquivada ? new Date() : null }, select: { id: true, arquivada_em: true } });
+    return res.json(vaga);
+  } catch (error) {
+    if (error.code === "P2025") return res.status(404).json({ erro: "Vaga não encontrada." });
+    console.error("Erro ao arquivar vaga:", error);
+    return res.status(500).json({ erro: "Não foi possível arquivar a vaga." });
   }
 });
 

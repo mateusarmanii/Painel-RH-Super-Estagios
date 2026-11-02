@@ -1,75 +1,67 @@
-import { lazy, Suspense, useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   AlertTriangle,
   BriefcaseBusiness,
-  Building2,
-  CalendarDays,
+  CalendarCheck2,
   CheckCircle2,
   ChevronRight,
   Clock,
   GraduationCap,
+  Info,
+  Layers,
+  MessageSquareX,
+  Percent,
   PieChart,
+  Printer,
   RefreshCw,
+  Target,
   TrendingDown,
+  UserRoundCheck,
+  UserRoundPlus,
   Users,
   WifiOff,
 } from "lucide-react";
-import PanelCard from "../components/PanelCard.jsx";
+import CompanyAvatar from "../components/CompanyAvatar.jsx";
 import { kanbanStatusLabels, kanbanStatusOrder } from "../kanbanStatus.js";
-import { hasNoOpenJob, toTalents } from "../regras.js";
 import { plural } from "../text.js";
 import { buttonPrimary, card } from "../ui.js";
 import { apiFetch, OFFLINE_MESSAGE } from "../api.js";
+import { addDays, startOfDay } from "../agenda/dates.js";
+import DashPanel from "../dashboard/DashPanel.jsx";
+import KpiCard from "../dashboard/KpiCard.jsx";
+import FilterBar from "../dashboard/FilterBar.jsx";
+import TrendPanel from "../dashboard/TrendPanel.jsx";
+import FunnelPanel from "../dashboard/FunnelPanel.jsx";
+import AgendaPanel from "../dashboard/AgendaPanel.jsx";
+import CompanyRanking from "../dashboard/CompanyRanking.jsx";
+import BarList, { PanelLink } from "../dashboard/BarList.jsx";
+import { ChartFallback } from "../dashboard/ChartFallback.jsx";
+import { compare, DEFAULT_PERIOD, formatDays, formatDecimal, formatKeyDate, formatRange, PERIODS, timeAgo } from "../dashboard/format.js";
 
-const FunnelChart = lazy(() => import("../components/FunnelChart.jsx"));
 const CourseDonutChart = lazy(() => import("../components/CourseDonutChart.jsx"));
 
-const metricCards = [
-  { key: "openJobs", label: "Vagas abertas", icon: BriefcaseBusiness, detail: "Ativas agora", accent: "border-t-marinho-600" },
-  { key: "candidatesInProcess", label: "Em processo", icon: Users, detail: "Candidaturas em andamento", accent: "border-t-ambar-400" },
-  { key: "partnerCompanies", label: "Empresas parceiras", icon: Building2, detail: "Cadastradas", accent: "border-t-emerald-600" },
-  { key: "scheduledInterviews", label: "Entrevistas", icon: CalendarDays, detail: "Agendadas", accent: "border-t-violet-600" },
-];
-
-const daysFormat = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 });
-
-function formatDays(value) {
-  if (value < 1) return "Menos de 1 dia";
-  return `${daysFormat.format(value)} ${value === 1 ? "dia" : "dias"}`;
-}
-
-function formatInterviewDate(value) {
-  if (!value) return "A definir";
-  return new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
-}
-
-const chartFallback = (
-  <div className="grid h-full min-h-40 place-items-center text-sm text-slate-500">Carregando gráfico...</div>
-);
+// Atualiza sozinho a cada 5 minutos (só com a aba visível) e ao voltar para a aba depois disso.
+const AUTO_REFRESH_MS = 5 * 60 * 1000;
 
 function DashboardSkeleton() {
   const block = `animate-pulse ${card}`;
-
   return (
-    <div aria-busy="true" aria-label="Carregando o dashboard">
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
-        <div className={`${block} h-72`} />
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {Array.from({ length: 5 }, (_, index) => (
-            <div key={index} className={`${block} h-32 p-5`}>
-              <div className="h-3 w-24 rounded bg-slate-200" />
-              <div className="mt-4 h-8 w-16 rounded bg-slate-200" />
-            </div>
-          ))}
-        </div>
+    <div aria-busy="true" aria-label="Carregando o dashboard" className="space-y-5">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {Array.from({ length: 4 }, (_, index) => <div key={index} className={`${block} h-20`} />)}
       </div>
-      <div className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-2">
-        {Array.from({ length: 4 }, (_, index) => (
-          <div key={index} className={`${block} h-80 overflow-hidden`}>
-            <div className="h-11 bg-ambar-100" />
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+        {Array.from({ length: 6 }, (_, index) => (
+          <div key={index} className={`${block} h-36 p-5`}>
+            <div className="h-3 w-24 rounded bg-slate-200" />
+            <div className="mt-4 h-8 w-16 rounded bg-slate-200" />
           </div>
         ))}
+      </div>
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
+        <div className={`${block} h-96 xl:col-span-2`} />
+        <div className={`${block} h-96`} />
       </div>
     </div>
   );
@@ -90,134 +82,201 @@ function ConnectionError({ message, onRetry }) {
   );
 }
 
-// Quadro de pendências, no estilo do "Olá, sua franquia tem" do painel interno.
-function GreetingSummary({ items }) {
+// Pendências do RH (o antigo "Olá, o RH tem"): cada uma leva para onde se resolve. Alerta > 0 fica em destaque.
+function Pendencias({ items }) {
   return (
-    <section className={`${card} overflow-hidden`} aria-labelledby="ola-rh">
-      <header className="border-b border-slate-100 px-5 py-4">
-        <h2 id="ola-rh" className="text-lg font-extrabold text-marinho-900">
-          Olá, o RH tem
-        </h2>
-      </header>
-      <ul className="divide-y divide-slate-100">
-        {items.map(({ key, total, singular, pluralLabel, to, href, icon: Icon }) => {
-          const content = (
-            <>
-              <span className="w-12 shrink-0 text-right text-3xl font-extrabold tabular-nums text-destaque">{total}</span>
-              <span className="flex min-w-0 flex-1 items-center gap-2 text-sm font-semibold text-marinho-900">
-                <Icon size={16} className="shrink-0 text-marinho-500" />
-                <span>{total === 1 ? singular : pluralLabel}</span>
-              </span>
-              <ChevronRight size={18} className="shrink-0 text-slate-400 transition-colors group-hover:text-marinho-700" />
-            </>
-          );
-          const className = "group flex items-center gap-4 px-5 py-3.5 transition-colors hover:bg-ambar-50";
-          return (
-            <li key={key}>
-              {to ? <Link to={to} className={className}>{content}</Link> : <a href={href} className={className}>{content}</a>}
-            </li>
-          );
-        })}
-      </ul>
+    <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Pendências">
+      {items.map(({ key, total, singular, pluralLabel, to, href, icon: Icon, urgent }) => {
+        const highlight = urgent && total > 0;
+        const content = (
+          <>
+            <span className={`grid size-10 shrink-0 place-items-center rounded-lg ${highlight ? "bg-destaque text-white" : "bg-marinho-50 text-marinho-700"}`}>
+              <Icon size={18} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className={`block text-2xl font-extrabold leading-none tabular-nums ${highlight ? "text-destaque" : "text-marinho-900"}`}>{total}</span>
+              <span className="mt-1 block truncate text-xs font-semibold text-slate-600">{total === 1 ? singular : pluralLabel}</span>
+            </span>
+            <ChevronRight size={18} className="shrink-0 text-slate-300 transition-colors group-hover:text-marinho-700" />
+          </>
+        );
+        const className = `group flex items-center gap-3 rounded-xl border bg-white px-4 py-3 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ambar-400 ${
+          highlight ? "border-rose-200" : "border-slate-200"
+        }`;
+        return (
+          <li key={key}>
+            {to ? <Link to={to} className={className}>{content}</Link> : <a href={href} className={className}>{content}</a>}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+// Meta mensal de contratações (Configurações → Geral; opcional). Conta o mês atual, com os mesmos filtros.
+function GoalBar({ goal, done }) {
+  const share = Math.min(1, done / goal);
+  const today = new Date();
+  const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+  const expected = (today.getDate() / daysInMonth) * goal;
+  const onTrack = done >= expected;
+  return (
+    <section className="flex flex-wrap items-center gap-4 rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm" aria-label="Meta do mês">
+      <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-marinho-900 text-ambar-400"><Target size={18} /></span>
+      <div className="min-w-0 flex-1 basis-60">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <p className="text-sm font-bold text-marinho-900">Meta do mês: {done} de {goal} contratações</p>
+          <p className={`text-xs font-semibold ${done >= goal ? "text-emerald-700" : onTrack ? "text-emerald-700" : "text-amber-700"}`}>
+            {done >= goal ? "Meta batida!" : onTrack ? "No ritmo" : `Abaixo do ritmo (esperado ~${Math.round(expected)} até hoje)`}
+          </p>
+        </div>
+        <div className="mt-2 h-2.5 w-full overflow-hidden rounded-full bg-slate-100" role="progressbar" aria-valuemin={0} aria-valuemax={goal} aria-valuenow={done}>
+          <div className={`h-full rounded-full ${done >= goal ? "bg-emerald-500" : "bg-marinho-600"}`} style={{ width: `${Math.max(2, share * 100)}%` }} />
+        </div>
+      </div>
     </section>
   );
 }
 
-function MetricCard({ label, value, detail, icon: Icon, accent, valueClassName = "text-3xl", className = "" }) {
+function AlertJobsPanel({ jobs, className }) {
   return (
-    <article className={`${card} border-t-4 ${accent} p-4 sm:p-5 ${className}`}>
-      <div className="flex items-start justify-between gap-3">
-        <p className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500">{label}</p>
-        <span className="hidden size-9 shrink-0 sm:grid place-items-center rounded-md bg-marinho-900 text-ambar-400">
-          <Icon size={17} />
-        </span>
-      </div>
-      <p className={`mt-2 font-extrabold tabular-nums text-marinho-900 ${valueClassName}`}>{value}</p>
-      <p className="mt-1 text-xs text-slate-500">{detail}</p>
-    </article>
-  );
-}
-
-function AlertJobsPanel({ jobs }) {
-  return (
-    <PanelCard
+    <DashPanel
       id="vagas-em-alerta"
       title={`Vagas em alerta${jobs.length ? ` (${jobs.length})` : ""}`}
-      subtitle="Abertas há mais de 10 dias sem nenhuma entrevista"
+      subtitle="Abertas há mais de 10 dias sem ninguém em entrevista ou teste"
       icon={AlertTriangle}
-      className="scroll-mt-24"
+      className={`scroll-mt-24 ${className}`}
+      bodyClassName="p-3"
     >
       {jobs.length === 0 ? (
-        <div className="flex items-center gap-3 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-5 text-sm text-emerald-800">
+        <div className="m-2 flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-5 text-sm text-emerald-800">
           <CheckCircle2 size={20} className="shrink-0" />
           <span><strong className="font-bold">Nenhuma vaga parada.</strong> Todas as vagas abertas estão andando.</span>
         </div>
       ) : (
-        <ul className="max-h-80 space-y-2 overflow-y-auto">
+        <ul className="max-h-[22rem] space-y-1 overflow-y-auto">
           {jobs.map((job) => (
             <li key={job.id}>
-              <Link
-                to={`/kanban/${job.id}`}
-                className="group flex flex-wrap items-center gap-x-4 gap-y-1 rounded-md border border-slate-200 px-4 py-3 transition-colors hover:border-ambar-300 hover:bg-ambar-50"
-              >
-                <div className="min-w-0 flex-1 basis-48">
+              <Link to={`/kanban/${job.id}`} className="group flex items-center gap-3 rounded-lg px-2 py-2.5 transition-colors hover:bg-ambar-50">
+                <CompanyAvatar id={job.empresa_id} name={job.empresa} logoId={job.logo_arquivo_id} size="sm" />
+                <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-bold text-marinho-900">{job.titulo}</p>
                   <p className="truncate text-xs text-slate-500">
                     {job.empresa} · Nº {job.codigo_vaga} · {plural(job.totalCandidaturas, "candidatura", "candidaturas")}
                   </p>
                 </div>
-                <span className="shrink-0 text-sm font-extrabold tabular-nums text-destaque">
+                <span className="shrink-0 rounded-full bg-rose-50 px-2 py-0.5 text-xs font-bold tabular-nums text-destaque">
                   {plural(job.diasAberta, "dia", "dias")}
                 </span>
-                <ChevronRight size={18} className="shrink-0 text-slate-400 group-hover:text-marinho-700" />
+                <ChevronRight size={16} className="shrink-0 text-slate-300 group-hover:text-marinho-700" />
               </Link>
             </li>
           ))}
         </ul>
       )}
-    </PanelCard>
+    </DashPanel>
   );
 }
 
+// Filtros na URL (?periodo=&de=&ate=&empresa=&area=): dá para recarregar a página ou mandar o link.
+function readFilters(params) {
+  const periodo = PERIODS.some((period) => period.value === params.get("periodo")) ? params.get("periodo") : DEFAULT_PERIOD;
+  return {
+    periodo,
+    de: params.get("de"),
+    ate: params.get("ate"),
+    empresa: params.get("empresa"),
+    area: params.get("area"),
+  };
+}
+
+function queryFor(filters) {
+  const query = new URLSearchParams();
+  if (filters.periodo === "personalizado") {
+    query.set("de", filters.de);
+    query.set("ate", filters.ate);
+  } else {
+    query.set("periodo", filters.periodo);
+  }
+  if (filters.empresa) query.set("empresa", filters.empresa);
+  if (filters.area) query.set("area", filters.area);
+  return query.toString();
+}
+
+async function readJson(response) {
+  return response.json().catch(() => ({}));
+}
+
 export default function DashboardPage() {
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const filters = useMemo(() => readFilters(searchParams), [searchParams]);
+  // "Personalizado" sem as duas datas ainda: mantém os números anteriores até aplicar.
+  const ready = filters.periodo !== "personalizado" || Boolean(filters.de && filters.ate);
+  const query = ready ? queryFor(filters) : null;
+
   const [dashboard, setDashboard] = useState(null);
+  const [agenda, setAgenda] = useState({ today: null, upcoming: [], error: "" });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [updatedAt, setUpdatedAt] = useState(null);
+  const [now, setNow] = useState(() => new Date());
+  const requestId = useRef(0);
+  const lastQuery = useRef(null);
 
   const loadDashboard = useCallback(async () => {
+    if (!query && lastQuery.current === null) return;
+    const currentQuery = query ?? lastQuery.current;
+    const id = ++requestId.current;
     setIsLoading(true);
 
-    try {
-      const responses = await Promise.all(
-        ["dashboard-metrics", "entrevistas", "candidatos", "empresas"].map((endpoint) => apiFetch(`/${endpoint}`)),
-      );
-      const [result, interviews, students, companies] = await Promise.all(
-        responses.map((response) => response.json().catch(() => ({}))),
-      );
-      const failed = responses.findIndex((response) => !response.ok);
-      if (failed === 0) throw new Error(result.erro ?? "O servidor respondeu com erro. Tente novamente em instantes.");
-      if (failed > 0) throw new Error("Não foi possível carregar todos os dados do dashboard.");
+    const today = startOfDay(new Date());
+    const todayRange = new URLSearchParams({ inicio: today.toISOString(), fim: addDays(today, 1).toISOString() });
 
+    try {
+      const [metricsResponse, upcomingResponse, todayInterviewsResponse, todayEventsResponse] = await Promise.all([
+        apiFetch(`/dashboard-metrics?${currentQuery}`),
+        apiFetch("/entrevistas"),
+        apiFetch(`/entrevistas?${todayRange}`),
+        apiFetch(`/eventos?${todayRange}`),
+      ]);
+      const [metrics, upcoming, todayInterviews, todayEvents] = await Promise.all(
+        [metricsResponse, upcomingResponse, todayInterviewsResponse, todayEventsResponse].map(readJson),
+      );
+      if (id !== requestId.current) return;
+      if (!metricsResponse.ok) throw new Error(metrics.erro ?? "O servidor respondeu com erro. Tente novamente em instantes.");
+
+      lastQuery.current = currentQuery;
       setDashboard({
-        ...result,
+        ...metrics,
         // Mesmos nomes de etapa do Kanban.
-        funnel: result.funnel
+        funnel: metrics.funnel
           .map((stage) => ({ ...stage, label: kanbanStatusLabels[stage.status] ?? stage.label }))
           .sort((a, b) => kanbanStatusOrder.indexOf(a.status) - kanbanStatusOrder.indexOf(b.status)),
-        // /entrevistas já traz só as futuras, em ordem de data.
-        upcomingInterviews: interviews.slice(0, 5),
-        totalUpcomingInterviews: interviews.length,
-        talentsCount: toTalents(students).length,
-        companiesWithoutJobsCount: companies.filter(hasNoOpenJob).length,
       });
+      const agendaOk = upcomingResponse.ok && todayInterviewsResponse.ok && todayEventsResponse.ok;
+      setAgenda({
+        // Hoje: entrevistas que ainda estão na etapa Entrevista (as de candidaturas que já andaram saem) e eventos.
+        today: agendaOk
+          ? {
+              interviews: todayInterviews.filter((interview) => interview.status_kanban === "ENTREVISTA_AGENDADA" && interview.status_exibido !== "CANCELADA"),
+              events: todayEvents,
+            }
+          : null,
+        // /entrevistas já traz só as futuras, em ordem de data.
+        upcoming: upcomingResponse.ok ? upcoming : [],
+        error: agendaOk ? "" : "Não foi possível carregar toda a agenda.",
+      });
+      setUpdatedAt(new Date());
       setError("");
     } catch (loadError) {
+      if (id !== requestId.current) return;
       // apiFetch lança OfflineError (um TypeError) quando a API está fora do ar.
       setError(loadError instanceof TypeError ? OFFLINE_MESSAGE : loadError.message);
     } finally {
-      setIsLoading(false);
+      if (id === requestId.current) setIsLoading(false);
     }
-  }, []);
+  }, [query]);
 
   useEffect(() => {
     loadDashboard();
@@ -225,14 +284,83 @@ export default function DashboardPage() {
     return () => window.removeEventListener("dashboard:refresh", loadDashboard);
   }, [loadDashboard]);
 
-  const hasFunnelData = dashboard?.funnel.some((stage) => stage.total > 0);
-  const hiringDays = dashboard?.metrics.tempoMedioContratacaoDias;
-  const hasHires = hiringDays !== null && hiringDays !== undefined;
+  // Relógio do "Atualizado há..." e atualização automática.
+  useEffect(() => {
+    const tick = setInterval(() => setNow(new Date()), 30 * 1000);
+    return () => clearInterval(tick);
+  }, []);
+  useEffect(() => {
+    if (!updatedAt) return undefined;
+    const refreshIfStale = () => {
+      if (document.visibilityState === "visible" && Date.now() - updatedAt.getTime() >= AUTO_REFRESH_MS) loadDashboard();
+    };
+    const timer = setInterval(refreshIfStale, 30 * 1000);
+    document.addEventListener("visibilitychange", refreshIfStale);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", refreshIfStale);
+    };
+  }, [updatedAt, loadDashboard]);
+
+  const changeFilters = useCallback(
+    (changes) =>
+      setSearchParams((params) => {
+        const next = new URLSearchParams(params);
+        for (const [key, value] of Object.entries(changes)) {
+          if (value) next.set(key, value);
+          else next.delete(key);
+        }
+        if (next.get("periodo") === DEFAULT_PERIOD) next.delete("periodo");
+        if (next.get("periodo") !== "personalizado") {
+          next.delete("de");
+          next.delete("ate");
+        }
+        return next;
+      }, { replace: true }),
+    [setSearchParams],
+  );
+
+  const period = dashboard?.periodo;
+  // Texto curto no card; o intervalo comparado aparece ao passar o mouse.
+  const compareLabel = "vs. período anterior";
+  const compareTitle = period ? `Período anterior: ${formatRange(period.anteriorDe, period.anteriorAte)}` : undefined;
+  const spark = (key) => dashboard?.serie.map((point) => point[key]);
+  const filterNames = dashboard && [
+    filters.empresa && dashboard.opcoes.empresas.find((empresa) => empresa.id === filters.empresa)?.nome,
+    filters.area && dashboard.opcoes.areas.find((area) => area.id === filters.area)?.nome,
+  ].filter(Boolean);
 
   return (
     <section className="min-h-[calc(100vh-4rem)] px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-7xl">
-        {dashboard && isLoading && <p className="mb-3 text-right text-xs text-slate-500">A atualizar...</p>}
+      <div className="mx-auto max-w-7xl space-y-5">
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <h1 className="text-xl font-extrabold text-marinho-900 sm:text-2xl">Visão geral</h1>
+            <p className="mt-0.5 text-sm text-slate-500">
+              {period ? formatRange(period.de, period.ate) : "Carregando período..."}
+              {filterNames?.length ? ` · ${filterNames.join(" · ")}` : ""}
+            </p>
+          </div>
+          {dashboard && (
+            <button type="button" onClick={() => window.print()} className="inline-flex h-9 items-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-marinho-800 hover:bg-marinho-50 print:hidden">
+              <Printer size={15} /> Imprimir / PDF
+            </button>
+          )}
+        </div>
+
+        {(dashboard || !isLoading) && (
+          <div className="print:hidden">
+          <FilterBar
+            key={`${filters.de ?? ""}-${filters.ate ?? ""}`}
+            filters={filters}
+            onChange={changeFilters}
+            options={dashboard?.opcoes ?? { empresas: [], areas: [] }}
+            updatedLabel={updatedAt ? timeAgo(updatedAt, now) : "—"}
+            isRefreshing={isLoading}
+            onRefresh={loadDashboard}
+          />
+          </div>
+        )}
 
         {!dashboard && isLoading && <DashboardSkeleton />}
 
@@ -241,7 +369,7 @@ export default function DashboardPage() {
         {dashboard && (
           <>
             {error && (
-              <p role="alert" className="mb-5 flex items-center gap-2 rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+              <p role="alert" className="flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
                 <WifiOff size={16} className="shrink-0" />
                 <span className="flex-1">{error} Os números abaixo podem estar desatualizados.</span>
                 <button type="button" onClick={loadDashboard} className="shrink-0 font-bold underline-offset-2 hover:underline">
@@ -250,103 +378,182 @@ export default function DashboardPage() {
               </p>
             )}
 
-            <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
-              <GreetingSummary
-                items={[
-                  { key: "alertas", total: dashboard.vagasEmAlerta?.length ?? 0, singular: "vaga em alerta", pluralLabel: "vagas em alerta", href: "#vagas-em-alerta", icon: AlertTriangle },
-                  { key: "entrevistas", total: dashboard.totalUpcomingInterviews, singular: "entrevista agendada", pluralLabel: "entrevistas agendadas", to: "/calendario", icon: CalendarDays },
-                  { key: "talentos", total: dashboard.talentsCount, singular: "talento para reaproveitar", pluralLabel: "talentos para reaproveitar", to: "/banco-de-talentos", icon: GraduationCap },
-                  { key: "empresas", total: dashboard.companiesWithoutJobsCount, singular: "empresa sem vaga aberta", pluralLabel: "empresas sem vaga aberta", to: "/empresas-sem-vaga", icon: TrendingDown },
-                ]}
-              />
+            {period.datasAproximadas && (
+              <p className="flex items-start gap-2 rounded-lg border border-sky-200 bg-sky-50 px-4 py-2.5 text-xs text-sky-900">
+                <Info size={15} className="mt-px shrink-0" />
+                <span>
+                  Datas anteriores a {formatKeyDate(period.datasReaisDesde)} não são exatas: os registros que já existiam receberam
+                  essa data quando o sistema passou a guardá-las. Comparações com esse período são aproximadas.
+                </span>
+              </p>
+            )}
 
-              <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-3">
-                {metricCards.map(({ key, ...metric }) => (
-                  <MetricCard key={key} {...metric} value={dashboard.metrics[key]} />
-                ))}
-                <MetricCard
-                  label="Tempo médio de contratação"
-                  icon={Clock}
-                  accent="border-t-destaque"
-                  className="col-span-2"
-                  value={hasHires ? formatDays(hiringDays) : "Sem contratações ainda"}
-                  valueClassName={hasHires && hiringDays >= 1 ? "text-3xl" : "text-lg"}
-                  detail={hasHires ? `Base: ${plural(dashboard.metrics.totalContratacoes, "contratação", "contratações")}` : "Da candidatura à contratação"}
-                />
-              </div>
+            {dashboard.meta?.mensal && <GoalBar goal={dashboard.meta.mensal} done={dashboard.meta.contratacoesMes} />}
+
+            <Pendencias
+              items={[
+                { key: "alertas", total: dashboard.pendencias.vagasEmAlerta, singular: "vaga em alerta", pluralLabel: "vagas em alerta", href: "#vagas-em-alerta", icon: AlertTriangle, urgent: true },
+                { key: "hoje", total: dashboard.pendencias.entrevistasHoje, singular: "entrevista hoje", pluralLabel: "entrevistas hoje", to: "/calendario", icon: CalendarCheck2 },
+                { key: "talentos", total: dashboard.pendencias.talentos, singular: "talento para reaproveitar", pluralLabel: "talentos para reaproveitar", to: "/banco-de-talentos", icon: GraduationCap },
+                { key: "empresas", total: dashboard.pendencias.empresasSemVagaAberta, singular: "empresa sem vaga aberta", pluralLabel: "empresas sem vaga aberta", to: "/empresas-sem-vaga", icon: TrendingDown },
+              ]}
+            />
+
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+              <KpiCard
+                label="Vagas abertas"
+                icon={BriefcaseBusiness}
+                value={dashboard.metrics.openJobs}
+                detail={`${plural(period.novasVagas.atual, "vaga nova", "vagas novas")} no período`}
+                spark={spark("vagas")}
+                to={filters.empresa ? `/vagas?empresa=${filters.empresa}` : "/vagas"}
+              />
+              <KpiCard
+                label="Em processo"
+                icon={Users}
+                value={dashboard.metrics.candidatesInProcess}
+                detail="Candidaturas em andamento agora"
+                to="/estudantes?situacao=EM_PROCESSO"
+              />
+              <KpiCard
+                label="Candidaturas"
+                icon={UserRoundPlus}
+                value={period.candidaturas.atual}
+                showDelta
+                delta={compare(period.candidaturas.atual, period.candidaturas.anterior)}
+                compareLabel={compareLabel}
+                compareTitle={compareTitle}
+                spark={spark("candidaturas")}
+              />
+              <KpiCard
+                label="Contratações"
+                icon={UserRoundCheck}
+                value={period.contratacoes.atual}
+                showDelta
+                delta={compare(period.contratacoes.atual, period.contratacoes.anterior)}
+                compareLabel={compareLabel}
+                compareTitle={compareTitle}
+                spark={spark("contratacoes")}
+                to="/contratacoes"
+              />
+              <KpiCard
+                label="Tempo médio de contratação"
+                icon={Clock}
+                value={formatDays(period.tempoMedioDias.atual) ?? "Sem contratações"}
+                valueSize={period.tempoMedioDias.atual >= 1 ? "text-3xl" : "text-lg"}
+                showDelta
+                delta={compare(period.tempoMedioDias.atual, period.tempoMedioDias.anterior, { kind: "days", lowerIsBetter: true })}
+                compareLabel={compareLabel}
+                compareTitle={compareTitle}
+                detail={`Desde sempre: ${formatDays(dashboard.metrics.tempoMedioContratacaoDias) ?? "—"}`}
+              />
+              <KpiCard
+                label="Taxa de contratação"
+                icon={Percent}
+                value={period.taxaContratacao.atual === null ? "—" : `${formatDecimal(period.taxaContratacao.atual)}%`}
+                showDelta
+                delta={compare(period.taxaContratacao.atual, period.taxaContratacao.anterior, { kind: "points" })}
+                compareLabel={compareLabel}
+                compareTitle={compareTitle}
+                detail="Das candidaturas do período"
+              />
             </div>
 
-            <div className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-2">
-              <AlertJobsPanel jobs={dashboard.vagasEmAlerta ?? []} />
+            <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
+              <TrendPanel serie={dashboard.serie} granularity={period.granularidade} className="xl:col-span-2" />
+              <AgendaPanel
+                today={agenda.today}
+                upcoming={agenda.upcoming.slice(0, 6)}
+                totalUpcoming={agenda.upcoming.length}
+                error={agenda.error}
+              />
+            </div>
 
-              <PanelCard title="Estudantes por curso" subtitle="Os 6 cursos com mais estudantes; os demais em “Outros”" icon={PieChart}>
-                {(dashboard.distribuicaoPorCurso ?? []).length === 0 ? (
-                  <p className="py-10 text-center text-sm text-slate-500">Ainda não há estudantes cadastrados.</p>
+            <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
+              <FunnelPanel
+                funnel={dashboard.funnel}
+                conversion={dashboard.conversao}
+                exactCount={dashboard.conversaoExata}
+                stageTimes={dashboard.tempoPorEtapa}
+                className="xl:col-span-2"
+              />
+              <AlertJobsPanel jobs={dashboard.vagasEmAlerta} />
+            </div>
+
+            <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
+              <CompanyRanking
+                companies={dashboard.rankingEmpresas}
+                totalCompanies={dashboard.metrics.partnerCompanies}
+                selectedId={filters.empresa}
+                onSelect={(empresa) => changeFilters({ empresa })}
+                className="xl:col-span-2"
+              />
+              <DashPanel
+                title="Motivos de dispensa"
+                subtitle={`${plural(period.dispensas.atual, "dispensa", "dispensas")} no período`}
+                icon={MessageSquareX}
+                action={<PanelLink to="/banco-de-talentos">Banco de Talentos</PanelLink>}
+              >
+                {dashboard.motivosDispensa.length === 0 ? (
+                  <p className="py-10 text-center text-sm text-slate-500">Nenhuma dispensa no período.</p>
                 ) : (
-                  <Suspense fallback={chartFallback}>
-                    <CourseDonutChart distribution={dashboard.distribuicaoPorCurso} />
+                  <>
+                    <BarList
+                      ariaLabel="Motivos de dispensa"
+                      items={dashboard.motivosDispensa.map((motivo) => ({
+                        key: motivo.categoria ?? motivo.texto,
+                        label: motivo.texto,
+                        total: motivo.total,
+                        muted: motivo.outros,
+                        hint: motivo.estimadas ? `${plural(motivo.estimadas, "classificada", "classificadas")} pelo texto do motivo` : undefined,
+                      }))}
+                    />
+                    {dashboard.motivosDispensa.some((motivo) => motivo.estimadas) && (
+                      <p className="mt-3 flex gap-1.5 text-xs text-slate-500">
+                        <Info size={14} className="mt-px shrink-0" />
+                        Motivos sem sugestão escolhida foram agrupados pelas palavras do texto.
+                      </p>
+                    )}
+                  </>
+                )}
+              </DashPanel>
+            </div>
+
+            <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+              <DashPanel
+                title="Estudantes por curso"
+                subtitle={filterNames?.length ? "Quem se candidatou às vagas do filtro" : "Clique num curso para ver os estudantes"}
+                icon={PieChart}
+              >
+                {dashboard.distribuicaoPorCurso.length === 0 ? (
+                  <p className="py-10 text-center text-sm text-slate-500">Nenhum estudante para exibir.</p>
+                ) : (
+                  <Suspense fallback={<ChartFallback />}>
+                    <CourseDonutChart
+                      distribution={dashboard.distribuicaoPorCurso}
+                      onSelect={(curso) => navigate(`/estudantes?${new URLSearchParams({ curso })}`)}
+                    />
                   </Suspense>
                 )}
-              </PanelCard>
+              </DashPanel>
 
-              <PanelCard title="Funil de contratação" subtitle="Candidaturas por etapa e % do total do funil" icon={Users}>
-                <div className="h-72 w-full">
-                  {!hasFunnelData ? (
-                    <div className="grid h-full place-items-center text-sm text-slate-500">Ainda não há candidaturas para exibir.</div>
-                  ) : (
-                    <Suspense fallback={chartFallback}>
-                      <FunnelChart data={dashboard.funnel} />
-                    </Suspense>
-                  )}
-                </div>
-              </PanelCard>
-
-              <PanelCard
-                title="Próximas entrevistas"
-                icon={CalendarDays}
-                bodyClassName="p-0"
-                action={
-                  <Link to="/calendario" className="shrink-0 text-xs font-extrabold uppercase tracking-wide text-marinho-900 underline-offset-2 hover:underline">
-                    Ver calendário
-                  </Link>
-                }
-              >
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[30rem] text-left text-sm">
-                    <thead className="bg-marinho-50 text-[11px] font-extrabold uppercase tracking-wider text-marinho-700">
-                      <tr>
-                        <th className="px-5 py-3">Estudante</th>
-                        <th className="px-5 py-3">Vaga</th>
-                        <th className="px-5 py-3">Data e hora</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {dashboard.upcomingInterviews.map((interview) => (
-                        <tr key={interview.id} className="hover:bg-slate-50">
-                          <td className="px-5 py-3.5 font-bold text-marinho-900">
-                            <Link to={`/estudantes/${interview.estudante.id}`} className="hover:underline">
-                              {interview.estudante.nome_completo}
-                            </Link>
-                          </td>
-                          <td className="px-5 py-3.5 text-slate-600">
-                            <Link to={`/kanban/${interview.vaga.id}`} className="hover:text-marinho-700 hover:underline">
-                              {interview.vaga.titulo}
-                            </Link>
-                          </td>
-                          <td className="whitespace-nowrap px-5 py-3.5 text-slate-600">
-                            {formatInterviewDate(interview.data_hora_entrevista)}
-                          </td>
-                        </tr>
-                      ))}
-                      {dashboard.upcomingInterviews.length === 0 && (
-                        <tr>
-                          <td colSpan="3" className="px-5 py-10 text-center text-slate-500">Nenhuma entrevista agendada.</td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </PanelCard>
+              <DashPanel title="Vagas abertas por área" subtitle="Clique numa área para filtrar o Dashboard" icon={Layers}>
+                {dashboard.vagasPorArea.length === 0 ? (
+                  <p className="py-10 text-center text-sm text-slate-500">Nenhuma vaga aberta.</p>
+                ) : (
+                  <BarList
+                    ariaLabel="Vagas abertas por área"
+                    mutedKey="nao-identificada"
+                    items={dashboard.vagasPorArea.map((area) => ({
+                      key: area.id,
+                      label: area.nome,
+                      total: area.total,
+                      hint: filters.area === area.id ? "Tirar o filtro desta área" : `Filtrar por ${area.nome}`,
+                      onClick: () => changeFilters({ area: filters.area === area.id ? null : area.id }),
+                    }))}
+                  />
+                )}
+              </DashPanel>
             </div>
           </>
         )}

@@ -25,12 +25,20 @@ export function nextInterview(applications, now = new Date()) {
     .sort((a, b) => new Date(a.data_hora_entrevista) - new Date(b.data_hora_entrevista))[0] ?? null;
 }
 
+// Etapas que já têm evento próprio na linha do tempo (entrevista, contratação, dispensa).
+const OWN_EVENT_STATUSES = ["ENTREVISTA_AGENDADA", "APROVADO", "RECUSADO"];
+
 // Linha do tempo: um evento por acontecimento de cada candidatura, do mais recente para o mais antigo.
+// Com o histórico de etapas (gravado desde 02/11/2026) entram também as outras mudanças de etapa
+// (ex.: "Enviado à Empresa", "Em Teste"), a data exata da dispensa e quem fez cada mudança.
 export function timeline(applications) {
   const events = [];
   for (const application of applications) {
     const base = { application, key: application.id };
-    events.push({ ...base, type: "indicado", date: application.created_at, id: `${application.id}-indicado` });
+    const history = application.historico ?? [];
+    const lastInto = (status) => history.findLast((item) => item.para_status === status);
+    const created = history.find((item) => item.de_status === null);
+    events.push({ ...base, type: "indicado", date: application.created_at, by: created?.usuario?.nome, id: `${application.id}-indicado` });
     if (application.data_hora_entrevista) {
       events.push({
         ...base,
@@ -40,9 +48,23 @@ export function timeline(applications) {
         id: `${application.id}-entrevista`,
       });
     }
-    if (application.data_aprovacao) events.push({ ...base, type: "contratado", date: application.data_aprovacao, id: `${application.id}-contratado` });
+    if (application.data_aprovacao) {
+      events.push({ ...base, type: "contratado", date: application.data_aprovacao, by: lastInto("APROVADO")?.usuario?.nome, id: `${application.id}-contratado` });
+    }
     if (application.status_kanban === "RECUSADO") {
-      events.push({ ...base, type: "dispensado", date: application.updated_at, id: `${application.id}-dispensado` });
+      const dismissal = lastInto("RECUSADO");
+      events.push({
+        ...base,
+        type: "dispensado",
+        date: dismissal?.created_at ?? application.updated_at,
+        by: dismissal?.usuario?.nome,
+        from: dismissal?.de_status,
+        id: `${application.id}-dispensado`,
+      });
+    }
+    for (const item of history) {
+      if (item.de_status === null || OWN_EVENT_STATUSES.includes(item.para_status)) continue;
+      events.push({ ...base, type: "etapa", date: item.created_at, to: item.para_status, from: item.de_status, by: item.usuario?.nome, id: item.id });
     }
   }
   return events.sort((a, b) => new Date(b.date) - new Date(a.date));

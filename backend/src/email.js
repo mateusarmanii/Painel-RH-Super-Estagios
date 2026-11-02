@@ -73,4 +73,15 @@ async function enviarConvite({ para, assunto, texto, ics, metodo }) {
   return info;
 }
 
-module.exports = { emailConfigurado, organizador, enviarConvite };
+// E-mail simples, só texto (redefinição de senha). Lança erro se o envio não estiver configurado ou falhar.
+async function enviarEmail({ para, assunto, texto }) {
+  const config = configuracao();
+  if (!config) throw new Error("Envio de e-mail não configurado.");
+  const mensagem = { from: config.remetente, to: para, subject: assunto.replace(/[\r\n]+/g, " "), text: texto };
+  const info = await obterTransporte(config).sendMail(mensagem);
+  const falso = arquivoFalso();
+  if (falso) fs.appendFileSync(falso, `${JSON.stringify({ para, assunto: mensagem.subject, texto })}\n`);
+  return info;
+}
+
+module.exports = { emailConfigurado, organizador, enviarConvite, enviarEmail };
