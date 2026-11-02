@@ -1,0 +1,571 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<title>Manual do Painel de RH</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap">
+<style>
+/* Layout: manual em duas colunas no computador (índice fixo à esquerda, conteúdo à direita); uma coluna no celular. */
+:root {
+  --bg: #f4f6fa;
+  --surface: #ffffff;
+  --ink: #13213f;
+  --ink-soft: #4a5672;
+  --line: #d9dfec;
+  --navy: #13213f;
+  --navy-soft: #eef1f7;
+  --amber: #f7b31b;
+  --amber-soft: #fef8e7;
+  --amber-ink: #7a5200;
+  --link: #2b5bb8;
+  --c-contatado: #64748b; --c-enviado: #0284c7; --c-entrevista: #7c3aed; --c-teste: #d99a06; --c-contratado: #059669; --c-dispensado: #e11d48;
+  --i-aguardando: #ea580c; --i-confirmada: #059669; --i-realizada: #2b3d69; --i-nao: #e11d48; --i-cancelada: #94a3b8;
+  --shadow: 0 1px 2px rgba(19,33,63,.06), 0 8px 24px rgba(19,33,63,.06);
+  --font: "Nunito", ui-rounded, "Segoe UI", system-ui, -apple-system, sans-serif;
+  --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0c1529; --surface: #13213f; --ink: #eef1f7; --ink-soft: #b3bfd8; --line: #2b3d69;
+    --navy: #0a1224; --navy-soft: #1b2a4b; --amber: #f9c95a; --amber-soft: #2e2510; --amber-ink: #f9c95a; --link: #8fb3ff;
+    --c-contatado: #94a3b8; --c-enviado: #38bdf8; --c-entrevista: #a78bfa; --c-teste: #fbbf24; --c-contratado: #34d399; --c-dispensado: #fb7185;
+    --i-aguardando: #fb923c; --i-confirmada: #34d399; --i-realizada: #93a4d1; --i-nao: #fb7185; --i-cancelada: #64748b;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.2);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0c1529; --surface: #13213f; --ink: #eef1f7; --ink-soft: #b3bfd8; --line: #2b3d69;
+  --navy: #0a1224; --navy-soft: #1b2a4b; --amber: #f9c95a; --amber-soft: #2e2510; --amber-ink: #f9c95a; --link: #8fb3ff;
+  --c-contatado: #94a3b8; --c-enviado: #38bdf8; --c-entrevista: #a78bfa; --c-teste: #fbbf24; --c-contratado: #34d399; --c-dispensado: #fb7185;
+  --i-aguardando: #fb923c; --i-confirmada: #34d399; --i-realizada: #93a4d1; --i-nao: #fb7185; --i-cancelada: #64748b;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.2);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 16px; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 16.5px; line-height: 1.6;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 64px;
+}
+h1, h2, h3, h4 { text-wrap: balance; line-height: 1.2; margin: 0; }
+p { margin: 0; }
+b, strong { font-weight: 800; }
+a { color: var(--link); font-weight: 700; }
+:focus-visible { outline: 3px solid var(--amber); outline-offset: 2px; border-radius: 4px; }
+.ui {
+  font-weight: 800; font-size: .92em; white-space: nowrap; background: var(--navy-soft); color: var(--ink);
+  border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 6px; padding: 0 7px;
+}
+code { font-family: var(--mono); font-size: .88em; background: var(--navy-soft); padding: 1px 6px; border-radius: 5px; }
+
+/* ---------- Topo ---------- */
+.hero {
+  margin-left: calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  margin-right: calc(-1 * max(16px, env(safe-area-inset-right, 0px)));
+  background: #13213f; color: #fff;
+  padding-block: 40px 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+:root[data-theme="dark"] .hero { background: var(--navy); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .hero { background: var(--navy); } }
+.hero-inner { max-width: 1120px; margin: 0 auto; }
+.eyebrow { font-size: 13px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: #f7b31b; }
+.hero h1 { font-size: clamp(30px, 5vw, 46px); font-weight: 900; margin-top: 8px; }
+.hero p { color: #d9dfec; margin-top: 12px; max-width: 64ch; font-size: 18px; }
+
+/* Caminho da vaga (sequência real) */
+.journey { list-style: none; padding: 0; margin: 28px 0 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; counter-reset: j; }
+.journey li { counter-increment: j; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.14); border-radius: 12px; padding: 12px; display: grid; gap: 4px; align-content: start; position: relative; }
+.journey li::before { content: counter(j); width: 26px; height: 26px; border-radius: 50%; background: #f7b31b; color: #13213f; font-weight: 900; font-size: 14px; display: grid; place-items: center; }
+.journey b { font-size: 15px; color: #fff; }
+.journey span { font-size: 13px; color: #b3bfd8; line-height: 1.35; }
+.journey a { color: #f9c95a; font-size: 13px; }
+
+/* ---------- Corpo ---------- */
+.layout { max-width: 1120px; margin: 32px auto 0; display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 36px; align-items: start; }
+.toc { position: sticky; top: max(16px, env(safe-area-inset-top, 0px)); display: grid; gap: 2px; font-size: 15px; max-height: calc(100vh - 32px); overflow-y: auto; }
+.toc .lab { font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft); padding: 0 10px 6px; }
+.toc a { color: var(--ink-soft); text-decoration: none; padding: 5px 10px; border-radius: 8px; font-weight: 700; border-left: 3px solid transparent; }
+.toc a:hover { background: var(--navy-soft); color: var(--ink); }
+.toc a.on { color: var(--ink); background: var(--navy-soft); border-left-color: var(--amber); }
+
+.content { min-width: 0; display: grid; gap: 56px; }
+.chapter { display: grid; gap: 18px; }
+.ch-head { display: grid; gap: 6px; padding-bottom: 12px; border-bottom: 2px solid var(--line); }
+.ch-head .where { font-size: 13px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--amber-ink); }
+.ch-head h2 { font-size: 30px; font-weight: 900; }
+.ch-head p { color: var(--ink-soft); max-width: 66ch; font-size: 17px; }
+.chapter h3 { font-size: 20px; font-weight: 900; }
+.chapter > p, .prose p { max-width: 70ch; }
+.prose { display: grid; gap: 10px; }
+
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.card h4 { font-size: 17px; font-weight: 900; }
+.card p, .card li { color: var(--ink-soft); font-size: 15.5px; line-height: 1.5; }
+.card ul { margin: 0; padding-left: 18px; display: grid; gap: 3px; }
+
+.howto { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); padding: 18px 20px; display: grid; gap: 10px; }
+.howto h4 { font-size: 17px; font-weight: 900; display: flex; gap: 8px; align-items: center; }
+.howto h4::before { content: ""; width: 10px; height: 10px; border-radius: 3px; background: var(--amber); flex: none; }
+.howto ol { margin: 0; padding-left: 22px; display: grid; gap: 6px; }
+.howto li { padding-left: 4px; }
+.howto li::marker { font-weight: 900; color: var(--amber-ink); }
+
+.tip, .warn { border-radius: 12px; padding: 12px 14px; font-size: 15.5px; line-height: 1.5; }
+.tip { background: var(--amber-soft); }
+.tip b:first-child { color: var(--amber-ink); }
+.warn { background: var(--navy-soft); border-left: 4px solid var(--c-dispensado); }
+
+/* Etapas do Kanban */
+.stages { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+.stage { background: var(--surface); border: 1px solid var(--line); border-top: 5px solid var(--c); border-radius: 12px; padding: 12px; display: grid; gap: 4px; align-content: start; min-width: 0; }
+.stage b { font-size: 15px; }
+.stage span { font-size: 13.5px; color: var(--ink-soft); line-height: 1.4; }
+.stage .rule { font-size: 12.5px; font-weight: 800; color: var(--ink); background: var(--navy-soft); border-radius: 6px; padding: 4px 6px; margin-top: 4px; }
+
+/* Status de entrevista */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { display: inline-flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px 5px 8px; font-size: 14.5px; }
+.chip i { width: 12px; height: 12px; border-radius: 50%; background: var(--c); flex: none; }
+.chip b { font-weight: 800; }
+
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 15px; min-width: 560px; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 12.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); background: var(--navy-soft); }
+tr:last-child td { border-bottom: 0; }
+td:first-child { font-weight: 800; white-space: nowrap; }
+
+details { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+summary { cursor: pointer; list-style: none; padding: 14px 16px; font-weight: 800; display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+summary::-webkit-details-marker { display: none; }
+summary::after { content: "+"; font-size: 22px; font-weight: 700; color: var(--ink-soft); line-height: 1; flex: none; }
+details[open] summary::after { content: "–"; }
+details > div { padding: 0 16px 16px; color: var(--ink-soft); display: grid; gap: 8px; }
+.faq { display: grid; gap: 10px; }
+
+.badge-admin { display: inline-block; font-size: 11.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; background: var(--navy-soft); color: var(--ink-soft); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; vertical-align: 2px; margin-left: 6px; }
+
+.footer { max-width: 1120px; margin: 56px auto 0; padding-top: 20px; border-top: 1px solid var(--line); color: var(--ink-soft); font-size: 15px; display: flex; flex-wrap: wrap; gap: 8px 24px; justify-content: space-between; }
+
+@media (max-width: 1000px) {
+  .journey { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .stages { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 860px) {
+  .layout { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .toc { position: static; max-height: none; display: flex; flex-wrap: wrap; gap: 6px; }
+  .toc .lab { width: 100%; padding: 0 0 2px; }
+  .toc a { border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; background: var(--surface); font-size: 14px; }
+  .grid3 { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 620px) {
+  .journey, .stages { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .grid2 { grid-template-columns: minmax(0, 1fr); }
+  .ch-head h2 { font-size: 26px; }
+}
+
+/* Página estática do painel (public/ajuda). */
+html{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!important}.back{display:inline-block;margin-bottom:18px;color:#f9c95a;font-weight:800;font-size:15px;text-decoration:none}.back:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="hero-inner">
+    <a class="back" href="/">← Voltar ao painel</a>
+    <div class="eyebrow">Manual de uso · Super Estágios</div>
+    <h1>Painel de RH, do cadastro da empresa à contratação</h1>
+    <p>Este manual mostra como usar cada tela do painel no dia a dia. Comece pelo caminho de uma vaga, logo abaixo: ele é a espinha do trabalho. Depois, consulte só o capítulo de que precisar.</p>
+    <ol class="journey" aria-label="Caminho de uma vaga no painel">
+      <li><b>Empresa</b><span>Cadastre a empresa cliente.</span><a href="#empresas">Empresas</a></li>
+      <li><b>Vaga</b><span>Abra a vaga que ela pediu.</span><a href="#vagas">Vagas</a></li>
+      <li><b>Estudantes</b><span>Cadastre ou indique candidatos.</span><a href="#estudantes">Estudantes</a></li>
+      <li><b>Kanban</b><span>Mova cada candidato pelas etapas.</span><a href="#kanban">Kanban</a></li>
+      <li><b>Entrevista</b><span>Agende, confirme e registre.</span><a href="#calendario">Calendário</a></li>
+      <li><b>Contratação</b><span>Acompanhe o estágio até o fim.</span><a href="#contratacoes">Contratações</a></li>
+    </ol>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="toc" aria-label="Capítulos">
+    <span class="lab">Capítulos</span>
+    <a href="#comecar">Primeiros passos</a>
+    <a href="#empresas">Empresas</a>
+    <a href="#vagas">Vagas</a>
+    <a href="#estudantes">Estudantes</a>
+    <a href="#kanban">Kanban da vaga</a>
+    <a href="#calendario">Calendário</a>
+    <a href="#banco">Banco de Talentos</a>
+    <a href="#contratacoes">Contratações Efetivas</a>
+    <a href="#dashboard">Dashboard</a>
+    <a href="#mensagens">Mensagens e links</a>
+    <a href="#configuracoes">Configurações</a>
+    <a href="#duvidas">Dúvidas comuns</a>
+  </nav>
+
+  <main class="content">
+
+    <!-- ===================== Primeiros passos ===================== -->
+    <section class="chapter" id="comecar">
+      <div class="ch-head">
+        <span class="where">Em todas as telas</span>
+        <h2>Primeiros passos</h2>
+        <p>Entre com o e-mail e a senha que a administração criou para você. As ferramentas abaixo ficam disponíveis em qualquer tela.</p>
+      </div>
+      <div class="grid2">
+        <div class="card">
+          <h4>Menu</h4>
+          <p>Na lateral esquerda: Dashboard, Vagas, Calendário, Empresas, Empresas sem vaga, Estudantes, Banco de Talentos, Contratações Efetivas e Configurações.</p>
+          <p>No celular, o menu abre pelo botão <span class="ui">☰</span>.</p>
+        </div>
+        <div class="card">
+          <h4>Novo cadastro</h4>
+          <p>O botão <span class="ui">Novo cadastro</span>, no topo, cria uma <b>Empresa</b>, uma <b>Vaga</b> ou um <b>Estudante</b> sem sair da tela em que você está.</p>
+        </div>
+        <div class="card">
+          <h4>Busca</h4>
+          <p>A busca do topo procura estudantes (por nome, e-mail ou final do telefone), empresas e vagas. Digite o <b>Nº da vaga</b> e aperte Enter para abrir direto o Kanban dela.</p>
+        </div>
+        <div class="card">
+          <h4>Sino de avisos</h4>
+          <p>Mostra o que pede atenção: entrevistas próximas, pedidos de remarcação, vagas paradas, prazos, pendências de estágio, retornos combinados, pareceres de empresas e cadastros pelo site.</p>
+          <p>Quer receber no celular? Veja o <a href="telegram.html">guia do Telegram</a>.</p>
+        </div>
+      </div>
+      <p class="tip"><b>Regra de ouro:</b> quase tudo que é novo no painel é opcional. Se um campo não for obrigatório, você pode deixar em branco e preencher depois.</p>
+    </section>
+
+    <!-- ===================== Empresas ===================== -->
+    <section class="chapter" id="empresas">
+      <div class="ch-head">
+        <span class="where">Menu → Empresas · Empresas sem vaga</span>
+        <h2>Empresas</h2>
+        <p>As empresas clientes da Super Estágios. Toda vaga pertence a uma empresa.</p>
+      </div>
+      <div class="howto">
+        <h4>Cadastrar uma empresa</h4>
+        <ol>
+          <li>Clique em <span class="ui">Novo cadastro</span> → <span class="ui">Empresa</span>.</li>
+          <li>Preencha o nome, o setor e o contato do responsável (telefone com DDD e e-mail).</li>
+          <li>Salve. A empresa já pode receber vagas.</li>
+        </ol>
+      </div>
+      <div class="grid2">
+        <div class="card">
+          <h4>Menu “⋯” de cada empresa</h4>
+          <ul>
+            <li><b>Ver vagas da empresa</b>: abre a lista de vagas já filtrada.</li>
+            <li><b>Contatos e anotações</b>: registre ligações, e-mails, reuniões e combine a data do próximo contato.</li>
+            <li><b>Relatório da empresa</b>: um resumo das vagas e contratações, pronto para imprimir.</li>
+            <li><b>Editar</b> ou <b>Excluir</b>.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>Empresas sem vaga</h4>
+          <p>Lista as empresas que não têm nenhuma vaga aberta agora, com a última vaga ou “Nunca teve vaga cadastrada”.</p>
+          <p>Use para prospectar: ligue, registre o contato e marque o próximo retorno.</p>
+        </div>
+      </div>
+      <p class="tip"><b>Retorno combinado:</b> ao registrar um contato com <b>próximo contato</b>, no dia marcado aparece um aviso no sino. Depois de falar com a empresa, clique em <span class="ui">Marcar retorno como feito</span>.</p>
+    </section>
+
+    <!-- ===================== Vagas ===================== -->
+    <section class="chapter" id="vagas">
+      <div class="ch-head">
+        <span class="where">Menu → Vagas</span>
+        <h2>Vagas</h2>
+        <p>Cada vaga tem um <b>Nº</b>, uma empresa e um quadro Kanban próprio com os candidatos dela.</p>
+      </div>
+      <div class="howto">
+        <h4>Abrir uma vaga</h4>
+        <ol>
+          <li>Clique em <span class="ui">Novo cadastro</span> → <span class="ui">Vaga</span>.</li>
+          <li>Escolha a empresa e preencha o Nº, o título, a descrição e a bolsa-auxílio.</li>
+          <li>Se quiser, informe também: modalidade, turno, horário, bairro e cidade, quantas pessoas a empresa pediu, o <b>prazo</b> e o <b>recrutador responsável</b>.</li>
+          <li>Salve. A vaga entra como <b>Aberta</b>.</li>
+        </ol>
+      </div>
+      <div class="grid3">
+        <div class="card"><h4>Status da vaga</h4><ul><li><b>Aberta</b>: recebendo candidatos.</li><li><b>Suspensa</b>: pausada pela empresa.</li><li><b>Fechada</b>: encerrada.</li></ul><p>Mude em <span class="ui">Suspender vaga</span>, <span class="ui">Fechar vaga</span> ou <span class="ui">Reabrir vaga</span>.</p></div>
+        <div class="card"><h4>Filtros úteis</h4><ul><li>Abas Abertas, Suspensas, Fechadas e Todas.</li><li><b>Minhas vagas</b>: só as suas como responsável.</li><li><b>Agrupar por empresa</b>.</li><li>Ver em cards ou em lista.</li></ul></div>
+        <div class="card"><h4>Selos no card</h4><ul><li><b>Vaga parada</b>: mais de 10 dias sem ninguém em entrevista nem em teste.</li><li><b>Prazo</b>: perto de vencer ou vencido.</li><li>“X de Y contratados”, quando a quantidade foi informada.</li></ul></div>
+      </div>
+      <p>Para trabalhar com os candidatos de uma vaga, clique em <span class="ui">Abrir Kanban</span>. A lista pode ser baixada pelo botão <span class="ui">Exportar CSV</span>, que abre no Excel.</p>
+      <p class="warn">O campo “Preferência informada pela empresa” é de <b>uso interno</b>. Ele nunca aparece em mensagens enviadas aos candidatos.</p>
+    </section>
+
+    <!-- ===================== Estudantes ===================== -->
+    <section class="chapter" id="estudantes">
+      <div class="ch-head">
+        <span class="where">Menu → Estudantes</span>
+        <h2>Estudantes</h2>
+        <p>Todos os estudantes cadastrados, com ou sem candidatura. O telefone é a chave: não dá para cadastrar o mesmo telefone duas vezes.</p>
+      </div>
+      <div class="howto">
+        <h4>Cadastrar um estudante</h4>
+        <ol>
+          <li>Clique em <span class="ui">Novo cadastro</span> → <span class="ui">Estudante</span>.</li>
+          <li>Preencha nome, telefone com DDD e curso. Os outros dados (instituição, semestre, turno, endereço, currículo, etiquetas) são opcionais.</li>
+          <li>Escolha a vaga para inscrevê-lo, ou “Sem vaga — indicar depois”.</li>
+          <li>Salve. Se escolheu uma vaga, ele já aparece no Kanban dela.</li>
+        </ol>
+      </div>
+      <div class="grid2">
+        <div class="card">
+          <h4>Encontrar quem você precisa</h4>
+          <p>Busque por nome, curso, instituição ou final do telefone. Os filtros cobrem curso, situação, turno, disponibilidade, semestre mínimo, cidade, etiqueta, currículo e origem (painel ou site).</p>
+        </div>
+        <div class="card">
+          <h4>Perfil do estudante</h4>
+          <ul>
+            <li><b>Vagas compatíveis</b>: vagas abertas que combinam com o curso dele, com o botão <span class="ui">Indicar</span>.</li>
+            <li><b>Linha do tempo</b>: por quais etapas passou em cada vaga.</li>
+            <li><b>Contatos e anotações</b>, <b>Mensagem com modelo</b> e <b>currículo</b>.</li>
+          </ul>
+        </div>
+      </div>
+      <p class="tip"><b>Etiquetas:</b> escreva palavras separadas por vírgula (ex.: <code>inglês, CNH, indicação</code>) e filtre por elas depois.</p>
+    </section>
+
+    <!-- ===================== Kanban ===================== -->
+    <section class="chapter" id="kanban">
+      <div class="ch-head">
+        <span class="where">Vagas → Abrir Kanban</span>
+        <h2>Kanban da vaga</h2>
+        <p>O quadro mostra os candidatos de uma vaga em colunas. Mover o cartão de coluna é registrar o andamento do processo.</p>
+      </div>
+
+      <div class="stages" role="list" aria-label="Etapas do Kanban, na ordem">
+        <div class="stage" role="listitem" style="--c: var(--c-contatado)"><b>Candidato Contatado</b><span>Primeiro contato feito.</span></div>
+        <div class="stage" role="listitem" style="--c: var(--c-enviado)"><b>Enviado à Empresa</b><span>Currículo apresentado ao cliente.</span></div>
+        <div class="stage" role="listitem" style="--c: var(--c-entrevista)"><b>Em Entrevista</b><span>Entrevista marcada.</span><span class="rule">Pede data e hora</span></div>
+        <div class="stage" role="listitem" style="--c: var(--c-teste)"><b>Em Teste</b><span>Entrevistado, aguardando a decisão.</span></div>
+        <div class="stage" role="listitem" style="--c: var(--c-contratado)"><b>Contratado</b><span>A empresa contratou.</span></div>
+        <div class="stage" role="listitem" style="--c: var(--c-dispensado)"><b>Dispensado</b><span>Saiu do processo.</span><span class="rule">Pede o motivo</span></div>
+      </div>
+
+      <div class="grid2">
+        <div class="howto">
+          <h4>Mover um candidato</h4>
+          <ol>
+            <li><b>Arraste</b> o cartão até a coluna, ou use o menu do cartão → <span class="ui">Mover para…</span>.</li>
+            <li>Indo para <b>Em Entrevista</b>, informe data, hora, formato (presencial ou online), local ou link e entrevistador.</li>
+            <li>Indo para <b>Dispensado</b>, escolha um motivo sugerido ou escreva o seu.</li>
+            <li>Ao marcar <b>Contratado</b>, o painel pergunta se você quer <span class="ui">Encerrar vaga</span> ou mantê-la aberta.</li>
+          </ol>
+        </div>
+        <div class="howto">
+          <h4>Trabalhar vários de uma vez</h4>
+          <ol>
+            <li>Clique em <span class="ui">Selecionar</span> e marque os cartões.</li>
+            <li>Escolha <span class="ui">Mover selecionados para</span> ou <span class="ui">Dispensar todos</span> (com um motivo).</li>
+            <li>Em Entrevista fica de fora: cada candidato precisa da própria data.</li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="grid3">
+        <div class="card"><h4>Sugerir candidatos</h4><p>Mostra estudantes compatíveis com a vaga que ainda não estão nela. Clique em <span class="ui">Adicionar</span> para trazê-los ao quadro.</p></div>
+        <div class="card"><h4>Link para a empresa</h4><p>Gera um link para a empresa ver os candidatos, com o currículo, e dar parecer: aprovou, talvez ou não aprovou. Telefone e e-mail não aparecem. Dá para trocar ou desativar o link.</p></div>
+        <div class="card"><h4>No cartão</h4><p>Menu do cartão: <b>Ver perfil</b>, <b>Ver currículo</b>, <b>Observação</b> (fica visível no cartão), <b>Mensagem com modelo</b> e <b>Indicar para outra vaga</b>.</p></div>
+      </div>
+      <p class="tip"><b>Ordem dos cartões:</b> arraste dentro da mesma coluna para priorizar. A ordem fica salva para toda a equipe. Use <span class="ui">Buscar no quadro</span> para achar alguém rápido.</p>
+    </section>
+
+    <!-- ===================== Calendário ===================== -->
+    <section class="chapter" id="calendario">
+      <div class="ch-head">
+        <span class="where">Menu → Calendário</span>
+        <h2>Calendário</h2>
+        <p>Todas as entrevistas agendadas no Kanban aparecem aqui sozinhas, junto com os seus eventos (reuniões, visitas, prazos).</p>
+      </div>
+      <div class="chips" aria-label="Cores das entrevistas">
+        <span class="chip" style="--c: var(--i-aguardando)"><i></i><b>Aguardando</b> confirmação</span>
+        <span class="chip" style="--c: var(--i-confirmada)"><i></i><b>Confirmada</b></span>
+        <span class="chip" style="--c: var(--i-realizada)"><i></i><b>Realizada</b></span>
+        <span class="chip" style="--c: var(--i-nao)"><i></i><b>Não compareceu</b></span>
+        <span class="chip" style="--c: var(--i-cancelada)"><i></i><b>Cancelada</b></span>
+      </div>
+      <div class="howto">
+        <h4>Do agendamento ao resultado</h4>
+        <ol>
+          <li>Clique na entrevista para abrir os detalhes.</li>
+          <li>Use <span class="ui">Pedir confirmação pelo WhatsApp</span> para mandar a mensagem pronta ao candidato. Quando ele confirmar, clique em <span class="ui">Confirmar</span>.</li>
+          <li>Depois do horário, registre o resultado: <span class="ui">Realizada</span> leva o candidato para <b>Em Teste</b>; <span class="ui">Não compareceu</span> fica registrado.</li>
+          <li>Mudou a data? Use <span class="ui">Reagendar</span>.</li>
+        </ol>
+      </div>
+      <div class="grid3">
+        <div class="card"><h4>Criar um evento</h4><p>Clique num horário vazio, ou em <span class="ui">Novo evento</span>. Pode ser de dia inteiro.</p></div>
+        <div class="card"><h4>Na sua agenda</h4><p><span class="ui">Google Agenda</span> adiciona a entrevista à sua agenda pessoal em um clique.</p></div>
+        <div class="card"><h4>Lembrete por e-mail</h4><p>Envia um convite de calendário, com alarme no celular, para os e-mails que você escolher. Se a data mudar, o painel oferece reenviar o convite atualizado.</p></div>
+      </div>
+      <p class="tip"><b>Conflito de horário:</b> se duas entrevistas se sobrepõem, o painel marca as duas para você ajustar.</p>
+    </section>
+
+    <!-- ===================== Banco de Talentos ===================== -->
+    <section class="chapter" id="banco">
+      <div class="ch-head">
+        <span class="where">Menu → Banco de Talentos</span>
+        <h2>Banco de Talentos</h2>
+        <p>Estudantes que já foram dispensados de alguma vaga e ainda não foram contratados. São candidatos conhecidos, prontos para uma nova oportunidade.</p>
+      </div>
+      <div class="howto">
+        <h4>Reaproveitar um talento</h4>
+        <ol>
+          <li>Busque por nome ou filtre por curso. A lista mostra a última dispensa e o motivo.</li>
+          <li>Clique em <span class="ui">Indicar para vaga</span> e escolha uma vaga aberta.</li>
+          <li>Ele entra no Kanban da nova vaga em <b>Enviado à Empresa</b>.</li>
+        </ol>
+      </div>
+      <p>A etiqueta <b>Em processo</b> avisa que o estudante já participa de outra seleção. Também dá para chamar pelo <span class="ui">Abrir WhatsApp</span>.</p>
+    </section>
+
+    <!-- ===================== Contratações ===================== -->
+    <section class="chapter" id="contratacoes">
+      <div class="ch-head">
+        <span class="where">Menu → Contratações Efetivas</span>
+        <h2>Contratações Efetivas</h2>
+        <p>Todos os candidatos marcados como Contratado, com a data e quantos dias levou a contratação.</p>
+      </div>
+      <div class="grid2">
+        <div class="card">
+          <h4>Visão geral</h4>
+          <p>Filtre por período e por empresa. Os resumos mostram o tempo médio, quem mais contratou e as contratações por mês.</p>
+        </div>
+        <div class="howto">
+          <h4>Acompanhar o estágio</h4>
+          <ol>
+            <li>Na contratação, abra <span class="ui">Dados do estágio</span>.</li>
+            <li>Preencha o que tiver: início, fim do contrato, TCE, apólice do seguro, supervisor, taxa de agenciamento.</li>
+            <li>Salve. Depois disso, controle também os relatórios semestrais.</li>
+          </ol>
+        </div>
+      </div>
+      <p class="tip"><b>O painel vigia por você:</b> contrato perto do fim (30 dias), limite de 2 anos na mesma empresa (60 dias antes), TCE não assinado e relatório pendente viram avisos no sino. O filtro <b>Pendências do estágio</b> junta todos.</p>
+    </section>
+
+    <!-- ===================== Dashboard ===================== -->
+    <section class="chapter" id="dashboard">
+      <div class="ch-head">
+        <span class="where">Menu → Dashboard</span>
+        <h2>Dashboard</h2>
+        <p>A primeira tela do painel: um resumo de como está o trabalho no período escolhido.</p>
+      </div>
+      <div class="grid3">
+        <div class="card"><h4>Números do período</h4><p>Vagas abertas, candidaturas, contratações, taxa de contratação e tempo médio de contratação.</p></div>
+        <div class="card"><h4>Para agir hoje</h4><p>Pendências, vagas paradas e as próximas entrevistas, cada uma com link direto.</p></div>
+        <div class="card"><h4>Gráficos</h4><p>Funil por etapa, vagas abertas por área, estudantes por curso e motivos de dispensa.</p></div>
+      </div>
+      <div class="howto">
+        <h4>Explorar os dados</h4>
+        <ol>
+          <li>Escolha o período no topo: 7, 30 ou 90 dias, este mês, este ano, 12 meses ou Personalizado.</li>
+          <li>Filtre por empresa ou área. Clique numa área do gráfico para filtrar o Dashboard inteiro, e em <span class="ui">Tirar o filtro desta área</span> para voltar.</li>
+          <li>Clique num curso para ver os estudantes dele.</li>
+        </ol>
+      </div>
+      <p>Se a administração definiu uma <b>meta mensal</b> de contratações, ela aparece como barra de progresso: “No ritmo” ou “Meta batida!”.</p>
+    </section>
+
+    <!-- ===================== Mensagens e links ===================== -->
+    <section class="chapter" id="mensagens">
+      <div class="ch-head">
+        <span class="where">Kanban · Perfil · Calendário</span>
+        <h2>Mensagens e links para fora</h2>
+        <p>Modelos de mensagem poupam digitação. Alguns links deixam o candidato ou a empresa responder sem precisar de login.</p>
+      </div>
+      <div class="howto">
+        <h4>Mandar uma mensagem com modelo</h4>
+        <ol>
+          <li>No cartão do Kanban, no perfil ou no Calendário, clique em <span class="ui">Mensagem com modelo</span>.</li>
+          <li>Escolha o modelo. O painel preenche o nome, a vaga e a data sozinho.</li>
+          <li>Copie a mensagem e cole no WhatsApp ou no e-mail.</li>
+        </ol>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Link</th><th>Quem usa</th><th>O que acontece</th></tr></thead>
+          <tbody>
+            <tr><td>Confirmação de presença</td><td>Candidato</td><td>Vai na mensagem pela variável <code>{link_confirmacao}</code>. O candidato toca em “Confirmo presença” e a entrevista vira Confirmada; se tocar em “Preciso remarcar”, chega um aviso no sino.</td></tr>
+            <tr><td>Link para a empresa</td><td>Empresa cliente</td><td>Gerado no Kanban. A empresa vê os candidatos enviados e dá parecer, que aparece como selo no cartão.</td></tr>
+            <tr><td>Cadastro pelo site</td><td>Novos estudantes</td><td>Página pública com as vagas abertas e formulário. Os cadastros entram em Estudantes com a etiqueta “Site”. Só funciona se a administração ligar.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===================== Configurações ===================== -->
+    <section class="chapter" id="configuracoes">
+      <div class="ch-head">
+        <span class="where">Menu → Configurações</span>
+        <h2>Configurações</h2>
+        <p>Algumas abas são para todos; outras, só para quem administra o painel.</p>
+      </div>
+      <div class="grid2">
+        <div class="card"><h4>Geral <span class="badge-admin">altera: admin</span></h4><p>Meta mensal de contratações e o cadastro pelo site (liga ou desliga, e se mostra o nome da empresa nas vagas públicas).</p></div>
+        <div class="card"><h4>Modelos de mensagem</h4><p>Crie textos prontos com variáveis como <code>{primeiro_nome}</code>, <code>{vaga}</code>, <code>{data_entrevista}</code> e <code>{link_confirmacao}</code>. Clique numa variável para inseri-la no texto.</p></div>
+        <div class="card"><h4>Celular</h4><p>Conecte o seu Telegram para receber os avisos do sino no celular. Passo a passo no <a href="telegram.html">guia do Telegram</a>.</p></div>
+        <div class="card"><h4>Usuários e Atividades <span class="badge-admin">só admin</span></h4><p>Criar, editar e desativar usuários, trocar senhas e ver o registro de quem alterou o quê, e quando.</p></div>
+      </div>
+    </section>
+
+    <!-- ===================== Dúvidas ===================== -->
+    <section class="chapter" id="duvidas">
+      <div class="ch-head">
+        <span class="where">Ajuda rápida</span>
+        <h2>Dúvidas comuns</h2>
+      </div>
+      <div class="faq">
+        <details><summary>Fui cadastrar um estudante e o painel disse que o telefone já existe.</summary><div><p>Esse estudante já está cadastrado. Abra o perfil dele pelo aviso e use <span class="ui">Indicar para vaga</span>, em vez de criar outro cadastro.</p></div></details>
+        <details><summary>Arrastei para Em Entrevista e o cartão voltou.</summary><div><p>Para ficar em Em Entrevista, o painel precisa da data e da hora. Se você fechou a janela sem salvar, o cartão volta para onde estava. Arraste de novo e preencha.</p></div></details>
+        <details><summary>Dispensei alguém por engano. Dá para desfazer?</summary><div><p>Sim. Arraste o cartão de volta para a etapa certa, ou use <span class="ui">Mover para…</span>.</p></div></details>
+        <details><summary>Não consigo excluir uma vaga ou uma empresa.</summary><div><p>Para não perder o histórico, uma vaga com candidatos e uma empresa com vagas não podem ser excluídas. Feche a vaga, ou use <span class="ui">Arquivar</span> para tirar o item das listas. O botão “Mostrar arquivados” traz de volta.</p></div></details>
+        <details><summary>O botão do WhatsApp não abre.</summary><div><p>O telefone do estudante está sem DDD. Edite o cadastro, coloque o DDD e tente de novo.</p></div></details>
+        <details><summary>O candidato pediu para remarcar pelo link. O que eu faço?</summary><div><p>Chega um aviso no sino e um selo no cartão, com o recado dele, se houver. Combine a nova data e use <span class="ui">Reagendar</span>; o pedido some sozinho.</p></div></details>
+        <details><summary>Preciso dos dados numa planilha.</summary><div><p>Use <span class="ui">Exportar CSV</span> nas listas. O arquivo abre no Excel e traz só o que está filtrado na tela.</p></div></details>
+        <details><summary>Esqueci minha senha.</summary><div><p>Na tela de entrada, digite o seu e-mail e clique em “Esqueci minha senha” para receber um link de troca (vale 1 hora). Se a opção não aparecer, peça a troca para a administração.</p></div></details>
+      </div>
+    </section>
+  </main>
+</div>
+
+<footer class="footer">
+  <span>Painel de RH Super Estágios · Manual de uso</span>
+  <span>Dúvida que não está aqui? Fale com a administração do painel.</span>
+</footer>
+
+<script>
+// Destaca no índice o capítulo que está na tela.
+(function () {
+  var links = Array.prototype.slice.call(document.querySelectorAll(".toc a"));
+  if (!("IntersectionObserver" in window) || !links.length) return;
+  var byId = {};
+  links.forEach(function (a) { byId[a.getAttribute("href").slice(1)] = a; });
+  var obs = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (!e.isIntersecting) return;
+      links.forEach(function (a) { a.classList.remove("on"); });
+      var a = byId[e.target.id];
+      if (a) a.classList.add("on");
+    });
+  }, { rootMargin: "-20% 0px -70% 0px" });
+  document.querySelectorAll(".chapter").forEach(function (s) { obs.observe(s); });
+})();
+</script>
+</body>
+</html>

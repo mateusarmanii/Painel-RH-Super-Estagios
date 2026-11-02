@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<title>Avisos no Celular</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap">
+<style>
+/* Layout: guia de leitura em coluna; cada passo com o texto à esquerda e a "tela" correspondente à direita. */
+:root {
+  --bg: #f4f6fa;
+  --surface: #ffffff;
+  --ink: #13213f;
+  --ink-soft: #4a5672;
+  --line: #d9dfec;
+  --navy: #1b2a4b;
+  --navy-soft: #eef1f7;
+  --amber: #f7b31b;
+  --amber-soft: #fef8e7;
+  --amber-ink: #7a5200;
+  --tg: #2aa3df;
+  --tg-soft: #e6f4fb;
+  --chat-bg: #dfe9ef;
+  --bubble-in: #ffffff;
+  --bubble-out: #e1f7cf;
+  --ok: #0f7a4f;
+  --ok-soft: #e7f7ef;
+  --red: #d9342b;
+  --orange: #e8790c;
+  --blue: #2f6fd6;
+  --shadow: 0 1px 2px rgba(19, 33, 63, .06), 0 8px 24px rgba(19, 33, 63, .07);
+  --font: "Nunito", ui-rounded, "Segoe UI", system-ui, -apple-system, sans-serif;
+  --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0c1529; --surface: #13213f; --ink: #eef1f7; --ink-soft: #b3bfd8; --line: #2b3d69;
+    --navy: #0a1224; --navy-soft: #1b2a4b; --amber: #f9c95a; --amber-soft: #2e2510; --amber-ink: #f9c95a;
+    --tg: #4fb6ea; --tg-soft: #10314a; --chat-bg: #0f1d33; --bubble-in: #1e2c47; --bubble-out: #23452e;
+    --ok: #5fd39d; --ok-soft: #12352a; --red: #ff6b61; --orange: #ffa24d; --blue: #7aa8ff;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0c1529; --surface: #13213f; --ink: #eef1f7; --ink-soft: #b3bfd8; --line: #2b3d69;
+  --navy: #0a1224; --navy-soft: #1b2a4b; --amber: #f9c95a; --amber-soft: #2e2510; --amber-ink: #f9c95a;
+  --tg: #4fb6ea; --tg-soft: #10314a; --chat-bg: #0f1d33; --bubble-in: #1e2c47; --bubble-out: #23452e;
+  --ok: #5fd39d; --ok-soft: #12352a; --red: #ff6b61; --orange: #ffa24d; --blue: #7aa8ff;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 17px; line-height: 1.6;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 64px;
+}
+.wrap { max-width: 980px; margin: 0 auto; }
+h1, h2, h3 { text-wrap: balance; line-height: 1.2; margin: 0; }
+p { margin: 0; }
+b, strong { font-weight: 800; }
+kbd, .ui {
+  font-family: var(--font); font-weight: 800; font-size: .92em; white-space: nowrap;
+  background: var(--navy-soft); color: var(--ink); border: 1px solid var(--line); border-bottom-width: 2px;
+  border-radius: 6px; padding: 1px 7px;
+}
+code { font-family: var(--mono); font-size: .9em; background: var(--navy-soft); padding: 1px 6px; border-radius: 5px; }
+a { color: var(--tg); font-weight: 700; }
+:focus-visible { outline: 3px solid var(--amber); outline-offset: 2px; border-radius: 4px; }
+
+/* ---------- Topo ---------- */
+.hero {
+  margin: 0 calc(-1 * max(16px, env(safe-area-inset-left, 0px))) 0;
+  background: #13213f; color: #fff;
+  padding-block: 40px 44px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+:root[data-theme="dark"] .hero { background: var(--navy); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .hero { background: var(--navy); } }
+.hero-inner { max-width: 980px; margin: 0 auto; display: grid; grid-template-columns: 1fr auto; gap: 32px; align-items: center; }
+.eyebrow { font-size: 13px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: #f7b31b; }
+.hero h1 { font-size: clamp(30px, 5vw, 44px); font-weight: 900; margin-top: 8px; }
+.hero p { color: #d9dfec; margin-top: 12px; max-width: 58ch; font-size: 18px; }
+.facts { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+.fact { display: inline-flex; align-items: center; gap: 8px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16); border-radius: 999px; padding: 6px 14px; font-size: 15px; font-weight: 700; color: #fff; }
+.fact svg { flex: none; }
+
+/* Notificação que "chega" no topo */
+.toast {
+  width: 300px; background: #fff; color: #13213f; border-radius: 18px; padding: 12px 14px;
+  box-shadow: 0 18px 40px rgba(0,0,0,.35); display: grid; grid-template-columns: 38px 1fr; gap: 10px; align-items: start;
+  animation: drop .7s cubic-bezier(.2,.9,.3,1.2) both .3s;
+}
+.toast .app { width: 38px; height: 38px; border-radius: 10px; background: #2aa3df; display: grid; place-items: center; }
+.toast .meta { font-size: 12px; color: #6b7690; display: flex; justify-content: space-between; }
+.toast .t { font-weight: 800; font-size: 14px; line-height: 1.3; margin-top: 2px; }
+.toast .d { font-size: 13px; color: #4a5672; line-height: 1.35; }
+@keyframes drop { from { transform: translateY(-14px); opacity: .0001; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .toast { animation: none; } }
+
+/* ---------- Seções ---------- */
+section { margin-top: 48px; }
+.sec-title { font-size: 26px; font-weight: 900; }
+.sec-lead { color: var(--ink-soft); margin-top: 6px; max-width: 62ch; }
+
+.before { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 18px; }
+.before div { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; font-size: 15.5px; line-height: 1.45; }
+.before b { display: block; font-size: 16px; margin-bottom: 2px; }
+
+/* Passos */
+.steps { list-style: none; margin: 22px 0 0; padding: 0; display: grid; gap: 18px; counter-reset: passo; }
+.step {
+  counter-increment: passo; background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
+  box-shadow: var(--shadow); padding: 22px; display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 24px; align-items: center;
+}
+.step-text { min-width: 0; display: grid; gap: 10px; align-content: start; }
+.step-num { display: flex; align-items: center; gap: 12px; }
+.step-num::before {
+  content: counter(passo); flex: none; width: 40px; height: 40px; border-radius: 50%;
+  background: var(--amber); color: #13213f; font-weight: 900; font-size: 20px; display: grid; place-items: center;
+}
+.step h3 { font-size: 21px; font-weight: 900; }
+.step p { color: var(--ink-soft); }
+.tip { font-size: 15px; background: var(--amber-soft); color: var(--ink); border-radius: 10px; padding: 10px 12px; line-height: 1.45; }
+.tip b { color: var(--amber-ink); }
+
+/* Telas desenhadas */
+.screen { border-radius: 14px; overflow: hidden; border: 1px solid var(--line); background: var(--bg); font-size: 13px; line-height: 1.4; }
+.screen-bar { background: var(--surface); border-bottom: 1px solid var(--line); padding: 8px 12px; display: flex; gap: 6px; align-items: center; color: var(--ink-soft); font-size: 12px; font-weight: 700; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--line); }
+.menu { display: grid; grid-template-columns: 112px 1fr; min-height: 170px; }
+.menu-side { background: #13213f; padding: 10px 8px; display: grid; gap: 3px; align-content: start; }
+.menu-side span { color: #b3bfd8; font-size: 11.5px; font-weight: 700; padding: 5px 8px; border-radius: 6px; }
+.menu-side span.on { background: #f7b31b; color: #13213f; }
+.menu-main { padding: 12px; display: grid; gap: 10px; align-content: start; }
+.tabs { display: flex; gap: 12px; border-bottom: 1px solid var(--line); font-size: 11.5px; font-weight: 700; color: var(--ink-soft); }
+.tabs span { padding-bottom: 6px; }
+.tabs span.on { color: var(--ink); border-bottom: 2px solid var(--amber); }
+.mini-card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px; display: grid; gap: 8px; }
+.mini-card b { font-size: 12.5px; }
+.btn { display: inline-flex; align-items: center; gap: 6px; justify-self: start; background: #f7b31b; color: #13213f; font-weight: 800; font-size: 12px; padding: 7px 12px; border-radius: 7px; }
+.btn.ghost { background: var(--surface); color: var(--ink); border: 1px solid var(--line); }
+.pulse { box-shadow: 0 0 0 0 rgba(247,179,27,.7); animation: pulse 1.8s infinite; }
+@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(247,179,27,.6); } 70% { box-shadow: 0 0 0 10px rgba(247,179,27,0); } 100% { box-shadow: 0 0 0 0 rgba(247,179,27,0); } }
+@media (prefers-reduced-motion: reduce) { .pulse { animation: none; box-shadow: 0 0 0 3px rgba(247,179,27,.5); } }
+.ok-line { background: var(--ok-soft); color: var(--ok); font-weight: 800; font-size: 12px; padding: 8px 10px; border-radius: 7px; display: flex; gap: 6px; align-items: center; }
+.row { display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* Telegram desenhado */
+.tg { background: var(--chat-bg); }
+.tg-head { background: var(--surface); padding: 9px 12px; display: flex; gap: 10px; align-items: center; border-bottom: 1px solid var(--line); }
+.avatar { width: 32px; height: 32px; border-radius: 50%; background: #13213f; display: grid; place-items: center; color: #f7b31b; font-weight: 900; font-size: 13px; flex: none; }
+.tg-head b { display: block; font-size: 13px; }
+.tg-head small { color: var(--ink-soft); font-size: 11px; }
+.tg-body { padding: 12px; display: grid; gap: 8px; min-height: 130px; align-content: end; }
+.bubble { background: var(--bubble-in); color: var(--ink); border-radius: 12px 12px 12px 4px; padding: 8px 10px; max-width: 92%; font-size: 12.5px; box-shadow: 0 1px 1px rgba(0,0,0,.06); }
+.bubble.out { background: var(--bubble-out); justify-self: end; border-radius: 12px 12px 4px 12px; }
+.bubble .lnk { color: var(--tg); font-weight: 700; }
+.bubble .time { display: block; text-align: right; font-size: 10px; color: var(--ink-soft); margin-top: 2px; }
+.tg-start { background: var(--surface); padding: 10px; border-top: 1px solid var(--line); }
+.tg-start span { display: block; text-align: center; font-weight: 900; letter-spacing: .06em; color: var(--tg); padding: 9px; border-radius: 8px; background: var(--tg-soft); font-size: 13px; }
+.about { background: var(--surface); border-radius: 10px; padding: 10px; font-size: 12px; color: var(--ink-soft); }
+.about b { color: var(--ink); display: block; margin-bottom: 2px; }
+
+/* Tipos de aviso */
+.legend { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 18px; }
+.legend > div { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: grid; gap: 8px; align-content: start; }
+.legend h3 { font-size: 17px; font-weight: 900; display: flex; align-items: center; gap: 8px; }
+.ball { width: 14px; height: 14px; border-radius: 50%; flex: none; }
+.legend ul { margin: 0; padding-left: 18px; color: var(--ink-soft); font-size: 15px; line-height: 1.5; }
+
+.examples { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
+.examples .bubble { max-width: none; border-radius: 12px; font-size: 14px; padding: 12px 14px; border: 1px solid var(--line); box-shadow: none; }
+.examples .lab { font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 6px; }
+
+.cards2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 18px; }
+.cards2 > div { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: grid; gap: 8px; align-content: start; }
+.cards2 h3 { font-size: 18px; font-weight: 900; }
+.cards2 p { color: var(--ink-soft); font-size: 15.5px; }
+
+/* Dúvidas */
+.faq { margin-top: 18px; display: grid; gap: 10px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+summary { cursor: pointer; list-style: none; padding: 14px 16px; font-weight: 800; display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+summary::-webkit-details-marker { display: none; }
+summary::after { content: "+"; font-size: 22px; font-weight: 700; color: var(--ink-soft); line-height: 1; flex: none; }
+details[open] summary::after { content: "–"; }
+details > div { padding: 0 16px 16px; color: var(--ink-soft); display: grid; gap: 8px; }
+
+.footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--ink-soft); font-size: 15px; display: flex; flex-wrap: wrap; gap: 8px 24px; justify-content: space-between; }
+
+@media (max-width: 820px) {
+  .hero-inner { grid-template-columns: 1fr; }
+  .toast { justify-self: start; max-width: 100%; }
+  .step { grid-template-columns: minmax(0, 1fr); }
+  .legend, .examples, .before { grid-template-columns: 1fr; }
+  .cards2 { grid-template-columns: 1fr; }
+}
+@media (max-width: 420px) {
+  body { font-size: 16px; }
+  .step { padding: 16px; }
+  .menu { grid-template-columns: 92px 1fr; }
+}
+
+/* Página estática do painel (public/ajuda). */
+html{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!important}.back{display:inline-block;margin-bottom:18px;color:#f9c95a;font-weight:800;font-size:15px;text-decoration:none}.back:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="hero-inner">
+    <div>
+      <a class="back" href="/">← Voltar ao painel</a>
+      <div class="eyebrow">Guia rápido · Painel de RH Super Estágios</div>
+      <h1>Receba os avisos do painel no seu celular</h1>
+      <p>Entrevista sem confirmação, candidato pedindo para remarcar, prazo de vaga vencendo: tudo o que aparece no sino do painel passa a chegar também no seu Telegram, na hora.</p>
+      <div class="facts">
+        <span class="fact"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f7b31b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Leva 2 minutos</span>
+        <span class="fact"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f7b31b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Opcional e gratuito</span>
+        <span class="fact"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f7b31b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 8a5 5 0 0 0-10 0c0 6-3 7-3 7h16s-3-1-3-7"/><path d="M10.3 19a1.94 1.94 0 0 0 3.4 0"/></svg>Bot: @superestagiosrh_bot</span>
+      </div>
+    </div>
+    <div class="toast" role="img" aria-label="Exemplo de notificação no celular: Entrevista às 14:30 sem confirmação">
+      <div class="app"><svg width="22" height="22" viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M21.5 4.3 18.4 19c-.2 1-.8 1.3-1.7.8l-4.7-3.5-2.3 2.2c-.3.3-.5.5-1 .5l.3-4.8 8.8-7.9c.4-.3-.1-.5-.6-.2L6.4 13 1.8 11.6c-1-.3-1-1 .2-1.5L20.1 3c.8-.3 1.6.2 1.4 1.3z"/></svg></div>
+      <div>
+        <div class="meta"><span>Telegram</span><span>agora</span></div>
+        <div class="t">🔴 Entrevista às 14:30 sem confirmação</div>
+        <div class="d">Ana Souza · Estágio em Administração</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section aria-labelledby="antes">
+    <h2 class="sec-title" id="antes">Antes de começar</h2>
+    <div class="before">
+      <div><b>Telegram instalado</b>No celular, baixe na Play Store ou na App Store e entre com o seu número.</div>
+      <div><b>Painel aberto</b>Entre no painel com o seu usuário. Pode ser no computador ou no próprio celular.</div>
+      <div><b>Cada um conecta o seu</b>A conexão é pessoal. Ninguém precisa conectar por você.</div>
+    </div>
+  </section>
+
+  <section aria-labelledby="passos">
+    <h2 class="sec-title" id="passos">Como conectar</h2>
+    <p class="sec-lead">Faça uma vez só. Depois disso, os avisos chegam sozinhos.</p>
+
+    <ol class="steps">
+      <li class="step">
+        <div class="step-text">
+          <div class="step-num"><h3>Abra Configurações → Celular</h3></div>
+          <p>No menu do painel, clique em <span class="ui">Configurações</span>. Na parte de cima, escolha a aba <span class="ui">Celular</span>.</p>
+          <p class="tip"><b>No celular:</b> o menu fica escondido no botão <span class="ui">☰</span>, no canto da tela.</p>
+        </div>
+        <div class="screen" role="img" aria-label="Painel com o menu Configurações e a aba Celular destacados">
+          <div class="screen-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span>&nbsp;Painel Super Estágios</div>
+          <div class="menu">
+            <div class="menu-side"><span>Dashboard</span><span>Vagas</span><span>Calendário</span><span>Estudantes</span><span class="on">Configurações</span></div>
+            <div class="menu-main">
+              <div class="tabs"><span>Geral</span><span>Modelos</span><span class="on">Celular</span></div>
+              <div class="mini-card"><b>Avisos no celular pelo Telegram</b><span style="color:var(--ink-soft);font-size:11.5px">Cada pessoa conecta o próprio Telegram.</span></div>
+            </div>
+          </div>
+        </div>
+      </li>
+
+      <li class="step">
+        <div class="step-text">
+          <div class="step-num"><h3>Clique em “Conectar Telegram”</h3></div>
+          <p>O Telegram abre sozinho, já na conversa com o bot <b>@superestagiosrh_bot</b>.</p>
+          <p class="tip"><b>Não abriu?</b> Aparece um quadro amarelo com um link. Toque nele ou copie e abra no celular. O link vale 15 minutos.</p>
+        </div>
+        <div class="screen" role="img" aria-label="Botão Conectar Telegram e o quadro amarelo com o link">
+          <div class="screen-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span>&nbsp;Configurações · Celular</div>
+          <div class="menu-main" style="padding:14px">
+            <div class="mini-card">
+              <b>Avisos no celular pelo Telegram</b>
+              <span class="btn pulse">📱 Conectar Telegram</span>
+              <span style="background:var(--amber-soft);border-radius:7px;padding:8px;font-size:11.5px"><b style="font-size:11.5px">Aguardando você tocar em “Iniciar” no Telegram…</b><br>Se o Telegram não abriu, use este link (vale 15 minutos)</span>
+            </div>
+          </div>
+        </div>
+      </li>
+
+      <li class="step">
+        <div class="step-text">
+          <div class="step-num"><h3>No Telegram, toque em “Iniciar”</h3></div>
+          <p>O botão fica na parte de baixo da conversa. Em inglês, aparece como <span class="ui">START</span>.</p>
+          <p>Não precisa digitar nada.</p>
+        </div>
+        <div class="screen tg" role="img" aria-label="Conversa com o bot no Telegram e o botão Iniciar embaixo">
+          <div class="tg-head"><div class="avatar">SE</div><div><b>superestagiosrh_bot</b><small>bot</small></div></div>
+          <div class="tg-body">
+            <div class="about"><b>O que este bot pode fazer?</b>Avisos do Painel de RH da Super Estágios no seu celular.</div>
+          </div>
+          <div class="tg-start"><span class="pulse">INICIAR</span></div>
+        </div>
+      </li>
+
+      <li class="step">
+        <div class="step-text">
+          <div class="step-num"><h3>Pronto! Confira a confirmação</h3></div>
+          <p>Chega a mensagem <b>“✅ Pronto!”</b> no Telegram, e o painel passa a mostrar <b>Conectado</b>.</p>
+          <p>Para ter certeza de que está tudo certo, clique em <span class="ui">Enviar teste</span> no painel. A mensagem de teste chega em segundos.</p>
+        </div>
+        <div class="screen tg" role="img" aria-label="Mensagem de confirmação no Telegram e o painel mostrando Conectado">
+          <div class="tg-head"><div class="avatar">SE</div><div><b>superestagiosrh_bot</b><small>bot</small></div></div>
+          <div class="tg-body">
+            <div class="bubble out">/start<span class="time">10:40</span></div>
+            <div class="bubble">✅ Pronto, Ana! Este Telegram vai receber os avisos do painel Super Estágios.<span class="time">10:40</span></div>
+          </div>
+          <div style="padding:10px;background:var(--surface);border-top:1px solid var(--line);display:grid;gap:8px">
+            <span class="ok-line">✓ Conectado</span>
+            <div class="row"><span class="btn ghost">Enviar teste</span><span class="btn ghost">Desconectar</span></div>
+          </div>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <section aria-labelledby="avisos">
+    <h2 class="sec-title" id="avisos">O que chega no celular</h2>
+    <p class="sec-lead">Os mesmos avisos do sino do painel. A bolinha colorida no começo da mensagem mostra a urgência.</p>
+
+    <div class="legend">
+      <div>
+        <h3><span class="ball" style="background:var(--red)"></span>Urgente</h3>
+        <ul>
+          <li>Entrevista nas próximas 3 horas ainda sem confirmação</li>
+          <li>Candidato pediu para remarcar</li>
+          <li>Prazo da vaga vencido</li>
+          <li>Contrato de estágio já terminou</li>
+        </ul>
+      </div>
+      <div>
+        <h3><span class="ball" style="background:var(--orange)"></span>Atenção</h3>
+        <ul>
+          <li>Vaga parada, sem entrevistas</li>
+          <li>Prazo da vaga nos próximos 3 dias</li>
+          <li>Retorno de contato combinado para hoje</li>
+          <li>TCE, contrato ou relatório do estágio pendente</li>
+        </ul>
+      </div>
+      <div>
+        <h3><span class="ball" style="background:var(--blue)"></span>Informativo</h3>
+        <ul>
+          <li>Entrevista confirmada nas próximas 3 horas</li>
+          <li>Empresa deu parecer sobre um candidato</li>
+          <li>Novo cadastro pelo site</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="examples" aria-label="Exemplos de mensagens">
+      <div><div class="lab">Exemplo urgente</div><div class="bubble">🔴 <b>Bruno Lima pediu para remarcar</b><br>Estágio em Marketing · “tenho prova nesse dia”<br><span class="lnk">Abrir no painel</span></div></div>
+      <div><div class="lab">Exemplo de atenção</div><div class="bubble">🟠 <b>Retornar contato: Carla Mendes</b><br>Ligar para confirmar documentos<br><span class="lnk">Abrir no painel</span></div></div>
+      <div><div class="lab">Exemplo informativo</div><div class="bubble">🔵 <b>Empresa aprovou Diego Rocha</b><br>Estágio em Contabilidade<br><span class="lnk">Abrir no painel</span></div></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="bom">
+    <h2 class="sec-title" id="bom">Bom saber</h2>
+    <div class="cards2">
+      <div>
+        <h3>🌙 Sem barulho à noite</h3>
+        <p>Entre 22h e 7h os avisos continuam chegando, mas <b>sem som</b>. Você vê tudo quando pegar o celular.</p>
+      </div>
+      <div>
+        <h3>🔁 Sem repetição</h3>
+        <p>Cada aviso chega <b>uma vez só</b>. Ele só volta se ficar mais grave, por exemplo quando um prazo que estava perto vence.</p>
+      </div>
+      <div>
+        <h3>🔗 Um toque para resolver</h3>
+        <p>O link <b>Abrir no painel</b> leva direto para a vaga, o estudante ou o calendário daquele aviso.</p>
+      </div>
+      <div>
+        <h3>🤐 O bot só avisa</h3>
+        <p>Ele não lê suas conversas e não responde mensagens. Resolva tudo pelo painel, como sempre.</p>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="parar">
+    <h2 class="sec-title" id="parar">Como parar de receber</h2>
+    <div class="cards2">
+      <div>
+        <h3>Pelo painel</h3>
+        <p>Abra <span class="ui">Configurações</span> → <span class="ui">Celular</span> e clique em <span class="ui">Desconectar</span>.</p>
+      </div>
+      <div>
+        <h3>Pelo Telegram</h3>
+        <p>Na conversa com o bot, envie <code>/parar</code>. Para voltar a receber, é só conectar de novo.</p>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="duvidas">
+    <h2 class="sec-title" id="duvidas">Dúvidas comuns</h2>
+    <div class="faq">
+      <details>
+        <summary>Cliquei em “Conectar Telegram” e nada aconteceu.</summary>
+        <div><p>Use o link do quadro amarelo que aparece logo abaixo do botão. Se estiver no computador, abra esse link no celular. Ele vale 15 minutos. Se vencer, clique em <span class="ui">Conectar Telegram</span> de novo para gerar outro.</p></div>
+      </details>
+      <details>
+        <summary>Toquei em Iniciar, mas recebi “Para receber os avisos, abra Configurações…”.</summary>
+        <div><p>O link venceu ou já tinha sido usado. Volte ao painel, clique em <span class="ui">Conectar Telegram</span> de novo e toque em Iniciar em até 15 minutos.</p></div>
+      </details>
+      <details>
+        <summary>Estou conectado, mas os avisos pararam de chegar.</summary>
+        <div>
+          <p>Abra <span class="ui">Configurações</span> → <span class="ui">Celular</span>:</p>
+          <p>• Se aparece <b>Conectado</b>, clique em <span class="ui">Enviar teste</span>. Se o teste chegar, está tudo certo; é só que não houve aviso novo.</p>
+          <p>• Se não aparece Conectado, conecte de novo. Isso acontece quando o bot é bloqueado ou a conversa com ele é apagada.</p>
+          <p>Confira também se as notificações do Telegram estão ligadas nas configurações do celular.</p>
+        </div>
+      </details>
+      <details>
+        <summary>Troquei de celular. Preciso fazer algo?</summary>
+        <div><p>Se você entrou no Telegram com o mesmo número, não. Os avisos continuam chegando. Se trocou de número ou de conta, conecte de novo pelo painel.</p></div>
+      </details>
+      <details>
+        <summary>Vou receber avisos de vagas que não são minhas?</summary>
+        <div><p>Sim. O celular recebe os mesmos avisos que o sino do painel mostra para toda a equipe. Se for demais para você, desconecte quando quiser; o sino continua funcionando normalmente.</p></div>
+      </details>
+      <details>
+        <summary>Sou obrigado a usar?</summary>
+        <div><p>Não. É opcional. Quem não conectar continua usando o sino do painel, exatamente como antes.</p></div>
+      </details>
+      <details>
+        <summary>Na hora de conectar, chegou só um resumo. É normal?</summary>
+        <div><p>Sim. Os avisos que já estavam abertos no sino viram um resumo (“Agora há 3 avisos abertos…”), para não chegar uma enxurrada de mensagens. A partir daí, cada aviso novo chega separado.</p></div>
+      </details>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <span>Painel de RH Super Estágios · Avisos pelo Telegram · <a href="manual.html">Manual completo do painel</a></span>
+    <span>Bot oficial: <b>@superestagiosrh_bot</b>. Desconfie de outros bots com nome parecido.</span>
+  </footer>
+</main>
+</body>
+</html>

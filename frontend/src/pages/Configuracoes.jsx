@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import { CheckCircle2, Copy, ExternalLink, History, MessageSquareText, Pencil, Plus, Send, Settings2, Smartphone, Trash2, Unplug, UserCog } from "lucide-react";
+import { CheckCircle2, CircleHelp, Copy, ExternalLink, History, MessageSquareText, Pencil, Plus, Send, Settings2, Smartphone, Trash2, Unplug, UserCog } from "lucide-react";
 import Modal from "../components/Modal.jsx";
 import LoadError from "../components/LoadError.jsx";
 import { apiJson } from "../api.js";
@@ -458,6 +458,11 @@ function PhoneTab() {
       <Section
         title="Avisos no celular pelo Telegram"
         description="Opcional e individual: cada pessoa conecta o próprio Telegram. Tudo que aparece no sino chega também como mensagem, assim que surge. Entre 22h e 7h as mensagens chegam sem som."
+        action={
+          <a href="/ajuda/telegram.html" target="_blank" rel="noopener noreferrer" className={`${buttonSecondary} h-9 px-3 text-xs`}>
+            <CircleHelp size={15} /> Passo a passo
+          </a>
+        }
       >
         {!status.configurado ? (
           <div className="space-y-2 rounded-md bg-slate-50 px-4 py-3 text-sm text-slate-600">

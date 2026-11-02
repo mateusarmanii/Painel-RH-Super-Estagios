@@ -9,6 +9,7 @@ import {
   Building2,
   CalendarDays,
   ChevronDown,
+  CircleHelp,
   GraduationCap,
   LayoutDashboard,
   LogOut,
@@ -33,6 +34,8 @@ const navigationItems = [
   { label: "Banco de Talentos", path: "/banco-de-talentos", icon: Users },
   { label: "Contratações Efetivas", path: "/contratacoes", icon: UserRoundCheck },
   { label: "Configurações", path: "/configuracoes", icon: Settings },
+  // Manual de uso (página estática em public/ajuda), aberto numa aba nova para não sair do painel.
+  { label: "Ajuda", href: "/ajuda/manual.html", icon: CircleHelp },
 ];
 
 // Título mostrado na barra superior de cada tela.
@@ -147,17 +150,26 @@ export default function Layout({ children, user, onLogout }) {
           {navigationItems.map((item) => {
             const active = isActive(item, pathname);
             const Icon = item.icon;
+            const itemClass = `flex w-full items-center gap-3 whitespace-nowrap rounded-md border-l-4 px-3 py-2.5 text-left text-xs font-bold uppercase tracking-wide transition-colors ${
+              active
+                ? "border-ambar-400 bg-white/10 text-ambar-400"
+                : "border-transparent text-slate-300 hover:bg-white/5 hover:text-white"
+            }`;
+            if (item.href) {
+              return (
+                <a key={item.label} href={item.href} target="_blank" rel="noopener noreferrer" title={`${item.label} (abre em outra aba)`} className={itemClass}>
+                  <Icon size={17} className="shrink-0" />
+                  <span className={whenExpanded}>{item.label}</span>
+                </a>
+              );
+            }
             return (
               <Link
                 key={item.label}
                 to={item.path}
                 aria-current={active ? "page" : undefined}
                 title={item.label}
-                className={`flex w-full items-center gap-3 whitespace-nowrap rounded-md border-l-4 px-3 py-2.5 text-left text-xs font-bold uppercase tracking-wide transition-colors ${
-                  active
-                    ? "border-ambar-400 bg-white/10 text-ambar-400"
-                    : "border-transparent text-slate-300 hover:bg-white/5 hover:text-white"
-                }`}
+                className={itemClass}
               >
                 <Icon size={17} className="shrink-0" />
                 <span className={whenExpanded}>{item.label}</span>

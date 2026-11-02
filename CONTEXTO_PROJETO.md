@@ -444,4 +444,9 @@ Migration `20261102150000_telegram`: só adições. `Usuario` ganhou `telegram_c
   - No plano grátis do Render a API "dorme" sem acessos, e dormindo não manda avisos. Para manter acordada: um ping em `GET /` a cada 10 minutos (n8n ou UptimeRobot) ou o plano pago.
 - **Testes:** `npm run test:telegram` (porta 3404, com um Telegram falso na porta 3499; nada sai para o Telegram real). São 36 casos, 0 sobras. No total: 21 scripts, 726 casos, todos passando.
 
+### 🟡 Guias de uso dentro do painel (02/11/2026); falta validar no navegador
+- `frontend/public/ajuda/manual.html` (manual completo, por tela) e `frontend/public/ajuda/telegram.html` (passo a passo dos avisos no celular). São páginas HTML estáticas: o Vite copia para `dist/ajuda/`, sem passar pelo React nem pelo login. O conteúdo não tem dados, só instruções.
+- Acesso: item **Ajuda** no fim do menu lateral (abre o manual numa aba nova) e botão **Passo a passo** em Configurações → Celular (abre o guia do Telegram). Os dois guias apontam um para o outro e têm "Voltar ao painel".
+- Para mudar o texto, edite esses dois arquivos direto. Os nomes de botões citados neles precisam acompanhar as telas.
+
 Não feito (depende do usuário ou de serviço externo): migrations no Neon (agora 4, contando a do Telegram), bot do Telegram e `TELEGRAM_BOT_TOKEN` no Render, troca da senha do banco, SMTP no Render, Automação 2 do n8n, monitoramento de erros (Sentry, precisa de conta), leitura de currículo com IA (precisa de chave de API), atualização do Prisma 5 → 6+ (mudança grande), testes de tela automatizados com Playwright (precisa instalar navegadores) e paginação (o volume atual não exige).
