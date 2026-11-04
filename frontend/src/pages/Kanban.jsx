@@ -6,20 +6,15 @@ import {
   ArrowRightLeft,
   BriefcaseBusiness,
   CalendarClock,
-  CalendarX2,
   CheckSquare,
   FileText,
-  HelpCircle,
   Lightbulb,
-  Link2,
   MessageSquarePlus,
   MessageSquareText,
   MessageSquareX,
   Search,
   StickyNote,
   Send,
-  ThumbsDown,
-  ThumbsUp,
   UserRound,
   X,
 } from "lucide-react";
@@ -43,7 +38,7 @@ import { CSS } from "@dnd-kit/utilities";
 import ActionMenu from "../components/ActionMenu.jsx";
 import DismissalReasonField, { dismissalPayload } from "../components/DismissalReasonField.jsx";
 import MessageTemplateDialog from "../components/MessageTemplateDialog.jsx";
-import { SuggestionsDialog, PortalLinkDialog } from "../components/KanbanTools.jsx";
+import { SuggestionsDialog } from "../components/KanbanTools.jsx";
 import { IndicateDialog } from "../components/IndicateForm.jsx";
 import Modal from "../components/Modal.jsx";
 import PageHeader from "../components/PageHeader.jsx";
@@ -156,13 +151,6 @@ function CardMenu({ candidate, onAction }) {
   );
 }
 
-// Parecer da empresa dado pelo portal (só informa; o RH decide a etapa).
-const opinionBadges = {
-  APROVADO: { label: "Empresa aprovou", icon: ThumbsUp, style: "bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200" },
-  TALVEZ: { label: "Empresa: talvez", icon: HelpCircle, style: "bg-amber-50 text-amber-800 ring-1 ring-amber-200" },
-  REPROVADO: { label: "Empresa não aprovou", icon: ThumbsDown, style: "bg-rose-50 text-rose-800 ring-1 ring-rose-200" },
-};
-
 function StudentCard({ candidate, onAction, selectMode, selected, onToggleSelect }) {
   const {
     attributes,
@@ -234,17 +222,6 @@ function StudentCard({ candidate, onAction, selectMode, selected, onToggleSelect
         </div>
       )}
 
-      {candidate.remarcacao && candidate.coluna === "entrevista" && (
-        <p className="mt-2 flex items-start gap-1.5 rounded bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-800" title={candidate.remarcacaoMensagem ?? undefined}>
-          <CalendarX2 size={14} className="mt-px shrink-0" />
-          <span className="line-clamp-2">Pediu para remarcar{candidate.remarcacaoMensagem ? `: ${candidate.remarcacaoMensagem}` : ""}</span>
-        </p>
-      )}
-
-      {candidate.parecer && opinionBadges[candidate.parecer.parecer] && (
-        <OpinionBadge opinion={candidate.parecer} />
-      )}
-
       {candidate.observacao && (
         <p className="mt-3 flex items-start gap-1.5 rounded border-l-2 border-marinho-300 bg-slate-50 px-2 py-1 text-xs text-slate-700">
           <StickyNote size={14} className="mt-px shrink-0 text-marinho-500" aria-label="Observação" />
@@ -259,16 +236,6 @@ function StudentCard({ candidate, onAction, selectMode, selected, onToggleSelect
         </p>
       )}
     </article>
-  );
-}
-
-function OpinionBadge({ opinion }) {
-  const { label, icon: Icon, style } = opinionBadges[opinion.parecer];
-  return (
-    <p className={`mt-2 flex items-start gap-1.5 rounded px-2 py-1 text-xs font-semibold ${style}`} title={opinion.comentario ?? undefined}>
-      <Icon size={13} className="mt-px shrink-0" />
-      <span className="line-clamp-2">{label}{opinion.comentario ? `: “${opinion.comentario}”` : ""}</span>
-    </p>
   );
 }
 
@@ -600,9 +567,6 @@ function toCandidate(application, index) {
     motivo: application.motivo_recusa,
     observacao: application.observacao,
     curriculo: application.estudante.curriculo ?? null,
-    parecer: application.pareceres?.[0] ?? null,
-    remarcacao: application.remarcacao_pedida_em ?? null,
-    remarcacaoMensagem: application.remarcacao_mensagem ?? null,
     avatar: avatarStyles[index % avatarStyles.length],
   };
 }
@@ -620,7 +584,7 @@ function KanbanBoard({ vagaId }) {
   const [reloadKey, setReloadKey] = useState(0);
   const [search, setSearch] = useState("");
   const [messaging, setMessaging] = useState(null);
-  const [tool, setTool] = useState(null); // null | "sugestoes" | "portal"
+  const [tool, setTool] = useState(null); // null | "sugestoes"
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [bulkDismiss, setBulkDismiss] = useState(false);
@@ -845,9 +809,6 @@ function KanbanBoard({ vagaId }) {
           <button type="button" onClick={() => setTool("sugestoes")} className={`${buttonSecondary} h-9 px-3`} title="Estudantes compatíveis que ainda não estão na vaga">
             <Lightbulb size={15} /> Sugerir candidatos
           </button>
-          <button type="button" onClick={() => setTool("portal")} className={`${buttonSecondary} h-9 px-3`} title="Link para a empresa ver os candidatos e dar parecer">
-            <Link2 size={15} /> Link para a empresa
-          </button>
           <button
             type="button"
             onClick={() => (selectMode ? leaveSelectMode() : setSelectMode(true))}
@@ -971,9 +932,6 @@ function KanbanBoard({ vagaId }) {
 
       {tool === "sugestoes" && (
         <SuggestionsDialog vagaId={vagaId} onClose={() => setTool(null)} onAdded={() => setReloadKey((current) => current + 1)} />
-      )}
-      {tool === "portal" && vaga && (
-        <PortalLinkDialog vaga={vaga} onClose={() => setTool(null)} onChanged={(token) => setVaga((current) => ({ ...current, portal_token: token }))} />
       )}
 
       <Modal isOpen={bulkDismiss} title={`Dispensar ${plural(selectedIds.size, "candidato", "candidatos")}`} onClose={() => setBulkDismiss(false)}>

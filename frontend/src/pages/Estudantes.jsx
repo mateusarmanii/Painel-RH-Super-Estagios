@@ -12,8 +12,7 @@ import { situationLabels, studentSituation } from "../perfil.js";
 import { formatCep } from "../cep.js";
 import { viewCurriculo } from "../curriculo.js";
 
-const EMPTY_FILTERS = { curso: "", instituicao: "", turno: "", semestreMinimo: "", situacao: "", curriculo: "", disponibilidade: [], etiqueta: "", origem: "" };
-const origemLabels = { FORMULARIO: "Cadastro pelo site", PAINEL: "Cadastro pelo painel" };
+const EMPTY_FILTERS = { curso: "", instituicao: "", turno: "", semestreMinimo: "", situacao: "", curriculo: "", disponibilidade: [], etiqueta: "" };
 
 const curriculoFilterLabels = { COM: "Com currículo", SEM: "Sem currículo" };
 
@@ -69,7 +68,6 @@ function matchesFilters(estudante, filters) {
   if (filters.curriculo && Boolean(estudante.curriculo) !== (filters.curriculo === "COM")) return false;
   if (filters.disponibilidade.length && !filters.disponibilidade.every((periodo) => estudante.disponibilidade?.includes(periodo))) return false;
   if (filters.etiqueta && !(estudante.etiquetas ?? []).some((tag) => normalize(tag) === filters.etiqueta)) return false;
-  if (filters.origem && (estudante.origem === "FORMULARIO" ? "FORMULARIO" : "PAINEL") !== filters.origem) return false;
   return true;
 }
 
@@ -111,9 +109,8 @@ function renderEstudante(estudante) {
         </Link>
       </h2>
       <p className="mt-2 text-sm text-slate-600">{estudante.curso}</p>
-      {(estudante.etiquetas?.length > 0 || estudante.origem === "FORMULARIO") && (
+      {estudante.etiquetas?.length > 0 && (
         <p className="mt-2 flex flex-wrap gap-1">
-          {estudante.origem === "FORMULARIO" && <span className="rounded-full bg-sky-50 px-2 py-0.5 text-[11px] font-semibold text-sky-800">Site</span>}
           {estudante.etiquetas?.map((tag) => <span key={tag} className="rounded-full bg-marinho-50 px-2 py-0.5 text-[11px] font-semibold text-marinho-800">{tag}</span>)}
         </p>
       )}
@@ -184,7 +181,6 @@ function Filters({ filters, onChange, students, visibleCount, isLoading }) {
     filters.situacao && { key: "situacao", label: situationLabels[filters.situacao], clear: { situacao: "" } },
     filters.curriculo && { key: "curriculo", label: curriculoFilterLabels[filters.curriculo], clear: { curriculo: "" } },
     filters.etiqueta && { key: "etiqueta", label: `Etiqueta: ${tags.find((t) => t.key === filters.etiqueta)?.label ?? filters.etiqueta}`, clear: { etiqueta: "" } },
-    filters.origem && { key: "origem", label: origemLabels[filters.origem], clear: { origem: "" } },
     ...filters.disponibilidade.map((periodo) => ({
       key: `disp-${periodo}`,
       label: `Disponível: ${periodoLabels[periodo]}`,
@@ -211,7 +207,7 @@ function Filters({ filters, onChange, students, visibleCount, isLoading }) {
       </div>
 
       {isOpen && (
-        <div className="grid grid-cols-2 gap-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm sm:grid-cols-3 sm:p-4 lg:grid-cols-4 2xl:grid-cols-7">
+        <div className="grid grid-cols-2 gap-3 superficie rounded-lg border border-slate-200 bg-white p-3 shadow-sm sm:grid-cols-3 sm:p-4 lg:grid-cols-4 2xl:grid-cols-7">
           <FilterSelect id="filtro-curso" label="Curso" value={filters.curso} onChange={set("curso")}>
             <option value="">Todos</option>
             {courses.map((course) => <option key={course.key} value={course.key}>{course.label}</option>)}
@@ -220,12 +216,6 @@ function Filters({ filters, onChange, students, visibleCount, isLoading }) {
             <FilterSelect id="filtro-etiqueta" label="Etiqueta" value={filters.etiqueta} onChange={set("etiqueta")}>
               <option value="">Todas</option>
               {tags.map((tag) => <option key={tag.key} value={tag.key}>{tag.label}</option>)}
-            </FilterSelect>
-          )}
-          {students.some((student) => student.origem === "FORMULARIO") && (
-            <FilterSelect id="filtro-origem" label="Origem" value={filters.origem} onChange={set("origem")}>
-              <option value="">Todas</option>
-              {Object.entries(origemLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
             </FilterSelect>
           )}
           <FilterSelect id="filtro-instituicao" label="Instituição" value={filters.instituicao} onChange={set("instituicao")}>

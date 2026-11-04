@@ -444,9 +444,69 @@ Migration `20261102150000_telegram`: só adições. `Usuario` ganhou `telegram_c
   - No plano grátis do Render a API "dorme" sem acessos, e dormindo não manda avisos. Para manter acordada: um ping em `GET /` a cada 10 minutos (n8n ou UptimeRobot) ou o plano pago.
 - **Testes:** `npm run test:telegram` (porta 3404, com um Telegram falso na porta 3499; nada sai para o Telegram real). São 36 casos, 0 sobras. No total: 21 scripts, 726 casos, todos passando.
 
+### 🟡 Telegram como assistente do RH (03/11/2026); falta testar com Telegram e IA reais
+Pedido do usuário: mais avisos e o Telegram como "braço direito do RH", com IA gratuita se possível. **Sem migration e sem commit.**
+- **Alterações pelo bot** (`src/acoes.js`), pedidas pelo usuário em 03/11/2026: `/contato Nome: texto` e `/mover Nome`, ou pela IA (`propor_registrar_contato`, `propor_mover_candidato`).
+  - **Nada grava sem o botão Confirmar**, e o resumo mostra exatamente o que será salvo. A IA só preenche a proposta.
+  - Botões em memória, por conversa: 10 minutos, uso único, e um pedido novo cancela os anteriores. Reiniciar a API também cancela.
+  - Mover aceita Contatado, Enviado, Em Teste e Contratado, com as regras do `PATCH /candidatos/:id` (data de contratação, motivo apagado, entrevista realizada ou cancelada). **Em Entrevista e Dispensado continuam só no painel**, porque exigem data ou motivo. Se mudar a regra da rota, mudar também `gravarMudanca`.
+  - O `updateMany` só grava se a etapa ainda for a do resumo, para não sobrescrever uma mudança feita no painel.
+  - Histórico de etapas e `Contato` guardam quem confirmou; a ação entra em `Atividade` com "(Telegram)" no caminho.
+- **Avisos novos** (`src/notificacoes.js`; aparecem também no sino):
+  - entrevista em 3–24h sem confirmação;
+  - entrevista passada há mais de 1h sem resultado (até 14 dias);
+  - candidatos parados há mais de 7 dias em Contatado, Enviado ou Em Teste (um aviso por vaga);
+  - vaga sem candidatos há mais de 3 dias;
+  - vaga completa e ainda aberta;
+  - contratação registrada (3 dias; usa o `HistoricoEtapa`);
+  - estagiário que se forma em até 60 dias, se o contrato não acabar antes.
+- **Resumos** (`enviarResumos` em `src/telegram.js`): do dia, em dias úteis das 8h às 12h; da semana, na sexta das 17h às 21h. A janela cobre a API acordando tarde no Render. A chave `resumo-…` na `NotificacaoEnviada` evita repetir.
+- **Comandos** (`src/assistente.js`): `/hoje`, `/amanha`, `/semana`, `/pendencias`, `/vagas`, `/buscar`, `/resumo`, `/ajuda`. Só para chat conectado de usuário ativo. `/buscar` mostra telefone; nunca seleciona `sexo_preferencia` nem `anotacoes_recrutador`.
+- **IA opcional** (`src/ia.js`, liga com `IA_API_KEY`; padrão Groq, modelo `openai/gpt-oss-20b`):
+  - **Decisão de privacidade:** a IA recebe só o texto digitado (sem e-mails e números longos). Ela escolhe a consulta ou a proposta, e o servidor busca e escreve a resposta, então nenhum dado do banco vai para a IA. Não mandar resultados de consulta para ela sem nova decisão do usuário.
+  - **Por que não o Gemini gratuito:** os termos dizem "Do not submit sensitive, confidential, or personal information to the Unpaid Services" e permitem revisão humana. O n8n com dados fictícios não muda isso.
+  - Groq: ligar Zero Data Retention em Data Controls. A página oficial consultada em 03/11/2026 não diz se há treino com os dados; confirmar nos termos.
+  - Sem memória entre mensagens (cada uma é independente). Limite de 10 perguntas por minuto por chat; texto da IA vem com 🤖; o log não guarda o texto digitado.
+- **Demonstração no painel:** rota `/tutorial-ia` (`pages/TutorialIa.jsx`), item "IA no Telegram" no menu e botão em Configurações → Celular. É uma conversa animada, sem arquivo de vídeo, com dados fictícios. Se os textos do bot mudarem, atualizar `CAPITULOS`.
+- **Testes:** novo `npm run test:assistente` (só lê o banco; IA falsa). `test:telegram` ganhou casos de comandos e permissão (grava `[TESTE]`, pedir aprovação).
+
+### 🟡 "Como usar" em cada tela (03/11/2026); falta validar no navegador logado
+Pedido do usuário: um tutorial animado em pop-up em cada página. **Sem commit.** Só frontend.
+- Botão "Como usar" na barra superior (`Layout.jsx`), que abre o pop-up da tela atual. **Não abre sozinho:** é opcional e não atrapalha o fluxo. A `/tutorial-ia` já é um tutorial e não tem o botão.
+- `src/tutoriais/`: `rotas.js` (tela → tutorial), `TutorialPlayer.jsx` (mini-tela, cursor, avanço automático, pausar, anterior e próximo; com "reduzir movimento", não avança sozinho), `roteiros.jsx` (os 12 roteiros, com dados fictícios) e `ComoUsar.jsx` (pop-up, carregado sob demanda).
+- **Ao renomear botões ou mudar fluxos, atualizar `roteiros.jsx`.**
+
+### ✅ Painel só para a equipe: acessos externos removidos (03/11/2026)
+**Regra do usuário:** o painel é de uso exclusivo do pessoal interno. Não criar links, páginas ou formulários para candidatos, empresas ou qualquer pessoa de fora. **Sem commit e sem migration.**
+- **Removidos:** portal da empresa e parecer (`/portal/:token`, "Link para a empresa"); página pública de vagas e cadastro (`/cadastro`, Configurações); confirmação de presença pelo candidato (`/confirmar/:token`, variável `{link_confirmacao}`, pedido de remarcação); `routes/publico.js`; avisos e selos de parecer, remarcação e cadastro pelo site; etiqueta e filtro de origem "Site".
+- **Sem login, só:** `POST /auth/login`, "Esqueci minha senha" e `/redefinir-senha/:token` (para a equipe), `GET /` e as logos das empresas (`/arquivos/logo/:id`). As páginas `/ajuda/*.html` também abrem sem login, mas não têm dados.
+- **Continua:** "Pedir confirmação pelo WhatsApp" (o RH envia a mensagem e marca Confirmar no painel) e o bot do Telegram, só para usuários conectados.
+- **Fica no banco, sem uso:** tabela `ParecerEmpresa`, `Vaga.portal_token`, `Aplicacao.remarcacao_*`, `Estudante.origem` e `consentimento_em`, chaves antigas em `Configuracao`. Nada foi apagado; remover exige uma migration destrutiva, com aprovação.
+- As seções antigas deste arquivo que descrevem esses recursos são histórico.
+
+### 🟡 Dois visuais: Clássico e Liquid Glass (claro e escuro); em todas as telas (04/11/2026)
+Pedido do usuário: botão Clássico ↔ Liquid Glass, sem duplicar telas, com **os dois modos Claro e Escuro como opções fixas** (`GlassModeToggle`). Nenhuma regra, rota ou dado muda. **Sem commit e sem push.** A repaginada anterior foi desfeita: o Clássico voltou às classes do commit `4cc3ed7`.
+- **Regras atuais:** os tons mudam nas variáveis `--color-*` na raiz (`html[data-visual="glass"][data-glass=...]`), para valer em toda tela, modal e menu. Claro: fundo `#f3f5f9`, cards e barra brancos, sem gradiente azul. Escuro: gradiente marinho e vidro escuro. Desfoque só na casca, nos pop-ups e nos painéis do Dashboard; `.superficie` é só cor, para não pesar listas e Kanban.
+- **Cuidado ao mexer no escuro:** tons 500–700 de texto mudam por classe, não por variável, para não clarear botões e avatares `bg-*-600/700`. Token que aponta para `--color-marinho-*` vira translúcido na raiz: usar cor literal.
+- **Pendência já existente no Clássico:** o Perfil do estudante estoura a largura no celular (553 px em 390 px).
+- As menções abaixo a Etapa 1, seletor temporário e `:has(.tela-glass)` são histórico.
+- **Como funciona:** `<html data-visual="classico|glass">`, aplicado antes de a página aparecer pelo script do `index.html` e salvo em `localStorage` (`visual`; padrão Clássico; vale no login). `src/visual.js` e `components/VisualToggle.jsx`; botão no menu lateral e, no celular, na barra superior.
+- **Marcadores sem estilo no Clássico:** `casca-menu`, `casca-barra`, `tela-glass`, `tela-login`, `superficie`, `vidro`, `btn-primario`, `btn-secundario`, `campo`, `kpi-valor`. Todo o Liquid Glass está em `index.css`, dentro de `@media screen` (a impressão não muda). CSS fora de `@layer` vence os utilitários, e os tons mudam pelas variáveis `--color-*` em cada escopo.
+- **O desfoque fica no `::before` de propósito:** `backdrop-filter` no próprio elemento prende os filhos `position: fixed` (camadas de clique fora, menus). Não mover para o elemento.
+- `#90bbcc` (`--color-azul-logo`) é o azul do logo, conferido no arquivo, e é usado só no Liquid Glass.
+- **Etapa 1 (só menu, barra e Dashboard).** Temporário, sair na Etapa 2: `data-glass="claro|escuro"`, `visualVariacao`, `GlassVariationPicker`, `useVariacao`, `trocarVariacao` e o `:has(.tela-glass)` do fundo.
+- **Etapa 2 (depois da escolha):** aplicar nas demais telas (Vagas, Empresas, Kanban, Calendário, Estudantes, Banco de Talentos, Contratações, Perfil, modais e login), com vidro mais opaco em tabelas, formulários, Kanban e listas e sem desfoque em cada cartão ou linha.
+- "IA no Telegram" saiu do menu e fica no Treinamento (`/tutorial-ia` continua, com "Voltar ao Treinamento").
+
+### 🟡 Treinamento (03/11/2026); falta validar no navegador logado
+Pedido do usuário: trocar "Ajuda" por "Treinamento", na **mesma aba**, com animação e explicação bem simples de cada parte do painel. **Sem commit.** Só frontend.
+- Rota `/treinamento` (`pages/Treinamento.jsx`), item "Treinamento" no menu. 15 módulos em `MODULOS`, na ordem do trabalho, com "Para que serve", "Quando usar", animação e link para a tela. O módulo fica na URL (`?modulo=`). Não usar `target="_blank"` nesta tela.
+- Animações reaproveitadas de `tutoriais/roteiros.jsx`, mais duas novas: `visaoGeral` e `ferramentas`. O módulo do Telegram leva à `/tutorial-ia`.
+- Sem o botão "Como usar" nesta tela, porque ela já é o treinamento.
+
 ### 🟡 Guias de uso dentro do painel (02/11/2026); falta validar no navegador
 - `frontend/public/ajuda/manual.html` (manual completo, por tela) e `frontend/public/ajuda/telegram.html` (passo a passo dos avisos no celular). São páginas HTML estáticas: o Vite copia para `dist/ajuda/`, sem passar pelo React nem pelo login. O conteúdo não tem dados, só instruções.
-- Acesso: item **Ajuda** no fim do menu lateral (abre o manual numa aba nova) e botão **Passo a passo** em Configurações → Celular (abre o guia do Telegram). Os dois guias apontam um para o outro e têm "Voltar ao painel".
+- Acesso: link "manual completo" na tela **Treinamento** (mesma aba; o item "Ajuda" do menu deixou de existir em 03/11/2026) e botão **Passo a passo** em Configurações → Celular (abre o guia do Telegram). Os dois guias apontam um para o outro e têm "Voltar ao painel".
 - Para mudar o texto, edite esses dois arquivos direto. Os nomes de botões citados neles precisam acompanhar as telas.
 
 Não feito (depende do usuário ou de serviço externo): migrations no Neon (agora 4, contando a do Telegram), bot do Telegram e `TELEGRAM_BOT_TOKEN` no Render, troca da senha do banco, SMTP no Render, Automação 2 do n8n, monitoramento de erros (Sentry, precisa de conta), leitura de currículo com IA (precisa de chave de API), atualização do Prisma 5 → 6+ (mudança grande), testes de tela automatizados com Playwright (precisa instalar navegadores) e paginação (o volume atual não exige).

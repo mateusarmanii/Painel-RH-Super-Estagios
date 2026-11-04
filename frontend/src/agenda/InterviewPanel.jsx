@@ -205,12 +205,6 @@ export default function InterviewPanel({ interview, conflicts, reminderVersion, 
             <Detail icon={Clock}>Etapa no Kanban: {kanbanStatusLabels[interview.status_kanban]}</Detail>
             {interview.observacao && <Detail icon={StickyNote}>{interview.observacao}</Detail>}
             {interview.motivo_recusa && <Detail icon={UserX}>Motivo da dispensa: {interview.motivo_recusa}</Detail>}
-            {/* Pedido feito pelo link de confirmação; some ao reagendar. */}
-            {interview.remarcacao_pedida_em && (
-              <p className="rounded-md bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-800">
-                O candidato pediu para remarcar{interview.remarcacao_mensagem ? `: “${interview.remarcacao_mensagem}”` : "."}
-              </p>
-            )}
             <button type="button" onClick={() => setMessaging(true)} className="inline-flex items-center gap-1.5 text-sm font-semibold text-marinho-700 hover:underline">
               <MessageSquareText size={15} /> Mensagem com modelo
             </button>

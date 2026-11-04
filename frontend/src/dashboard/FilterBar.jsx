@@ -21,7 +21,7 @@ export default function FilterBar({ filters, onChange, options, updatedLabel, is
   }
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
+    <div className="superficie rounded-xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div role="group" aria-label="Período" className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1 lg:pb-0">
           {PERIODS.map((period) => {

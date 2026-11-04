@@ -25,6 +25,9 @@
 
   /* Vermelho dos números de destaque. */
   --color-destaque: #c0392b;
+
+  /* Azul-claro do logo: só no visual Liquid Glass. */
+  --color-azul-logo: #90bbcc;
 }
 
 html,
@@ -38,4 +41,452 @@ body {
   background-color: #f3f5f9;
   color: var(--color-slate-800);
   font-family: var(--font-sans);
+}
+
+/*
+  Visual Liquid Glass (<html data-visual="glass">), com duas opções fixas em data-glass: "claro" e "escuro".
+  Os componentes são os mesmos do Clássico: aqui só mudam os estilos, e tudo é central (nenhuma tela tem regra própria).
+  - Sem data-visual="glass", nada abaixo se aplica: o Clássico continua igual.
+  - Os tons são trocados nas variáveis --color-* do Tailwind, na raiz; CSS fora de @layer vence os utilitários.
+  - Só tons que nunca são fundo sólido mudam pela variável; textos 500-700 mudam por classe, para não clarear
+    botões e avatares bg-*-600/700.
+  - O desfoque fica no ::before: backdrop-filter no próprio elemento prende os filhos "position: fixed".
+  - Listas e Kanban não têm desfoque (.superficie é só cor). Ele fica na casca, nos pop-ups e nos painéis do Dashboard.
+  - Só em tela: a impressão continua igual à do Clássico.
+*/
+@layer components {
+  @media screen {
+    /* Em components, para os utilitários (absolute, fixed) continuarem valendo nos menus. */
+    html[data-visual="glass"] .vidro {
+      position: relative;
+    }
+  }
+}
+
+@media screen {
+  /* ---------- Tokens ---------- */
+  html[data-visual="glass"] {
+    --gl-blur: blur(20px) saturate(160%);
+    --gl-raio: 20px;
+  }
+
+  html[data-visual="glass"][data-glass="claro"] {
+    --gl-vidro: rgb(255 255 255 / 0.92);
+    --gl-vidro-forte: rgb(255 255 255 / 0.97);
+    --gl-superficie: #fff;
+    --gl-barra: rgb(255 255 255 / 0.88);
+    --gl-menu: rgb(255 255 255 / 0.88);
+    --gl-borda: rgb(19 33 63 / 0.1);
+    --gl-borda-campo: rgb(19 33 63 / 0.18);
+    --gl-brilho: rgb(255 255 255 / 0.95);
+    --gl-sombra: 0 8px 24px rgb(19 33 63 / 0.07);
+    --gl-grafico-texto: var(--color-marinho-600);
+    --gl-grafico-linha: rgb(19 33 63 / 0.1);
+    --gl-grafico-serie: var(--color-marinho-600);
+    --gl-grafico-cursor: rgb(19 33 63 / 0.05);
+    --gl-menu-ativo: rgb(19 33 63 / 0.07);
+    --gl-fundo: #f3f5f9;
+
+    --color-slate-400: #3d5285;
+    --color-slate-500: #3d5285;
+    --color-slate-600: #2b3d69;
+    --color-ambar-600: #92400e;
+  }
+
+  html[data-visual="glass"][data-glass="escuro"] {
+    color-scheme: dark;
+    --gl-vidro: rgb(19 33 63 / 0.58);
+    --gl-vidro-forte: rgb(19 33 63 / 0.92);
+    --gl-superficie: rgb(19 33 63 / 0.72);
+    --gl-barra: rgb(19 33 63 / 0.58);
+    --gl-menu: rgb(19 33 63 / 0.72);
+    --gl-borda: rgb(255 255 255 / 0.16);
+    --gl-borda-campo: rgb(255 255 255 / 0.24);
+    --gl-brilho: rgb(255 255 255 / 0.3);
+    --gl-sombra: 0 14px 38px rgb(12 21 41 / 0.45);
+    --gl-grafico-texto: #d9dfec;
+    --gl-grafico-linha: rgb(255 255 255 / 0.14);
+    --gl-grafico-serie: var(--color-azul-logo);
+    --gl-grafico-cursor: rgb(255 255 255 / 0.06);
+    --gl-menu-ativo: rgb(255 255 255 / 0.1);
+    --gl-fundo:
+      radial-gradient(44rem 32rem at 86% -6%, rgb(144 187 204 / 0.38), transparent 70%),
+      radial-gradient(42rem 34rem at -8% 30%, rgb(61 82 133 / 0.75), transparent 70%),
+      radial-gradient(40rem 28rem at 64% 108%, rgb(144 187 204 / 0.2), transparent 70%),
+      radial-gradient(20rem 14rem at 26% 100%, rgb(247 179 27 / 0.1), transparent 70%),
+      linear-gradient(160deg, #13213f, #0c1529);
+
+    --color-slate-50: rgb(255 255 255 / 0.06);
+    --color-slate-100: rgb(255 255 255 / 0.1);
+    --color-slate-200: rgb(255 255 255 / 0.16);
+    --color-slate-300: #b3bfd8;
+    --color-slate-400: #b3bfd8;
+    --color-slate-500: #d9dfec;
+    --color-slate-600: #d9dfec;
+    --color-slate-700: #eef1f7;
+    --color-slate-800: #eef1f7;
+    --color-slate-900: #eef1f7;
+    --color-marinho-50: rgb(255 255 255 / 0.1);
+    --color-marinho-100: rgb(255 255 255 / 0.14);
+    --color-marinho-200: rgb(255 255 255 / 0.3);
+    --color-marinho-300: rgb(255 255 255 / 0.3);
+    --color-marinho-400: rgb(255 255 255 / 0.4);
+    --color-marinho-500: #90bbcc;
+    --color-marinho-600: #90bbcc;
+    --color-marinho-700: #d9dfec;
+    --color-marinho-800: #eef1f7;
+    --color-marinho-900: #eef1f7;
+    --color-ambar-50: rgb(247 179 27 / 0.14);
+    --color-ambar-100: rgb(247 179 27 / 0.22);
+    --color-ambar-600: #f9c95a;
+    --color-destaque-texto: #fda4af;
+
+    --color-sky-50: rgb(14 165 233 / 0.16);
+    --color-sky-100: rgb(14 165 233 / 0.24);
+    --color-sky-200: rgb(14 165 233 / 0.4);
+    --color-sky-800: #bae6fd;
+    --color-sky-900: #bae6fd;
+    --color-sky-950: #bae6fd;
+    --color-violet-50: rgb(139 92 246 / 0.2);
+    --color-violet-100: rgb(139 92 246 / 0.28);
+    --color-violet-200: rgb(139 92 246 / 0.45);
+    --color-violet-800: #ddd6fe;
+    --color-violet-900: #ddd6fe;
+    --color-violet-950: #ddd6fe;
+    --color-emerald-50: rgb(16 185 129 / 0.18);
+    --color-emerald-100: rgb(16 185 129 / 0.26);
+    --color-emerald-200: rgb(16 185 129 / 0.42);
+    --color-emerald-800: #a7f3d0;
+    --color-emerald-900: #a7f3d0;
+    --color-emerald-950: #a7f3d0;
+    --color-rose-50: rgb(244 63 94 / 0.2);
+    --color-rose-100: rgb(244 63 94 / 0.28);
+    --color-rose-200: rgb(244 63 94 / 0.45);
+    --color-rose-300: rgb(244 63 94 / 0.55);
+    --color-rose-800: #fecdd3;
+    --color-rose-900: #fecdd3;
+    --color-rose-950: #fecdd3;
+    --color-amber-50: rgb(245 158 11 / 0.18);
+    --color-amber-100: rgb(245 158 11 / 0.26);
+    --color-amber-200: rgb(245 158 11 / 0.42);
+    --color-amber-300: rgb(245 158 11 / 0.55);
+    --color-amber-700: #fde68a;
+    --color-amber-800: #fde68a;
+    --color-amber-900: #fde68a;
+    --color-orange-50: rgb(249 115 22 / 0.18);
+    --color-orange-100: rgb(249 115 22 / 0.26);
+    --color-orange-200: rgb(249 115 22 / 0.42);
+    --color-orange-300: rgb(249 115 22 / 0.55);
+    --color-orange-800: #fed7aa;
+    --color-orange-900: #fed7aa;
+    --color-orange-950: #fed7aa;
+  }
+
+  /* ---------- Fundo ---------- */
+  html[data-visual="glass"] body {
+    background-color: transparent;
+  }
+
+  html[data-visual="glass"] body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background: var(--gl-fundo);
+  }
+
+  html[data-visual="glass"] .tela-login {
+    background-color: transparent;
+  }
+
+  html[data-visual="glass"][data-glass="escuro"] .tela-login.tela-login {
+    background-color: rgb(12 21 41 / 0.55);
+  }
+
+  /* ---------- Superfícies sem desfoque: cartões, listas e Kanban ---------- */
+  html[data-visual="glass"] .superficie {
+    background-color: var(--gl-superficie);
+    border-color: var(--gl-borda);
+    border-radius: var(--gl-raio);
+    box-shadow: inset 0 1px 0 var(--gl-brilho), var(--gl-sombra);
+  }
+
+  html[data-visual="glass"][data-glass="escuro"] .bg-white:not(.vidro, .superficie, .casca-barra) {
+    background-color: var(--gl-vidro-forte);
+  }
+
+  html[data-visual="glass"] :is(section, article).rounded-md {
+    border-radius: 16px;
+  }
+
+  html[data-visual="glass"] :is(.border-slate-200, .border-slate-300) {
+    border-color: var(--gl-borda);
+  }
+
+  /* ---------- Vidro com desfoque: casca, pop-ups e painéis do Dashboard ---------- */
+  html[data-visual="glass"] :is(.casca-menu, .casca-barra, .vidro, .tela-glass .superficie) {
+    isolation: isolate;
+    background-color: transparent;
+    border-color: var(--gl-borda);
+  }
+
+  html[data-visual="glass"] .tela-glass .superficie {
+    position: relative;
+  }
+
+  html[data-visual="glass"] :is(.casca-menu, .casca-barra, .vidro, .tela-glass .superficie)::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    pointer-events: none;
+    background-color: var(--gl-vidro);
+    -webkit-backdrop-filter: var(--gl-blur);
+    backdrop-filter: var(--gl-blur);
+  }
+
+  html[data-visual="glass"] .vidro::before {
+    background-color: var(--gl-vidro-forte);
+  }
+
+  html[data-visual="glass"] .casca-barra::before {
+    background-color: var(--gl-barra);
+  }
+
+  html[data-visual="glass"] .casca-menu::before {
+    background-color: var(--gl-menu);
+  }
+
+  html[data-visual="glass"] .vidro {
+    border-radius: 18px;
+    box-shadow: inset 0 1px 0 var(--gl-brilho), var(--gl-sombra);
+  }
+
+  html[data-visual="glass"] .casca-barra {
+    box-shadow: inset 0 -1px 0 var(--gl-borda), var(--gl-sombra);
+  }
+
+  @media (min-width: 64rem) {
+    html[data-visual="glass"] .casca-menu {
+      border-right: 1px solid var(--gl-borda);
+      box-shadow: inset -1px 0 0 var(--gl-brilho), var(--gl-sombra);
+    }
+  }
+
+  /* ---------- Menu lateral ---------- */
+  html[data-visual="glass"][data-glass="escuro"] .casca-menu {
+    --color-slate-200: #e2e8f0;
+    --color-slate-300: #cbd5e1;
+    --color-slate-400: #b3bfd8;
+  }
+
+  /* No claro, o menu deixa de ser azul: textos em marinho. "branco" vira marinho (texto e fundos translúcidos). */
+  html[data-visual="glass"][data-glass="claro"] .casca-menu {
+    --color-white: #13213f;
+    --color-slate-200: #13213f;
+    --color-slate-300: #223358;
+    --color-slate-400: #2b3d69;
+  }
+
+  html[data-visual="glass"][data-glass="claro"] .casca-menu .text-ambar-400 {
+    color: var(--color-marinho-600);
+  }
+
+  html[data-visual="glass"][data-glass="claro"] .casca-menu .bg-ambar-400 {
+    --color-white: #fff;
+  }
+
+  html[data-visual="glass"] .casca-menu nav a {
+    border-left-width: 0;
+    border-radius: 999px;
+  }
+
+  html[data-visual="glass"] .casca-menu nav a[aria-current="page"] {
+    background-color: var(--gl-menu-ativo);
+  }
+
+  html[data-visual="glass"][data-glass="claro"] .casca-menu nav a[aria-current="page"] {
+    color: #13213f;
+  }
+
+  /* ---------- Controles em pílula ---------- */
+  html[data-visual="glass"] :is(.campo, .btn-primario, .btn-secundario, button.rounded-md, button.rounded-lg, a.rounded-md, .tela-glass button:not(.superficie), .casca-menu > div > button) {
+    border-radius: 999px;
+  }
+
+  html[data-visual="glass"] textarea.campo {
+    border-radius: 16px;
+  }
+
+  html[data-visual="glass"] :is(.campo, .btn-secundario) {
+    background-color: var(--gl-vidro-forte);
+    border-color: var(--gl-borda-campo);
+  }
+
+  html[data-visual="glass"] :is(.bg-ambar-400, .btn-primario) {
+    --color-marinho-900: #13213f;
+    background-color: rgb(247 179 27 / 0.94);
+  }
+
+  html[data-visual="glass"] .btn-primario {
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.45), 0 6px 18px rgb(247 179 27 / 0.22);
+  }
+
+  html[data-visual="glass"] .btn-primario:hover {
+    background-color: var(--color-ambar-500);
+  }
+
+  /* ---------- Escuro: o que não cabe em variável ---------- */
+  html[data-visual="glass"][data-glass="escuro"] .bg-marinho-900:not(.casca-menu, .tela-login) {
+    background-color: rgb(144 187 204 / 0.26);
+  }
+
+  html[data-visual="glass"][data-glass="escuro"] .text-marinho-200 {
+    color: #b3bfd8;
+  }
+
+  html[data-visual="glass"][data-glass="escuro"] .text-destaque {
+    color: var(--color-destaque-texto);
+  }
+
+  html[data-visual="glass"][data-glass="escuro"] :is(.text-sky-500, .text-sky-600, .text-sky-700) {
+    color: #bae6fd;
+  }
+
+  html[data-visual="glass"][data-glass="escuro"] :is(.text-violet-500, .text-violet-600, .text-violet-700) {
+    color: #ddd6fe;
+  }
+
+  html[data-visual="glass"][data-glass="escuro"] :is(.text-emerald-500, .text-emerald-600, .text-emerald-700) {
+    color: #a7f3d0;
+  }
+
+  html[data-visual="glass"][data-glass="escuro"] :is(.text-rose-500, .text-rose-600, .text-rose-700, .hover\:text-rose-600:hover) {
+    color: #fecdd3;
+  }
+
+  html[data-visual="glass"][data-glass="escuro"] :is(.text-orange-500, .text-orange-600, .text-orange-700) {
+    color: #fed7aa;
+  }
+
+  html[data-visual="glass"][data-glass="escuro"] option {
+    background-color: #13213f;
+    color: #eef1f7;
+  }
+
+  /* Conversa desenhada da demonstração da IA. */
+  html[data-visual="glass"][data-glass="escuro"] [class*="bg-[#dfe9ef]"] {
+    background-color: rgb(12 21 41 / 0.6);
+  }
+
+  html[data-visual="glass"][data-glass="escuro"] [class*="bg-[#e1f7cf]"] {
+    background-color: rgb(144 187 204 / 0.26);
+  }
+
+  /* ---------- Claro: textos fracos demais sobre branco ---------- */
+  html[data-visual="glass"][data-glass="claro"] .text-rose-500 {
+    color: var(--color-rose-700);
+  }
+
+  html[data-visual="glass"][data-glass="claro"] .text-orange-600 {
+    color: var(--color-orange-800);
+  }
+
+  html[data-visual="glass"][data-glass="claro"] .text-sky-600 {
+    color: var(--color-sky-800);
+  }
+
+  /* Login no claro: fundo claro, então a marca fica em marinho. */
+  html[data-visual="glass"][data-glass="claro"] .tela-login .text-white {
+    color: var(--color-marinho-900);
+  }
+
+  html[data-visual="glass"][data-glass="claro"] .tela-login .text-marinho-200 {
+    color: var(--color-marinho-500);
+  }
+
+  html[data-visual="glass"][data-glass="claro"] .tela-login .text-ambar-400 {
+    color: var(--color-marinho-600);
+  }
+
+  html[data-visual="glass"][data-glass="claro"] .tela-login .bg-marinho-900 {
+    background-color: transparent;
+  }
+
+  /* ---------- Números do Dashboard ---------- */
+  html[data-visual="glass"] .kpi-valor.text-3xl {
+    font-size: 2.5rem;
+    line-height: 1.1;
+  }
+
+  /* Valores com texto ("17,5 dias") ficam menores, para não quebrar linha. */
+  html[data-visual="glass"] .kpi-valor.kpi-valor-texto.text-3xl {
+    font-size: 1.875rem;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+
+  /* ---------- Gráficos (Recharts): as cores fixas seguem o tema ---------- */
+  html[data-visual="glass"] .recharts-cartesian-grid line {
+    stroke: var(--gl-grafico-linha);
+  }
+
+  html[data-visual="glass"] .recharts-rectangle.recharts-tooltip-cursor {
+    fill: var(--gl-grafico-cursor);
+  }
+
+  html[data-visual="glass"] :is([fill="#64748b"], [fill="#475569"], [fill="#334155"]) {
+    fill: var(--gl-grafico-texto);
+  }
+
+  html[data-visual="glass"] [fill="#2b3d69"] {
+    fill: var(--gl-grafico-serie);
+  }
+
+  html[data-visual="glass"] [stroke="#2b3d69"] {
+    stroke: var(--gl-grafico-serie);
+  }
+
+  html[data-visual="glass"][data-glass="escuro"] [stroke="#ffffff"] {
+    stroke: transparent;
+  }
+
+  /* ---------- Sem desfoque ou pedido de menos transparência: fundo firme ---------- */
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    html[data-visual="glass"][data-glass="escuro"] {
+      --gl-vidro: rgb(19 33 63 / 0.92);
+      --gl-vidro-forte: rgb(19 33 63 / 0.97);
+      --gl-barra: rgb(19 33 63 / 0.95);
+      --gl-menu: rgb(19 33 63 / 0.95);
+    }
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    html[data-visual="glass"] {
+      --gl-blur: none;
+    }
+
+    html[data-visual="glass"][data-glass="claro"] {
+      --gl-vidro: #fff;
+      --gl-vidro-forte: #fff;
+      --gl-barra: #fff;
+      --gl-menu: #fff;
+    }
+
+    html[data-visual="glass"][data-glass="escuro"] {
+      --gl-vidro: #13213f;
+      --gl-vidro-forte: #13213f;
+      --gl-superficie: #13213f;
+      --gl-barra: #13213f;
+      --gl-menu: #13213f;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html[data-visual="glass"] * {
+      transition-duration: 0.01ms;
+      animation-duration: 0.01ms;
+    }
+  }
 }

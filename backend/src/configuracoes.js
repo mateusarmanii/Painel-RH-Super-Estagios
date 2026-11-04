@@ -8,16 +8,6 @@ const CONFIGURACOES = {
     padrao: null,
     validar: (valor) => (valor === null || (Number.isInteger(valor) && valor >= 1 && valor <= 10000) ? null : "A meta deve ser um número inteiro de 1 a 10.000."),
   },
-  // Formulário público de cadastro e página pública de vagas.
-  formulario_publico_ativo: {
-    padrao: false,
-    validar: (valor) => (typeof valor === "boolean" ? null : "Valor inválido."),
-  },
-  // Mostrar o nome da empresa na página pública de vagas.
-  vagas_publicas_mostrar_empresa: {
-    padrao: false,
-    validar: (valor) => (typeof valor === "boolean" ? null : "Valor inválido."),
-  },
 };
 
 async function lerConfiguracoes() {

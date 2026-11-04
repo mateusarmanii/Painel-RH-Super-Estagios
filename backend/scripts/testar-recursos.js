@@ -1,5 +1,5 @@
 // Testes dos recursos opcionais (02/11/2026): estágio pós-contratação, contatos, modelos de mensagem, configurações,
-// cadastro público, confirmação de presença, portal da empresa, campos novos da vaga e do estudante, sugestões,
+// campos novos da vaga e do estudante, sugestões,
 // ordem do Kanban, arquivar, anonimizar, administração, atividades, busca, notificações, relatório e nova senha.
 // Sobe a API na porta 3403, cria registros "[TESTE]" e remove tudo no final (as configurações voltam como estavam).
 // ATENÇÃO: grava e apaga dados no banco do DATABASE_URL (só os registros que o próprio teste cria).
@@ -93,45 +93,21 @@ async function main() {
     checar("Lista do Kanban segue a ordem salva", r.body[0]?.id === b.aplicacao, r.body.map((x) => x.estudante.nome_completo).join(", "));
     checarStatus("Ordem com candidatura de outra vaga → 400", await req("PUT", `/vagas/${vaga.id}/ordem`, { ids: [ids.vagas[0]] }), 400);
 
-    console.log("\n== Confirmação de presença pelo link");
+    console.log("\n== Painel só para a equipe");
+    for (const caminho of ["/publico/vagas", "/publico/portal/qualquer", "/publico/entrevista/qualquer"]) {
+      checarStatus(`${caminho} sem login → 401`, await req("GET", caminho, undefined, { token: null }), 401);
+    }
+    checarStatus("Cadastro público sem login → 401", await req("POST", "/publico/candidatura", { nome_completo: "[TESTE] Fora", telefone: teste.telefone(), curso: "X", consentimento: true }, { token: null }), 401);
+    checarStatus("Com login, a rota pública também não existe → 404", await req("GET", "/publico/vagas"), 404);
+    checarStatus("Link para empresa não pode ser gerado → 404", await req("POST", `/vagas/${vaga.id}/portal`), 404);
+
+    console.log("\n== Entrevista e reagendamento");
     await mover(a, "ENVIADO_EMPRESA");
     await mover(a, "ENTREVISTA_AGENDADA", { data_hora_entrevista: new Date(Date.now() + 48 * HORA).toISOString() });
     r = await req("GET", `/modelos/contexto/${a.aplicacao}`);
-    const token = r.body.token_confirmacao;
-    checar("Contexto da mensagem traz o token de confirmação", Boolean(token));
-    r = await req("GET", `/publico/entrevista/${token}`, undefined, { token: null });
-    checar("Link abre sem login e mostra só o primeiro nome", r.status === 200 && r.body.primeiro_nome === "[TESTE]" && r.body.aberta && !("telefone" in r.body), `[${r.status}]`);
-    checarStatus("Token adulterado → 404", await req("GET", `/publico/entrevista/${token.slice(0, -2)}xx`, undefined, { token: null }), 404);
-    r = await req("POST", `/publico/entrevista/${token}`, { resposta: "remarcar", mensagem: "Tenho prova" }, { token: null });
-    const pedido = await prisma.aplicacao.findUnique({ where: { id: a.aplicacao } });
-    checar("Pedir para remarcar grava o pedido e a mensagem", r.status === 200 && pedido.remarcacao_pedida_em && pedido.remarcacao_mensagem === "Tenho prova");
-    const nota = await prisma.contato.findFirst({ where: { estudante_id: a.id, aplicacao_id: a.aplicacao } });
-    checar("Pedido vira anotação no registro de contatos", nota?.texto?.includes("Tenho prova"));
-    r = await req("GET", "/notificacoes");
-    checar("Notificação de pedido de remarcação", r.body.some((n) => n.tipo === "remarcacao" && n.descricao.includes("Vaga Recursos")));
+    checar("Contexto da mensagem sem token de link externo", r.status === 200 && !("token_confirmacao" in r.body));
     r = await req("PATCH", `/entrevistas/${a.aplicacao}`, { acao: "reagendar", data_hora_entrevista: new Date(Date.now() + 72 * HORA).toISOString() });
-    checar("Reagendar limpa o pedido", r.status === 200 && !(await prisma.aplicacao.findUnique({ where: { id: a.aplicacao } })).remarcacao_pedida_em);
-    checarStatus("Link antigo deixa de valer após reagendar", await req("GET", `/publico/entrevista/${token}`, undefined, { token: null }), 404);
-    const novoToken = (await req("GET", `/modelos/contexto/${a.aplicacao}`)).body.token_confirmacao;
-    r = await req("POST", `/publico/entrevista/${novoToken}`, { resposta: "confirmar" }, { token: null });
-    checar("Confirmar pelo link marca a entrevista como Confirmada", r.status === 200 && r.body.status === "CONFIRMADA");
-
-    console.log("\n== Portal da empresa");
-    r = await req("POST", `/vagas/${vaga.id}/portal`);
-    const portal = r.body.portal_token;
-    checar("Gerar link do portal", r.status === 200 && portal?.length >= 20);
-    r = await req("GET", `/publico/portal/${portal}`, undefined, { token: null });
-    checar("Portal mostra quem foi enviado (A) e esconde Candidato Contatado (B)", r.status === 200
-      && r.body.candidatos.some((c) => c.id === a.aplicacao) && !r.body.candidatos.some((c) => c.id === b.aplicacao), `[${r.status}]`);
-    checar("Portal não expõe telefone nem e-mail", r.body.candidatos.every((c) => !("telefone" in c) && !("email" in c)));
-    r = await req("POST", `/publico/portal/${portal}/parecer`, { aplicacao_id: a.aplicacao, parecer: "APROVADO", comentario: "Gostamos", nome_avaliador: "Gestora" }, { token: null });
-    checarStatus("Parecer da empresa", r, 201);
-    checarStatus("Parecer para quem não está no portal → 404", await req("POST", `/publico/portal/${portal}/parecer`, { aplicacao_id: b.aplicacao, parecer: "APROVADO" }, { token: null }), 404);
-    r = await req("GET", `/vagas/${vaga.id}/candidatos`);
-    checar("Parecer aparece na lista do Kanban", r.body.find((x) => x.id === a.aplicacao)?.pareceres?.[0]?.parecer === "APROVADO");
-    checar("Parecer não muda a etapa", r.body.find((x) => x.id === a.aplicacao)?.status_kanban === "ENTREVISTA_AGENDADA");
-    await req("DELETE", `/vagas/${vaga.id}/portal`);
-    checarStatus("Link desativado → 404", await req("GET", `/publico/portal/${portal}`, undefined, { token: null }), 404);
+    checarStatus("Reagendar", r, 200);
 
     console.log("\n== Estágio pós-contratação");
     checarStatus("Dados de estágio para quem não foi contratado → 409", await req("PUT", `/estagios/${b.aplicacao}`, { tce_assinado: true }), 409);
@@ -168,30 +144,12 @@ async function main() {
     checarStatus("Modelo sem texto → 400", await req("POST", "/modelos", { titulo: "[TESTE] X", texto: " " }), 400);
     checarStatus("Editar modelo", await req("PUT", `/modelos/${r.body.id}`, { titulo: "[TESTE] Convite 2", texto: "Oi" }), 200);
 
-    console.log("\n== Configurações e cadastro pelo site");
-    checarStatus("Recrutador não muda configurações → 403", await req("PUT", "/configuracoes", { formulario_publico_ativo: true }), 403);
-    await comoAdmin("PUT", "/configuracoes", { formulario_publico_ativo: false });
-    checarStatus("Formulário desligado: vagas públicas → 404", await req("GET", "/publico/vagas", undefined, { token: null }), 404);
-    r = await comoAdmin("PUT", "/configuracoes", { formulario_publico_ativo: true, meta_contratacoes_mensal: 5 });
-    checar("Admin liga o formulário e define a meta", r.status === 200 && r.body.formulario_publico_ativo === true && r.body.meta_contratacoes_mensal === 5);
+    console.log("\n== Configurações");
+    checarStatus("Recrutador não muda configurações → 403", await req("PUT", "/configuracoes", { meta_contratacoes_mensal: 7 }), 403);
+    r = await comoAdmin("PUT", "/configuracoes", { meta_contratacoes_mensal: 5 });
+    checar("Admin define a meta", r.status === 200 && r.body.meta_contratacoes_mensal === 5);
     checarStatus("Meta inválida → 400", await comoAdmin("PUT", "/configuracoes", { meta_contratacoes_mensal: 0 }), 400);
-    r = await req("GET", "/publico/vagas", undefined, { token: null });
-    checar("Vagas públicas sem o nome da empresa (padrão)", r.status === 200 && r.body.some((v) => v.id === vaga.id) && r.body.every((v) => v.empresa === null));
-    checarStatus("Cadastro sem consentimento → 400",
-      await req("POST", "/publico/candidatura", { nome_completo: "[TESTE] Site", telefone: teste.telefone(), curso: "Direito" }, { token: null }), 400);
-    const telefoneSite = teste.telefone();
-    r = await req("POST", "/publico/candidatura", { nome_completo: "[TESTE] Site", telefone: telefoneSite, curso: "Direito", vaga_id: vaga.id, consentimento: true }, { token: null });
-    const doSite = await prisma.estudante.findFirst({ where: { nome_completo: "[TESTE] Site" }, include: { aplicacoes: { include: { historico: true } } } });
-    if (doSite) ids.estudantes.push(doSite.id);
-    checar("Cadastro pelo site cria o estudante com origem e consentimento", r.status === 201 && doSite?.origem === "FORMULARIO" && doSite?.consentimento_em);
-    checar("…e a candidatura em Candidato Contatado, com histórico", doSite?.aplicacoes[0]?.status_kanban === "CANDIDATO_CONTATADO" && doSite?.aplicacoes[0]?.historico.length === 1);
-    r = await req("POST", "/publico/candidatura", { nome_completo: "[TESTE] Outro Nome", telefone: telefoneSite, curso: "X", consentimento: true }, { token: null });
-    checar("Telefone repetido não cria outro estudante nem muda o nome", r.status === 201
-      && (await prisma.estudante.count({ where: { nome_completo: { startsWith: "[TESTE] Outro Nome" } } })) === 0);
-    r = await req("POST", "/publico/candidatura", { nome_completo: "[TESTE] Robo", telefone: teste.telefone(), curso: "X", consentimento: true, site: "spam" }, { token: null });
-    checar("Campo anti-robô: responde ok e não grava", r.status === 201 && (await prisma.estudante.count({ where: { nome_completo: "[TESTE] Robo" } })) === 0);
-    r = await req("GET", "/notificacoes");
-    checar("Notificação de cadastro pelo site", r.body.some((n) => n.tipo === "cadastro" && n.descricao.includes("[TESTE] Site")));
+    checarStatus("Página pública não é mais configurável → 400", await comoAdmin("PUT", "/configuracoes", { formulario_publico_ativo: true }), 400);
 
     console.log("\n== Dashboard: meta");
     r = await req("GET", `/dashboard-metrics?empresa=${ids.empresa}`);
@@ -200,7 +158,6 @@ async function main() {
     console.log("\n== Arquivar, anonimizar e administração");
     r = await req("PATCH", `/vagas/${ids.vagas[1]}/arquivo`, { arquivada: true });
     checar("Arquivar vaga", r.status === 200 && r.body.arquivada_em);
-    checar("Vaga arquivada some das vagas públicas", !(await req("GET", "/publico/vagas", undefined, { token: null })).body.some((v) => v.id === ids.vagas[1]));
     checarStatus("Desarquivar", await req("PATCH", `/vagas/${ids.vagas[1]}/arquivo`, { arquivada: false }), 200);
     checarStatus("Arquivar empresa", await req("PATCH", `/empresas/${ids.empresa}/arquivo`, { arquivada: true }), 200);
     checarStatus("Arquivar estudante", await req("PATCH", `/candidatos/${b.id}/arquivo`, { arquivado: true }), 200);

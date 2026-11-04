@@ -87,7 +87,7 @@ export default function GlobalSearch({ id, onDone }) {
   return (
     <form onSubmit={handleSubmit} className="relative flex min-w-0 flex-1" role="search">
       <label htmlFor={id} className="sr-only">Buscar estudante, empresa ou vaga</label>
-      <div className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 focus-within:border-marinho-600 focus-within:ring-2 focus-within:ring-ambar-400/40">
+      <div className="campo flex h-10 min-w-0 flex-1 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 focus-within:border-marinho-600 focus-within:ring-2 focus-within:ring-ambar-400/40">
         <Search size={17} className="shrink-0 text-slate-500" />
         <input
           id={id}
@@ -109,7 +109,7 @@ export default function GlobalSearch({ id, onDone }) {
         />
       </div>
       {showList && (
-        <ul id={`${id}-resultados`} role="listbox" className="absolute inset-x-0 top-11 z-40 max-h-96 overflow-y-auto rounded-md border border-slate-200 bg-white py-1 shadow-lg">
+        <ul id={`${id}-resultados`} role="listbox" className="absolute inset-x-0 top-11 z-40 max-h-96 overflow-y-auto vidro rounded-md border border-slate-200 bg-white py-1 shadow-lg">
           {items.length === 0 ? (
             <li className="px-4 py-3 text-sm text-slate-500">Nada encontrado.</li>
           ) : (

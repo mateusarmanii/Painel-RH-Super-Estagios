@@ -34,6 +34,9 @@ function Delta({ delta, compareLabel, compareTitle }) {
   );
 }
 
+// Valor com texto ("17,5 dias"): o Liquid Glass usa um tamanho menor, para não quebrar a linha.
+const valorComTexto = (value) => /\p{L}/u.test(String(value));
+
 export default function KpiCard({ label, value, detail, icon: Icon, delta, showDelta = false, compareLabel, compareTitle, spark, to, valueSize = "text-3xl" }) {
   const body = (
     <>
@@ -45,7 +48,7 @@ export default function KpiCard({ label, value, detail, icon: Icon, delta, showD
           </span>
         )}
       </div>
-      <p className={`mt-1 font-extrabold tabular-nums tracking-tight text-marinho-900 ${valueSize}`}>{value}</p>
+      <p className={`kpi-valor ${valorComTexto(value) ? "kpi-valor-texto" : ""} mt-1 font-extrabold tabular-nums tracking-tight text-marinho-900 ${valueSize}`}>{value}</p>
       {showDelta ? <Delta delta={delta} compareLabel={compareLabel} compareTitle={compareTitle} /> : <p className="mt-1 text-xs text-slate-500">{detail}</p>}
       {showDelta && detail && <p className="mt-0.5 text-xs text-slate-400">{detail}</p>}
       <Sparkline values={spark} />
@@ -56,7 +59,7 @@ export default function KpiCard({ label, value, detail, icon: Icon, delta, showD
       )}
     </>
   );
-  const className = "group flex min-w-0 flex-col rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5";
+  const className = "group flex min-w-0 flex-col superficie rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5";
 
   if (!to) return <article className={className}>{body}</article>;
   return (

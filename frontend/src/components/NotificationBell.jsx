@@ -25,7 +25,7 @@ function when(date) {
 }
 
 // Sino do topo: entrevistas próximas, pedidos de remarcação, vagas paradas ou com prazo, contratos e relatórios de
-// estágio, retornos combinados, pareceres de empresas e cadastros pelo site. "Lida" fica só neste navegador.
+// estágio, retornos combinados e contratações. "Lida" fica só neste navegador.
 export default function NotificationBell() {
   const { pathname } = useLocation();
   const [items, setItems] = useState([]);
@@ -89,7 +89,7 @@ export default function NotificationBell() {
       {isOpen && (
         <>
           <button type="button" aria-label="Fechar notificações" onClick={() => setIsOpen(false)} className="fixed inset-0 z-30 cursor-default" />
-          <section role="dialog" aria-label="Notificações" className="absolute right-0 z-40 mt-2 w-[min(24rem,calc(100vw-1.5rem))] overflow-hidden rounded-lg border border-slate-200 bg-white shadow-xl">
+          <section role="dialog" aria-label="Notificações" className="absolute right-0 z-40 mt-2 w-[min(24rem,calc(100vw-1.5rem))] overflow-hidden vidro rounded-lg border border-slate-200 bg-white shadow-xl">
             <header className="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-3">
               <h2 className="text-sm font-extrabold text-marinho-900">Notificações</h2>
               {unread.length > 0 && (

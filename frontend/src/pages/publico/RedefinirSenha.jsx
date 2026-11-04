@@ -45,7 +45,7 @@ export default function RedefinirSenhaPage() {
 
   return (
     <PublicShell title="Nova senha">
-      <form onSubmit={submit} className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <form onSubmit={submit} className="superficie rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <span className="grid size-11 place-items-center rounded-full bg-marinho-50 text-marinho-700"><KeyRound size={20} /></span>
         <h1 className="mt-3 text-xl font-extrabold text-marinho-900">Criar nova senha</h1>
         <label className="mt-5 block text-sm font-semibold text-marinho-900">

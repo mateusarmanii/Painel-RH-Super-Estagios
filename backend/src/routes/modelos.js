@@ -1,13 +1,11 @@
 // Modelos de mensagem (WhatsApp/e-mail) com variáveis entre chaves, preenchidas no navegador:
-// {nome} {primeiro_nome} {curso} {vaga} {codigo_vaga} {empresa} {data_entrevista} {hora_entrevista} {local_entrevista}
-// {link_confirmacao}. Usar um modelo é opcional: os botões de WhatsApp de sempre continuam iguais.
+// {nome} {primeiro_nome} {curso} {vaga} {codigo_vaga} {empresa} {data_entrevista} {hora_entrevista} {local_entrevista}.
+// Usar um modelo é opcional: os botões de WhatsApp de sempre continuam iguais.
 //   GET/POST /modelos · PUT/DELETE /modelos/:id
-//   GET /modelos/contexto/:aplicacaoId  dados da candidatura para preencher as variáveis (inclui o token do link
-//                                       de confirmação de presença, quando há entrevista futura)
+//   GET /modelos/contexto/:aplicacaoId  dados da candidatura para preencher as variáveis
 const express = require("express");
 const prisma = require("../prisma");
 const { uuidValido } = require("../utils");
-const { tokenEntrevista } = require("../tokens");
 
 const router = express.Router();
 const TITULO_MAX = 80;
@@ -85,8 +83,7 @@ router.get("/contexto/:aplicacaoId", async (req, res) => {
       },
     });
     if (!aplicacao) return res.status(404).json({ erro: "Candidatura não encontrada." });
-    const entrevistaFutura = aplicacao.status_kanban === "ENTREVISTA_AGENDADA" && aplicacao.data_hora_entrevista > new Date();
-    return res.json({ ...aplicacao, token_confirmacao: entrevistaFutura ? tokenEntrevista(aplicacao) : null });
+    return res.json(aplicacao);
   } catch (error) {
     console.error("Erro ao montar contexto da mensagem:", error);
     return res.status(500).json({ erro: "Não foi possível carregar os dados da mensagem." });

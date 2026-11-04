@@ -48,7 +48,7 @@ export default function ActionMenu({ label, title, items, wrapperProps }) {
           />
           <div
             role="menu"
-            className="fixed inset-x-0 bottom-0 z-50 max-h-[80vh] overflow-y-auto rounded-t-xl border border-slate-200 bg-white pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1 shadow-2xl sm:absolute sm:inset-x-auto sm:bottom-auto sm:right-0 sm:z-20 sm:mt-1 sm:max-h-none sm:w-64 sm:rounded-md sm:pb-1 sm:shadow-lg"
+            className="fixed inset-x-0 bottom-0 z-50 max-h-[80vh] overflow-y-auto vidro rounded-t-xl border border-slate-200 bg-white pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1 shadow-2xl sm:absolute sm:inset-x-auto sm:bottom-auto sm:right-0 sm:z-20 sm:mt-1 sm:max-h-none sm:w-64 sm:rounded-md sm:pb-1 sm:shadow-lg"
           >
             {title && (
               <p className="truncate border-b border-slate-100 px-4 pb-2 pt-2 text-xs font-extrabold uppercase tracking-wide text-slate-500 sm:hidden">

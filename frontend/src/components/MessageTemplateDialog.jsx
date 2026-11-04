@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
-import { Copy, Link2, Mail, MessageCircle } from "lucide-react";
+import { Copy, Mail, MessageCircle } from "lucide-react";
 import Modal from "./Modal.jsx";
 import { apiJson } from "../api.js";
 import { whatsappLink } from "../text.js";
 import { buttonSecondary, inputBase } from "../ui.js";
-import { confirmationLink, fillTemplate, templateValues } from "../mensagens.js";
+import { fillTemplate, templateValues } from "../mensagens.js";
 
 // "Mensagem com modelo": escolhe um modelo (Configurações → Modelos), mostra o texto preenchido (editável) e abre o
 // WhatsApp/e-mail ou copia. Opcional: os botões de WhatsApp de sempre continuam onde estavam.
@@ -43,7 +43,6 @@ export default function MessageTemplateDialog({ applicationId, onClose }) {
   }
 
   const whatsapp = context && whatsappLink(context.estudante.telefone, text);
-  const link = context && confirmationLink(context.token_confirmacao);
 
   return (
     <Modal isOpen={Boolean(applicationId)} title="Mensagem com modelo" onClose={onClose}>
@@ -55,12 +54,6 @@ export default function MessageTemplateDialog({ applicationId, onClose }) {
         <div className="space-y-3 text-sm text-slate-600">
           <p>Ainda não há modelos de mensagem.</p>
           <Link to="/configuracoes" onClick={onClose} className="font-semibold text-marinho-700 underline">Criar um modelo em Configurações</Link>
-          {link && (
-            <p className="flex flex-wrap items-center gap-2 rounded-md bg-slate-50 px-3 py-2">
-              <Link2 size={14} /> Link de confirmação:
-              <button type="button" onClick={() => navigator.clipboard?.writeText(link).then(() => toast.success("Link copiado."))} className="font-semibold text-marinho-700 underline">copiar</button>
-            </p>
-          )}
         </div>
       ) : (
         <div className="space-y-3">
@@ -75,9 +68,6 @@ export default function MessageTemplateDialog({ applicationId, onClose }) {
             Mensagem (pode editar antes de enviar)
             <textarea rows={8} value={text} onChange={(e) => setText(e.target.value)} className={`${inputBase} mt-1 py-2`} />
           </label>
-          {!context.token_confirmacao && /\{link_confirmacao\}/.test(templates.find((t) => t.id === selected)?.texto ?? "") && (
-            <p className="text-xs text-amber-700">Sem entrevista futura marcada: o link de confirmação ficou vazio.</p>
-          )}
           <div className="flex flex-wrap justify-end gap-2">
             <button type="button" onClick={() => navigator.clipboard?.writeText(text).then(() => toast.success("Mensagem copiada."))} className={buttonSecondary}>
               <Copy size={15} /> Copiar

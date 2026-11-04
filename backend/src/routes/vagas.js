@@ -5,7 +5,6 @@ const { camposVaga } = require("../campos");
 const { RESUMO_ARQUIVO } = require("../arquivos");
 const { areaDaVaga, listaAreas, separarVagas } = require("../compatibilidade");
 const { registrarEtapas } = require("../historico");
-const { novoTokenPortal } = require("../tokens");
 
 const router = express.Router();
 const statusVagaValidos = new Set(["ABERTA", "FECHADA", "SUSPENSA"]);
@@ -83,8 +82,6 @@ router.get("/:vagaId/candidatos", async (req, res) => {
             curriculo: { select: RESUMO_ARQUIVO },
           },
         },
-        // Último parecer da empresa (portal da empresa), só para mostrar no cartão.
-        pareceres: { orderBy: { created_at: "desc" }, take: 1, select: { parecer: true, comentario: true, nome_avaliador: true, created_at: true } },
       },
       // Ordem salva no Kanban (arrastar dentro da coluna); sem ordem, a de chegada.
       orderBy: [{ ordem: { sort: "asc", nulls: "last" } }, { created_at: "asc" }],
@@ -247,31 +244,6 @@ router.put("/:id", async (req, res) => {
 });
 
 // ---------- Recursos opcionais da vaga ----------
-
-// Link do portal da empresa: POST gera (ou troca) o link; DELETE desativa. O link antigo deixa de valer na hora.
-router.post("/:id/portal", async (req, res) => {
-  if (!uuidValido.test(req.params.id)) return res.status(400).json({ erro: "ID de vaga inválido." });
-  try {
-    const vaga = await prisma.vaga.update({ where: { id: req.params.id }, data: { portal_token: novoTokenPortal() }, select: { id: true, portal_token: true } });
-    return res.json(vaga);
-  } catch (error) {
-    if (error.code === "P2025") return res.status(404).json({ erro: "Vaga não encontrada." });
-    console.error("Erro ao gerar link do portal:", error);
-    return res.status(500).json({ erro: "Não foi possível gerar o link." });
-  }
-});
-
-router.delete("/:id/portal", async (req, res) => {
-  if (!uuidValido.test(req.params.id)) return res.status(400).json({ erro: "ID de vaga inválido." });
-  try {
-    await prisma.vaga.update({ where: { id: req.params.id }, data: { portal_token: null } });
-    return res.status(204).end();
-  } catch (error) {
-    if (error.code === "P2025") return res.status(404).json({ erro: "Vaga não encontrada." });
-    console.error("Erro ao desativar link do portal:", error);
-    return res.status(500).json({ erro: "Não foi possível desativar o link." });
-  }
-});
 
 // Estudantes compatíveis com a vaga que ainda não estão nela (mesma regra das "Vagas compatíveis" do perfil).
 // Contratados e anonimizados ficam de fora.

@@ -31,7 +31,8 @@
     "test:historico": "node scripts/testar-historico.js",
     "test:motivos": "node scripts/testar-motivos.js",
     "test:recursos": "node scripts/testar-recursos.js",
-    "test:telegram": "node scripts/testar-telegram.js"
+    "test:telegram": "node scripts/testar-telegram.js",
+    "test:assistente": "node scripts/testar-assistente.js"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

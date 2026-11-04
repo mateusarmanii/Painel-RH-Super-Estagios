@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
-import { CheckCircle2, CircleHelp, Copy, ExternalLink, History, MessageSquareText, Pencil, Plus, Send, Settings2, Smartphone, Trash2, Unplug, UserCog } from "lucide-react";
+import { Bot, CheckCircle2, CircleHelp, History, MessageSquareText, Pencil, Plus, Send, Settings2, Smartphone, Trash2, Unplug, UserCog } from "lucide-react";
 import Modal from "../components/Modal.jsx";
 import LoadError from "../components/LoadError.jsx";
 import { apiJson } from "../api.js";
@@ -21,21 +22,6 @@ function Section({ title, description, children, action }) {
       </div>
       {children}
     </section>
-  );
-}
-
-function Toggle({ checked, onChange, label, description, disabled }) {
-  return (
-    <label className={`flex items-start gap-3 ${disabled ? "opacity-60" : "cursor-pointer"}`}>
-      <input type="checkbox" role="switch" checked={checked} disabled={disabled} onChange={(event) => onChange(event.target.checked)} className="peer sr-only" />
-      <span aria-hidden="true" className={`relative mt-0.5 h-6 w-11 shrink-0 rounded-full transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-ambar-400 ${checked ? "bg-emerald-600" : "bg-slate-300"}`}>
-        <span className={`absolute top-0.5 size-5 rounded-full bg-white shadow transition-[left] ${checked ? "left-[1.375rem]" : "left-0.5"}`} />
-      </span>
-      <span>
-        <span className="block text-sm font-semibold text-marinho-900">{label}</span>
-        {description && <span className="block text-xs text-slate-500">{description}</span>}
-      </span>
-    </label>
   );
 }
 
@@ -71,8 +57,6 @@ function GeneralTab({ isAdmin }) {
   if (error) return <LoadError message={error} onRetry={load} />;
   if (!settings) return <div className={`${card} h-48 animate-pulse`} />;
 
-  const publicLink = `${window.location.origin}/cadastro`;
-
   return (
     <div className="space-y-4">
       {!isAdmin && <p className="rounded-md bg-slate-100 px-4 py-2 text-sm text-slate-600">Só administradores podem mudar estas configurações.</p>}
@@ -92,35 +76,6 @@ function GeneralTab({ isAdmin }) {
         </form>
       </Section>
 
-      <Section title="Cadastro pelo site" description="Página pública com as vagas abertas e um formulário de cadastro (com aceite da LGPD). Começa desligada.">
-        <div className="space-y-4">
-          <Toggle
-            checked={settings.formulario_publico_ativo}
-            disabled={!isAdmin}
-            onChange={(value) => save({ formulario_publico_ativo: value }, value ? "Cadastro pelo site ligado." : "Cadastro pelo site desligado.")}
-            label="Página pública de vagas e cadastro"
-            description="Os cadastros entram em Estudantes com a etiqueta “Site”; se o estudante escolher uma vaga, ele aparece no Kanban em Candidato Contatado."
-          />
-          <Toggle
-            checked={settings.vagas_publicas_mostrar_empresa}
-            disabled={!isAdmin || !settings.formulario_publico_ativo}
-            onChange={(value) => save({ vagas_publicas_mostrar_empresa: value }, "Configuração salva.")}
-            label="Mostrar o nome da empresa nas vagas públicas"
-            description="Desligado, a página mostra só o título, a área e o local."
-          />
-          {settings.formulario_publico_ativo && (
-            <div className="flex flex-wrap items-center gap-2 rounded-md bg-slate-50 px-3 py-2 text-sm">
-              <span className="min-w-0 flex-1 truncate font-mono text-xs text-slate-700">{publicLink}</span>
-              <button type="button" onClick={() => navigator.clipboard?.writeText(publicLink).then(() => toast.success("Link copiado."))} className={`${buttonSecondary} h-8 px-3 text-xs`}>
-                <Copy size={14} /> Copiar
-              </button>
-              <a href={publicLink} target="_blank" rel="noopener noreferrer" className={`${buttonSecondary} h-8 px-3 text-xs`}>
-                <ExternalLink size={14} /> Abrir
-              </a>
-            </div>
-          )}
-        </div>
-      </Section>
     </div>
   );
 }
@@ -457,11 +412,16 @@ function PhoneTab() {
     <div className="space-y-4">
       <Section
         title="Avisos no celular pelo Telegram"
-        description="Opcional e individual: cada pessoa conecta o próprio Telegram. Tudo que aparece no sino chega também como mensagem, assim que surge. Entre 22h e 7h as mensagens chegam sem som."
+        description="Opcional e individual: cada pessoa conecta o próprio Telegram. Tudo que aparece no sino chega também como mensagem, com um resumo nos dias úteis. Pelo bot você consulta agenda, pendências, vagas e estudantes, registra contatos e move candidatos, sempre confirmando antes: envie /ajuda. Entre 22h e 7h as mensagens chegam sem som."
         action={
-          <a href="/ajuda/telegram.html" target="_blank" rel="noopener noreferrer" className={`${buttonSecondary} h-9 px-3 text-xs`}>
-            <CircleHelp size={15} /> Passo a passo
-          </a>
+          <div className="flex flex-wrap gap-2">
+            <Link to="/tutorial-ia" className={`${buttonSecondary} h-9 px-3 text-xs`}>
+              <Bot size={15} /> Como usar a IA
+            </Link>
+            <a href="/ajuda/telegram.html" className={`${buttonSecondary} h-9 px-3 text-xs`}>
+              <CircleHelp size={15} /> Passo a passo
+            </a>
+          </div>
         }
       >
         {!status.configurado ? (

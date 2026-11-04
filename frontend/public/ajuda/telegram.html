@@ -221,7 +221,7 @@ html{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!i
       <a class="back" href="/">← Voltar ao painel</a>
       <div class="eyebrow">Guia rápido · Painel de RH Super Estágios</div>
       <h1>Receba os avisos do painel no seu celular</h1>
-      <p>Entrevista sem confirmação, candidato pedindo para remarcar, prazo de vaga vencendo: tudo o que aparece no sino do painel passa a chegar também no seu Telegram, na hora.</p>
+      <p>Entrevista sem confirmação, retorno combinado, prazo de vaga vencendo: tudo o que aparece no sino do painel passa a chegar também no seu Telegram, na hora.</p>
       <div class="facts">
         <span class="fact"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f7b31b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Leva 2 minutos</span>
         <span class="fact"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f7b31b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Opcional e gratuito</span>
@@ -336,7 +336,6 @@ html{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!i
         <h3><span class="ball" style="background:var(--red)"></span>Urgente</h3>
         <ul>
           <li>Entrevista nas próximas 3 horas ainda sem confirmação</li>
-          <li>Candidato pediu para remarcar</li>
           <li>Prazo da vaga vencido</li>
           <li>Contrato de estágio já terminou</li>
         </ul>
@@ -344,26 +343,68 @@ html{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!i
       <div>
         <h3><span class="ball" style="background:var(--orange)"></span>Atenção</h3>
         <ul>
-          <li>Vaga parada, sem entrevistas</li>
+          <li>Entrevista nas próximas 24 horas sem confirmação</li>
+          <li>Entrevista que já passou, sem resultado registrado</li>
+          <li>Vaga parada, sem candidatos ou completa e ainda aberta</li>
+          <li>Candidatos parados na mesma etapa há mais de 7 dias</li>
           <li>Prazo da vaga nos próximos 3 dias</li>
           <li>Retorno de contato combinado para hoje</li>
           <li>TCE, contrato ou relatório do estágio pendente</li>
+          <li>Estagiário perto de se formar</li>
         </ul>
       </div>
       <div>
         <h3><span class="ball" style="background:var(--blue)"></span>Informativo</h3>
         <ul>
           <li>Entrevista confirmada nas próximas 3 horas</li>
-          <li>Empresa deu parecer sobre um candidato</li>
-          <li>Novo cadastro pelo site</li>
+          <li>Contratação registrada</li>
         </ul>
       </div>
     </div>
 
     <div class="examples" aria-label="Exemplos de mensagens">
-      <div><div class="lab">Exemplo urgente</div><div class="bubble">🔴 <b>Bruno Lima pediu para remarcar</b><br>Estágio em Marketing · “tenho prova nesse dia”<br><span class="lnk">Abrir no painel</span></div></div>
+      <div><div class="lab">Exemplo urgente</div><div class="bubble">🔴 <b>Entrevista às 14:30 sem confirmação</b><br>Bruno Lima · Estágio em Marketing<br><span class="lnk">Abrir no painel</span></div></div>
       <div><div class="lab">Exemplo de atenção</div><div class="bubble">🟠 <b>Retornar contato: Carla Mendes</b><br>Ligar para confirmar documentos<br><span class="lnk">Abrir no painel</span></div></div>
-      <div><div class="lab">Exemplo informativo</div><div class="bubble">🔵 <b>Empresa aprovou Diego Rocha</b><br>Estágio em Contabilidade<br><span class="lnk">Abrir no painel</span></div></div>
+      <div><div class="lab">Exemplo informativo</div><div class="bubble">🔵 <b>Contratação: Diego Rocha</b><br>Estágio em Contabilidade · Loja Exemplo<br><span class="lnk">Abrir no painel</span></div></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="consultar">
+    <h2 class="sec-title" id="consultar">Pergunte ao bot</h2>
+    <p class="sec-lead">Além de avisar, o bot responde. Toque no botão de menu da conversa ou digite um destes comandos.</p>
+    <div class="cards2">
+      <div>
+        <h3>📅 Agenda</h3>
+        <p><code>/hoje</code>, <code>/amanha</code> e <code>/semana</code> mostram entrevistas e eventos.</p>
+      </div>
+      <div>
+        <h3>🔎 Buscar</h3>
+        <p><code>/buscar Ana</code> mostra contato e situação de estudantes, empresas e vagas. Também aceita o número da vaga ou o final do telefone.</p>
+      </div>
+      <div>
+        <h3>📋 Pendências e vagas</h3>
+        <p><code>/pendencias</code> lista o que precisa de atenção, e <code>/vagas</code> lista as vagas abertas.</p>
+      </div>
+      <div>
+        <h3>📊 Resumos</h3>
+        <p>Chega um resumo nos dias úteis, a partir das 8h, e outro na sexta, a partir das 17h. Para ver os números da semana a qualquer hora, envie <code>/resumo</code>.</p>
+      </div>
+      <div>
+        <h3>📝 Registrar contato</h3>
+        <p><code>/contato Ana Souza: confirmou a entrevista</code> pergunta o tipo de contato e mostra um resumo. Só salva quando você tocar em <span class="ui">Confirmar</span>.</p>
+      </div>
+      <div>
+        <h3>➡️ Mover candidato</h3>
+        <p><code>/mover Ana Souza</code> mostra as etapas e pede confirmação. Em Entrevista e Dispensado são feitas no painel, porque pedem data ou motivo.</p>
+      </div>
+      <div>
+        <h3>💬 Escrever normalmente</h3>
+        <p>Se a IA estiver ligada, você pode perguntar “quem tem entrevista amanhã?”, contar “liguei para a Ana e ela confirmou” ou pedir “escreva uma mensagem cobrando o currículo”. Texto começando com 🤖 foi escrito pela IA: confira antes de usar. <a href="/tutorial-ia">Veja a demonstração no painel</a>.</p>
+      </div>
+      <div>
+        <h3>🔒 Seus dados</h3>
+        <p>As respostas sobre o painel vêm direto do banco, sem passar pela IA. Ela recebe só o que você digita, sem e-mails e números longos. Evite escrever dados sensíveis de candidatos.</p>
+      </div>
     </div>
   </section>
 
@@ -383,8 +424,8 @@ html{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!i
         <p>O link <b>Abrir no painel</b> leva direto para a vaga, o estudante ou o calendário daquele aviso.</p>
       </div>
       <div>
-        <h3>🤐 O bot só avisa</h3>
-        <p>Ele não lê suas conversas e não responde mensagens. Resolva tudo pelo painel, como sempre.</p>
+        <h3>✅ Nada muda sem você confirmar</h3>
+        <p>O bot mostra um resumo e só grava depois do seu toque em <span class="ui">Confirmar</span>, com o seu nome no histórico. O botão vale por 10 minutos. Só responde a quem conectou o próprio usuário.</p>
       </div>
     </div>
   </section>

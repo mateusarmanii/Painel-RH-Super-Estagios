@@ -4,7 +4,7 @@ export default function DashPanel({ id, title, subtitle, icon: Icon, action, cla
     <section
       id={id}
       aria-labelledby={id ? `${id}-titulo` : undefined}
-      className={`flex min-w-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm ${className}`}
+      className={`flex min-w-0 flex-col overflow-hidden superficie rounded-xl border border-slate-200 bg-white shadow-sm ${className}`}
     >
       <header className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 px-5 py-4">
         <div className="flex min-w-0 items-start gap-3">

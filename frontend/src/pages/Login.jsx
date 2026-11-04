@@ -54,7 +54,7 @@ export default function LoginPage({ onLogin }) {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-marinho-900 px-4 py-10">
+    <main className="tela-login flex min-h-screen items-center justify-center bg-marinho-900 px-4 py-10">
       <div className="w-full max-w-sm">
         <div className="mb-6 flex items-center gap-3">
           <span aria-hidden="true" className="grid size-11 place-items-center rounded-md bg-ambar-400 text-base font-extrabold text-marinho-900">
@@ -66,7 +66,7 @@ export default function LoginPage({ onLogin }) {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="rounded-lg border-t-4 border-ambar-400 bg-white p-6 shadow-xl sm:p-8" noValidate>
+        <form onSubmit={handleSubmit} className="vidro rounded-lg border-t-4 border-ambar-400 bg-white p-6 shadow-xl sm:p-8" noValidate>
           <h1 className="text-xl font-extrabold text-marinho-900">Entrar</h1>
           <p className="mt-1 text-sm text-slate-600">Use o e-mail e a senha cadastrados para você.</p>
 

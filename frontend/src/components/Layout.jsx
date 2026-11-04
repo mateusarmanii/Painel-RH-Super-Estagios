@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import CreationForm from "./CreationForm.jsx";
 import GlobalSearch from "./GlobalSearch.jsx";
 import Modal from "./Modal.jsx";
 import NotificationBell from "./NotificationBell.jsx";
 import {
+  BookOpen,
   BriefcaseBusiness,
   Building2,
   CalendarDays,
@@ -23,6 +24,10 @@ import {
   X,
 } from "lucide-react";
 import { buttonPrimary } from "../ui.js";
+import { tutorialDaTela } from "../tutoriais/rotas.js";
+import { GlassModeToggle, VisualToggle } from "./VisualToggle.jsx";
+
+const ComoUsar = lazy(() => import("../tutoriais/ComoUsar.jsx"));
 
 const navigationItems = [
   { label: "Dashboard", path: "/", icon: LayoutDashboard },
@@ -34,8 +39,7 @@ const navigationItems = [
   { label: "Banco de Talentos", path: "/banco-de-talentos", icon: Users },
   { label: "Contratações Efetivas", path: "/contratacoes", icon: UserRoundCheck },
   { label: "Configurações", path: "/configuracoes", icon: Settings },
-  // Manual de uso (página estática em public/ajuda), aberto numa aba nova para não sair do painel.
-  { label: "Ajuda", href: "/ajuda/manual.html", icon: CircleHelp },
+  { label: "Treinamento", path: "/treinamento", icon: BookOpen, also: ["/tutorial-ia"] },
 ];
 
 // Título mostrado na barra superior de cada tela.
@@ -51,6 +55,8 @@ const pageTitles = [
   ["/contratacoes", "Contratações efetivas"],
   ["/configuracoes", "Configurações"],
   ["/relatorios/empresa", "Relatório da empresa"],
+  ["/tutorial-ia", "Como usar a IA no Telegram"],
+  ["/treinamento", "Treinamento"],
 ];
 
 function pageTitle(pathname) {
@@ -88,11 +94,14 @@ export default function Layout({ children, user, onLogout }) {
   const whenExpandedBlock = isPinned ? "" : "lg:hidden lg:group-hover/menu:block";
   const [isNewMenuOpen, setIsNewMenuOpen] = useState(false);
   const [creating, setCreating] = useState(null);
+  const [isHowToOpen, setIsHowToOpen] = useState(false);
+  const tutorial = tutorialDaTela(pathname);
 
-  // Fecha a gaveta do menu e o "Novo cadastro" ao trocar de tela (ex.: "Ver perfil" no aviso de telefone repetido).
+  // Fecha a gaveta do menu, o "Novo cadastro" e o "Como usar" ao trocar de tela (ex.: "Ver perfil" no aviso de telefone repetido).
   useEffect(() => {
     setIsSidebarOpen(false);
     setCreating(null);
+    setIsHowToOpen(false);
   }, [pathname]);
 
   const creationTypes = [
@@ -115,7 +124,7 @@ export default function Layout({ children, user, onLogout }) {
 
       <aside
         aria-label="Menu principal"
-        className={`group/menu print:hidden fixed inset-y-0 left-0 z-50 flex w-64 max-w-[85vw] flex-col overflow-x-hidden bg-marinho-900 text-slate-200 shadow-2xl transition-[transform,width] duration-200 ease-out lg:translate-x-0 ${
+        className={`casca-menu group/menu print:hidden fixed inset-y-0 left-0 z-50 flex w-64 max-w-[85vw] flex-col overflow-x-hidden bg-marinho-900 text-slate-200 shadow-2xl transition-[transform,width] duration-200 ease-out lg:translate-x-0 ${
           isPinned ? "lg:w-64 lg:shadow-none" : "lg:w-16 lg:shadow-none lg:hover:w-64 lg:hover:shadow-2xl"
         } ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}`}
       >
@@ -155,14 +164,6 @@ export default function Layout({ children, user, onLogout }) {
                 ? "border-ambar-400 bg-white/10 text-ambar-400"
                 : "border-transparent text-slate-300 hover:bg-white/5 hover:text-white"
             }`;
-            if (item.href) {
-              return (
-                <a key={item.label} href={item.href} target="_blank" rel="noopener noreferrer" title={`${item.label} (abre em outra aba)`} className={itemClass}>
-                  <Icon size={17} className="shrink-0" />
-                  <span className={whenExpanded}>{item.label}</span>
-                </a>
-              );
-            }
             return (
               <Link
                 key={item.label}
@@ -184,6 +185,11 @@ export default function Layout({ children, user, onLogout }) {
               Logado como <span className="font-bold text-slate-200">{user.nome}</span>
             </p>
           )}
+          <GlassModeToggle className={whenExpandedBlock.includes("hidden") ? "lg:hidden lg:group-hover/menu:flex" : ""} />
+          <VisualToggle
+            labelClassName={whenExpanded}
+            className="flex w-full items-center gap-3 whitespace-nowrap rounded-md border-l-4 border-transparent px-3 py-2.5 text-left text-xs font-bold uppercase tracking-wide text-slate-300 transition-colors hover:bg-white/5 hover:text-white"
+          />
           <button
             type="button"
             onClick={onLogout}
@@ -207,7 +213,7 @@ export default function Layout({ children, user, onLogout }) {
         </button>
       </aside>
 
-      <header className={`print:hidden fixed inset-x-0 top-0 z-30 flex h-16 items-center gap-3 border-b border-slate-200 bg-white px-3 shadow-sm transition-[left] duration-200 sm:px-6 ${isPinned ? "lg:left-64" : "lg:left-16"}`}>
+      <header className={`casca-barra print:hidden fixed inset-x-0 top-0 z-30 flex h-16 items-center gap-3 border-b border-slate-200 bg-white px-3 shadow-sm transition-[left] duration-200 sm:px-6 ${isPinned ? "lg:left-64" : "lg:left-16"}`}>
         <button
           type="button"
           aria-label="Abrir menu"
@@ -225,6 +231,25 @@ export default function Layout({ children, user, onLogout }) {
         <div className="mx-auto hidden w-full max-w-md md:flex">
           <GlobalSearch id="buscar-topo" />
         </div>
+
+        {/* No celular o botão fica aqui, sem precisar abrir o menu. */}
+        <VisualToggle
+          iconOnly
+          className="grid size-10 shrink-0 place-items-center rounded-md text-marinho-800 transition-colors hover:bg-marinho-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ambar-400 lg:hidden"
+        />
+
+        {tutorial && (
+          <button
+            type="button"
+            onClick={() => setIsHowToOpen(true)}
+            aria-label="Como usar esta tela"
+            title="Como usar esta tela"
+            className="flex h-10 shrink-0 items-center gap-1.5 rounded-md px-2.5 text-sm font-bold text-marinho-800 transition-colors hover:bg-marinho-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ambar-400"
+          >
+            <CircleHelp size={19} />
+            <span className="hidden xl:inline">Como usar</span>
+          </button>
+        )}
 
         <NotificationBell />
 
@@ -249,7 +274,7 @@ export default function Layout({ children, user, onLogout }) {
                 onClick={() => setIsNewMenuOpen(false)}
                 className="fixed inset-0 z-10 cursor-default"
               />
-              <div role="menu" className="absolute right-0 z-20 mt-2 w-52 overflow-hidden rounded-md border border-slate-200 bg-white py-1 shadow-lg">
+              <div role="menu" className="absolute right-0 z-20 mt-2 w-52 overflow-hidden vidro rounded-md border border-slate-200 bg-white py-1 shadow-lg">
                 {creationTypes.map(({ type, label, icon: Icon }) => (
                   <button
                     key={type}
@@ -277,6 +302,12 @@ export default function Layout({ children, user, onLogout }) {
           <CreationForm key={creatingType.type} type={creatingType.type} onSuccess={() => setCreating(null)} />
         )}
       </Modal>
+
+      {isHowToOpen && tutorial && (
+        <Suspense fallback={null}>
+          <ComoUsar tutorial={tutorial} titulo={pageTitle(pathname)} onClose={() => setIsHowToOpen(false)} />
+        </Suspense>
+      )}
     </>
   );
 }

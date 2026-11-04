@@ -97,11 +97,11 @@ export default function BancoTalentosPage() {
         ) : isLoading ? (
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3" aria-busy="true">
             {Array.from({ length: 3 }, (_, index) => (
-              <div key={index} className="h-56 animate-pulse rounded-lg border border-slate-200 bg-white" />
+              <div key={index} className="h-56 animate-pulse superficie rounded-lg border border-slate-200 bg-white" />
             ))}
           </div>
         ) : filteredTalents.length === 0 ? (
-          <div className="grid place-items-center rounded-md border border-slate-200 bg-white px-6 py-14 text-center shadow-sm">
+          <div className="grid place-items-center superficie rounded-md border border-slate-200 bg-white px-6 py-14 text-center shadow-sm">
             <span className="grid size-12 place-items-center rounded-full bg-marinho-50 text-marinho-700">
               <Users size={22} />
             </span>
@@ -119,7 +119,7 @@ export default function BancoTalentosPage() {
             {filteredTalents.map((talent) => (
               <article
                 key={talent.id}
-                className="flex flex-col rounded-lg border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
+                className="flex flex-col superficie rounded-lg border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">

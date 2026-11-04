@@ -103,7 +103,7 @@ export default function EntityList({
     return (
       <article
         key={item.id}
-        className="relative flex min-h-56 flex-col rounded-lg border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
+        className="relative flex min-h-56 flex-col superficie rounded-lg border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
       >
         <div className="absolute right-3 top-3">
           <ActionMenu
@@ -194,7 +194,7 @@ export default function EntityList({
         {isLoading ? (
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3" aria-busy="true" aria-label="Carregando">
             {Array.from({ length: 3 }, (_, index) => (
-              <div key={index} className="h-56 animate-pulse rounded-lg border border-slate-200 bg-white" />
+              <div key={index} className="h-56 animate-pulse superficie rounded-lg border border-slate-200 bg-white" />
             ))}
           </div>
         ) : loadError ? (

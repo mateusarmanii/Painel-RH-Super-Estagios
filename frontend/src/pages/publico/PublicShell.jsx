@@ -36,7 +36,7 @@ export function PublicMessage({ icon: Icon, tone = "slate", title, children }) {
     red: "bg-rose-50 text-rose-700",
   };
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+    <div className="superficie rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
       {Icon && (
         <span className={`mx-auto grid size-12 place-items-center rounded-full ${tones[tone]}`}>
           <Icon size={22} />

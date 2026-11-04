@@ -85,7 +85,7 @@ function Summary({ summary, onOpen, onOpenEvent }) {
   if (!summary) {
     return (
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-busy="true">
-        {[0, 1, 2, 3].map((key) => <div key={key} className="h-24 animate-pulse rounded-lg border border-slate-200 bg-white" />)}
+        {[0, 1, 2, 3].map((key) => <div key={key} className="h-24 animate-pulse superficie rounded-lg border border-slate-200 bg-white" />)}
       </div>
     );
   }
@@ -344,7 +344,7 @@ export default function AgendaPage() {
       <div className="mx-auto w-full max-w-7xl space-y-5">
         <Summary summary={summary} onOpen={(interview) => openItem("entrevista", interview)} onOpenEvent={(event) => openItem("evento", event)} />
 
-        <div className="space-y-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
+        <div className="space-y-3 superficie rounded-lg border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
           <div className="flex flex-wrap items-center gap-2">
             <button type="button" onClick={() => setAnchor(new Date())} className={`${buttonSecondary} px-3`}>
               Hoje
@@ -441,7 +441,7 @@ export default function AgendaPage() {
           </div>
         </div>
 
-        <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm" aria-busy={isLoading}>
+        <div className="overflow-hidden superficie rounded-lg border border-slate-200 bg-white shadow-sm" aria-busy={isLoading}>
           {loadError ? (
             <div className="p-4">
               <LoadError

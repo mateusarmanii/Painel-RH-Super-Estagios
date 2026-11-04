@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
-import { Copy, ExternalLink, Link2Off, Plus, RefreshCw } from "lucide-react";
+import { Plus } from "lucide-react";
 import Modal from "./Modal.jsx";
 import { apiJson } from "../api.js";
 import { buttonPrimary, buttonSecondary } from "../ui.js";
@@ -84,67 +84,3 @@ export function SuggestionsDialog({ vagaId, onClose, onAdded }) {
   );
 }
 
-// "Link para a empresa": gera, copia, troca ou desativa o link do portal da vaga (opcional).
-export function PortalLinkDialog({ vaga, onClose, onChanged }) {
-  const [busy, setBusy] = useState(false);
-  const link = vaga.portal_token ? `${window.location.origin}/portal/${vaga.portal_token}` : "";
-
-  async function generate() {
-    setBusy(true);
-    try {
-      const result = await apiJson(`/vagas/${vaga.id}/portal`, { method: "POST" }, "Não foi possível gerar o link.");
-      onChanged(result.portal_token);
-      toast.success(vaga.portal_token ? "Link trocado: o anterior não funciona mais." : "Link criado.");
-    } catch (generateError) {
-      toast.error(generateError.message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function revoke() {
-    if (!window.confirm("Desativar o link? A empresa não vai mais conseguir abrir o portal.")) return;
-    setBusy(true);
-    try {
-      await apiJson(`/vagas/${vaga.id}/portal`, { method: "DELETE" }, "Não foi possível desativar o link.");
-      onChanged(null);
-      toast.success("Link desativado.");
-    } catch (revokeError) {
-      toast.error(revokeError.message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <Modal isOpen title="Link para a empresa" onClose={onClose}>
-      <div className="space-y-4 text-sm text-slate-700">
-        <p>
-          A empresa abre o link (sem login) e vê os candidatos enviados para esta vaga (a partir de “Enviado à Empresa”, sem os dispensados), com curso,
-          instituição, semestre e currículo, e dá um parecer: aprovar, talvez ou não aprovar. O parecer aparece no cartão; a etapa continua com você.
-        </p>
-        {link ? (
-          <>
-            <div className="flex flex-wrap items-center gap-2 rounded-md bg-slate-50 px-3 py-2">
-              <span className="min-w-0 flex-1 truncate font-mono text-xs">{link}</span>
-              <button type="button" onClick={() => navigator.clipboard?.writeText(link).then(() => toast.success("Link copiado."))} className={`${buttonSecondary} h-8 px-3 text-xs`}>
-                <Copy size={14} /> Copiar
-              </button>
-              <a href={link} target="_blank" rel="noopener noreferrer" className={`${buttonSecondary} h-8 px-3 text-xs`}><ExternalLink size={14} /> Abrir</a>
-            </div>
-            <div className="flex flex-wrap justify-end gap-2">
-              <button type="button" disabled={busy} onClick={revoke} className="inline-flex h-10 items-center gap-2 rounded-md px-3 text-sm font-semibold text-rose-700 hover:bg-rose-50">
-                <Link2Off size={15} /> Desativar link
-              </button>
-              <button type="button" disabled={busy} onClick={generate} className={buttonSecondary}><RefreshCw size={15} /> Trocar link</button>
-            </div>
-          </>
-        ) : (
-          <div className="flex justify-end">
-            <button type="button" disabled={busy} onClick={generate} className={buttonPrimary}>{busy ? "Gerando..." : "Gerar link"}</button>
-          </div>
-        )}
-      </div>
-    </Modal>
-  );
-}

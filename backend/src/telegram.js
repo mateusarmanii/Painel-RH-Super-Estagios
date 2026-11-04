@@ -2,16 +2,21 @@
 // usuário conecta o próprio Telegram em Configurações → Celular (link t.me/<bot>?start=<código>, vale 15 min).
 //
 // Dois laços enquanto a API está no ar:
-//   - leitura (getUpdates, long polling): recebe o /start <código> que conecta o usuário e o /parar que desconecta.
+//   - leitura (getUpdates, long polling): recebe o /start <código> que conecta o usuário, o /parar que desconecta,
+//     os comandos de consulta e o texto livre (src/assistente.js). Só responde a chats de usuários ativos conectados.
 //     Não usa webhook, então funciona também no localhost. Só uma instância da API pode ler por vez.
 //   - envio (a cada TELEGRAM_INTERVALO_SEG, padrão 120): monta os avisos do sino (src/notificacoes.js) e manda a
 //     cada usuário conectado só os que ainda não recebeu (tabela NotificacaoEnviada; limpa depois de 90 dias).
+//     Também manda o resumo do dia (dias úteis, a partir das 8h) e o da semana (sexta, a partir das 17h).
 // Entre 22h e 7h (São Paulo) as mensagens chegam sem som.
 //
 // Testes: TELEGRAM_API_URL troca o endereço da API do Telegram (ignorado em produção).
 const crypto = require("crypto");
 const prisma = require("./prisma");
 const { montarNotificacoes } = require("./notificacoes");
+const { AJUDA, marcador, diaSp, executarComando, responderTextoLivre, resumoDoDia, resumoDaSemana } = require("./assistente");
+const { prepararBotoes, pegarAcao, executarBotao } = require("./acoes");
+const { escapar, enderecoPainel } = require("./textoBot");
 
 const producao = () => process.env.NODE_ENV === "production";
 const token = () => (process.env.TELEGRAM_BOT_TOKEN ?? "").trim();
@@ -53,27 +58,12 @@ async function usuarioDoBot() {
   return nomeDoBot;
 }
 
-const escapar = (texto) => String(texto ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-
-// Endereço do painel para o link "Abrir no painel" (o primeiro do FRONTEND_URL). O Telegram não aceita link para
-// localhost, então fora do ar público a mensagem vai sem link.
-function enderecoPainel() {
-  const primeiro = (process.env.FRONTEND_URL ?? "").split(",")[0].trim().replace(/\/+$/, "");
-  try {
-    const url = new URL(primeiro);
-    return /^(localhost|127\.0\.0\.1)$/.test(url.hostname) ? null : primeiro;
-  } catch {
-    return null;
-  }
-}
-
 const horaSp = new Intl.DateTimeFormat("en-US", { timeZone: "America/Sao_Paulo", hour: "numeric", hourCycle: "h23" });
+const diaDaSemanaSp = new Intl.DateTimeFormat("en-US", { timeZone: "America/Sao_Paulo", weekday: "short" });
 const silencioso = (agora = new Date()) => {
   const h = Number(horaSp.format(agora));
   return h >= 22 || h < 7;
 };
-
-const marcador = { alta: "🔴", media: "🟠", info: "🔵" };
 
 function textoDoAviso(item) {
   const painel = enderecoPainel();
@@ -88,15 +78,21 @@ function textoDoAviso(item) {
 // vence), ele chega de novo.
 const chaveDoAviso = (item) => `${item.chave ?? item.id}:${item.gravidade}`.slice(0, 300);
 
-function enviarMensagem(chatId, texto, { agora } = {}) {
+function enviarMensagem(chatId, texto, { agora, teclado } = {}) {
   return chamar("sendMessage", {
     chat_id: chatId,
     text: texto,
     parse_mode: "HTML",
     link_preview_options: { is_disabled: true },
     disable_notification: silencioso(agora),
+    ...(teclado && { reply_markup: { inline_keyboard: teclado } }),
   });
 }
+
+// Resposta do assistente: texto simples ou { texto, botoes }.
+const responder = (chatId, resposta) => (typeof resposta === "string"
+  ? enviarMensagem(chatId, resposta)
+  : enviarMensagem(chatId, resposta.texto, { teclado: prepararBotoes(chatId, resposta.botoes) }));
 
 // Bloqueou o bot ou apagou a conversa: desconecta (o usuário conecta de novo pelo painel quando quiser).
 async function desconectarSeBloqueado(usuario, error) {
@@ -147,7 +143,7 @@ async function conectar(chatId, codigo) {
       ? `Agora há ${abertos.length} ${abertos.length === 1 ? "aviso aberto" : "avisos abertos"} no sino${urgentes ? ` (${urgentes} ${urgentes === 1 ? "urgente" : "urgentes"})` : ""}. A partir de agora, cada aviso novo chega aqui.`
       : "Não há avisos abertos agora. Cada aviso novo chega aqui.",
     painel && `<a href="${escapar(painel)}">Abrir o painel</a>`,
-    "Para parar, envie /parar ou desconecte em Configurações.",
+    "Envie /ajuda para ver o que mais posso fazer. Para parar, envie /parar ou desconecte em Configurações.",
   ].filter(Boolean).join("\n\n"));
 }
 
@@ -159,13 +155,43 @@ async function desconectarChat(chatId) {
 async function tratarMensagem(mensagem) {
   if (mensagem?.chat?.type !== "private" || typeof mensagem.text !== "string") return;
   const chatId = String(mensagem.chat.id);
-  const [comando, argumento] = mensagem.text.trim().split(/\s+/);
-  if (comando === "/start") return conectar(chatId, argumento);
-  if (comando === "/parar" || comando === "/stop") return desconectarChat(chatId);
-  const conectado = await prisma.usuario.count({ where: { telegram_chat_id: chatId } });
-  return enviarMensagem(chatId, conectado
-    ? "Este bot só envia os avisos do painel; as respostas aqui não são lidas. Para parar, envie /parar."
-    : "Para receber os avisos do painel Super Estágios, abra Configurações → Celular no painel e toque em Conectar Telegram.");
+  const texto = mensagem.text.trim();
+  const [primeira, ...resto] = texto.split(/\s+/);
+  // "/Amanhã@nome_do_bot" → "amanha"
+  const comando = primeira.startsWith("/") ? primeira.slice(1).split("@")[0].normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase() : null;
+  if (comando === "start") return conectar(chatId, resto[0]);
+  if (comando === "parar" || comando === "stop") return desconectarChat(chatId);
+
+  // Daqui para baixo há dados do painel: só para quem conectou o Telegram e continua ativo.
+  const conectado = await prisma.usuario.count({ where: { telegram_chat_id: chatId, ativo: true } });
+  if (!conectado) return enviarMensagem(chatId, "Para usar este bot, abra Configurações → Celular no painel Super Estágios e toque em Conectar Telegram.");
+
+  if (comando) {
+    const resposta = await executarComando(comando, resto.join(" "));
+    return responder(chatId, resposta ?? "Não conheço esse comando. Envie /ajuda para ver a lista.");
+  }
+  await chamar("sendChatAction", { chat_id: chatId, action: "typing" }).catch(() => {});
+  return responder(chatId, await responderTextoLivre(texto, chatId));
+}
+
+// Toque em um botão. Vale quem estiver conectado nesta conversa no momento do toque, não quem pediu antes.
+async function tratarBotao(botao) {
+  await chamar("answerCallbackQuery", { callback_query_id: botao.id }).catch(() => {});
+  const mensagem = botao.message;
+  if (mensagem?.chat?.type !== "private" || typeof botao.data !== "string") return;
+  const chatId = String(mensagem.chat.id);
+  const usuario = await prisma.usuario.findFirst({ where: { telegram_chat_id: chatId, ativo: true }, select: { id: true, email: true } });
+  if (!usuario) return enviarMensagem(chatId, "Para usar este bot, abra Configurações → Celular no painel Super Estágios e toque em Conectar Telegram.");
+  // Tira os botões da mensagem antiga, para ninguém tocar de novo.
+  await chamar("editMessageReplyMarkup", { chat_id: chatId, message_id: mensagem.message_id, reply_markup: { inline_keyboard: [] } }).catch(() => {});
+  const acao = pegarAcao(chatId, botao.data);
+  if (!acao) return enviarMensagem(chatId, "Esse botão expirou e nada foi alterado. Repita o pedido, se ainda precisar.");
+  try {
+    return await responder(chatId, await executarBotao(acao, usuario));
+  } catch (error) {
+    console.error("Telegram: erro ao executar botão:", error.message);
+    return enviarMensagem(chatId, "Não consegui concluir. Confira no painel se a alteração foi feita antes de tentar de novo.");
+  }
 }
 
 // ---------- Envio dos avisos ----------
@@ -204,6 +230,36 @@ async function enviarNovos(agora = new Date()) {
   return { enviados };
 }
 
+// Resumos da hora: a janela de horas cobre o caso de a API só acordar depois do horário (plano grátis do Render).
+function resumosDoMomento(agora) {
+  const hora = Number(horaSp.format(agora));
+  const semana = diaDaSemanaSp.format(agora);
+  const resumos = [];
+  if (!["Sat", "Sun"].includes(semana) && hora >= 8 && hora < 12) resumos.push({ chave: `resumo-dia-${diaSp(agora)}`, montar: resumoDoDia });
+  if (semana === "Fri" && hora >= 17 && hora < 21) resumos.push({ chave: `resumo-semana-${diaSp(agora)}`, montar: resumoDaSemana });
+  return resumos;
+}
+
+async function enviarResumos(agora = new Date()) {
+  const resumos = resumosDoMomento(agora);
+  if (!resumos.length) return;
+  const usuarios = await prisma.usuario.findMany({ where: { telegram_chat_id: { not: null }, ativo: true }, select: { id: true, nome: true, telegram_chat_id: true } });
+  for (const { chave, montar } of resumos) {
+    const jaEnviados = new Set((await prisma.notificacaoEnviada.findMany({ where: { chave }, select: { usuario_id: true } })).map((linha) => linha.usuario_id));
+    const faltam = usuarios.filter((usuario) => !jaEnviados.has(usuario.id));
+    if (!faltam.length) continue;
+    const texto = await montar(agora);
+    for (const usuario of faltam) {
+      try {
+        await enviarMensagem(usuario.telegram_chat_id, texto, { agora });
+        await prisma.notificacaoEnviada.createMany({ data: [{ usuario_id: usuario.id, chave }], skipDuplicates: true });
+      } catch (error) {
+        if (!(await desconectarSeBloqueado(usuario, error))) console.error(`Telegram: erro ao enviar resumo para ${usuario.nome}:`, error.message);
+      }
+    }
+  }
+}
+
 async function enviarTeste(usuarioId) {
   const usuario = await prisma.usuario.findUnique({ where: { id: usuarioId }, select: { id: true, nome: true, telegram_chat_id: true } });
   if (!usuario?.telegram_chat_id) return false;
@@ -229,11 +285,12 @@ async function lacoLeitura() {
   while (ligado) {
     try {
       controle = new AbortController();
-      const atualizacoes = await chamar("getUpdates", { offset, timeout: 25, allowed_updates: ["message"] }, { signal: controle.signal });
+      const atualizacoes = await chamar("getUpdates", { offset, timeout: 25, allowed_updates: ["message", "callback_query"] }, { signal: controle.signal });
       espera = 1000;
       for (const atualizacao of atualizacoes) {
         offset = atualizacao.update_id + 1;
-        await tratarMensagem(atualizacao.message).catch((error) => console.error("Telegram: erro ao tratar mensagem:", error.message));
+        const tratamento = atualizacao.callback_query ? tratarBotao(atualizacao.callback_query) : tratarMensagem(atualizacao.message);
+        await tratamento.catch((error) => console.error("Telegram: erro ao tratar mensagem:", error.message));
       }
     } catch (error) {
       if (!ligado) break;
@@ -250,6 +307,7 @@ async function lacoLeitura() {
 async function rodadaDeEnvio() {
   try {
     await enviarNovos();
+    await enviarResumos();
   } catch (error) {
     console.error("Telegram: erro ao enviar avisos:", error.message);
   }
@@ -259,6 +317,8 @@ async function rodadaDeEnvio() {
 function iniciarTelegram() {
   if (!telegramConfigurado() || ligado) return;
   ligado = true;
+  // Menu "/" da conversa. Se falhar, os comandos continuam funcionando digitados.
+  chamar("setMyCommands", { commands: AJUDA.map(([command, description]) => ({ command, description })) }).catch(() => {});
   lacoLeitura();
   proximoEnvio = setTimeout(rodadaDeEnvio, Math.min(5000, intervaloMs()));
   console.log(`Telegram: avisos ligados (a cada ${intervaloMs() / 1000} s).`);
@@ -277,6 +337,7 @@ module.exports = {
   novoCodigo,
   enviarTeste,
   enviarNovos,
+  enviarResumos,
   iniciarTelegram,
   pararTelegram,
   textoDoAviso,

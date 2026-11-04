@@ -245,10 +245,10 @@ export default function EstudantePerfilPage() {
     return (
       <section className="px-4 py-8 sm:px-6 lg:px-8" aria-busy="true">
         <div className="mx-auto max-w-6xl space-y-4">
-          <div className="h-40 animate-pulse rounded-lg border border-slate-200 bg-white" />
+          <div className="h-40 animate-pulse superficie rounded-lg border border-slate-200 bg-white" />
           <div className="grid gap-4 lg:grid-cols-3">
-            <div className="h-72 animate-pulse rounded-lg border border-slate-200 bg-white lg:col-span-2" />
-            <div className="h-72 animate-pulse rounded-lg border border-slate-200 bg-white" />
+            <div className="h-72 animate-pulse superficie rounded-lg border border-slate-200 bg-white lg:col-span-2" />
+            <div className="h-72 animate-pulse superficie rounded-lg border border-slate-200 bg-white" />
           </div>
         </div>
       </section>
@@ -295,11 +295,6 @@ export default function EstudantePerfilPage() {
                 {student.instituicao_ensino && ` · ${student.instituicao_ensino}`}
               </p>
               <div className="mt-3 flex flex-wrap gap-1.5">
-                {student.origem === "FORMULARIO" && (
-                  <span className="rounded-full bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-800" title={student.consentimento_em ? `Cadastro pelo site; aceite LGPD em ${dateFormat.format(new Date(student.consentimento_em))}` : "Cadastro pelo site"}>
-                    Site
-                  </span>
-                )}
                 {student.anonimizado_em && <span className="rounded-full bg-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-700">Anonimizado (LGPD)</span>}
                 {student.etiquetas?.map((tag) => (
                   <span key={tag} className="rounded-full bg-marinho-50 px-2.5 py-1 text-xs font-semibold text-marinho-800 ring-1 ring-marinho-100">{tag}</span>

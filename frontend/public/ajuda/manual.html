@@ -212,7 +212,7 @@ html{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!i
     <a href="#banco">Banco de Talentos</a>
     <a href="#contratacoes">Contratações Efetivas</a>
     <a href="#dashboard">Dashboard</a>
-    <a href="#mensagens">Mensagens e links</a>
+    <a href="#mensagens">Mensagens</a>
     <a href="#configuracoes">Configurações</a>
     <a href="#duvidas">Dúvidas comuns</a>
   </nav>
@@ -242,7 +242,7 @@ html{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!i
         </div>
         <div class="card">
           <h4>Sino de avisos</h4>
-          <p>Mostra o que pede atenção: entrevistas próximas, pedidos de remarcação, vagas paradas, prazos, pendências de estágio, retornos combinados, pareceres de empresas e cadastros pelo site.</p>
+          <p>Mostra o que pede atenção: entrevistas próximas ou sem resultado, vagas paradas, prazos, pendências de estágio, retornos combinados e contratações.</p>
           <p>Quer receber no celular? Veja o <a href="telegram.html">guia do Telegram</a>.</p>
         </div>
       </div>
@@ -327,7 +327,7 @@ html{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!i
       <div class="grid2">
         <div class="card">
           <h4>Encontrar quem você precisa</h4>
-          <p>Busque por nome, curso, instituição ou final do telefone. Os filtros cobrem curso, situação, turno, disponibilidade, semestre mínimo, cidade, etiqueta, currículo e origem (painel ou site).</p>
+          <p>Busque por nome, curso, instituição ou final do telefone. Os filtros cobrem curso, situação, turno, disponibilidade, semestre mínimo, cidade, etiqueta e currículo.</p>
         </div>
         <div class="card">
           <h4>Perfil do estudante</h4>
@@ -380,7 +380,6 @@ html{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!i
 
       <div class="grid3">
         <div class="card"><h4>Sugerir candidatos</h4><p>Mostra estudantes compatíveis com a vaga que ainda não estão nela. Clique em <span class="ui">Adicionar</span> para trazê-los ao quadro.</p></div>
-        <div class="card"><h4>Link para a empresa</h4><p>Gera um link para a empresa ver os candidatos, com o currículo, e dar parecer: aprovou, talvez ou não aprovou. Telefone e e-mail não aparecem. Dá para trocar ou desativar o link.</p></div>
         <div class="card"><h4>No cartão</h4><p>Menu do cartão: <b>Ver perfil</b>, <b>Ver currículo</b>, <b>Observação</b> (fica visível no cartão), <b>Mensagem com modelo</b> e <b>Indicar para outra vaga</b>.</p></div>
       </div>
       <p class="tip"><b>Ordem dos cartões:</b> arraste dentro da mesma coluna para priorizar. A ordem fica salva para toda a equipe. Use <span class="ui">Buscar no quadro</span> para achar alguém rápido.</p>
@@ -429,7 +428,7 @@ html{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!i
         <ol>
           <li>Busque por nome ou filtre por curso. A lista mostra a última dispensa e o motivo.</li>
           <li>Clique em <span class="ui">Indicar para vaga</span> e escolha uma vaga aberta.</li>
-          <li>Ele entra no Kanban da nova vaga em <b>Enviado à Empresa</b>.</li>
+          <li>Ele entra no Kanban da nova vaga em <b>Candidato Contatado</b>.</li>
         </ol>
       </div>
       <p>A etiqueta <b>Em processo</b> avisa que o estudante já participa de outra seleção. Também dá para chamar pelo <span class="ui">Abrir WhatsApp</span>.</p>
@@ -486,8 +485,8 @@ html{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!i
     <section class="chapter" id="mensagens">
       <div class="ch-head">
         <span class="where">Kanban · Perfil · Calendário</span>
-        <h2>Mensagens e links para fora</h2>
-        <p>Modelos de mensagem poupam digitação. Alguns links deixam o candidato ou a empresa responder sem precisar de login.</p>
+        <h2>Mensagens</h2>
+        <p>Modelos de mensagem poupam digitação. O painel é só da equipe: a mensagem sai por você, no WhatsApp ou no e-mail.</p>
       </div>
       <div class="howto">
         <h4>Mandar uma mensagem com modelo</h4>
@@ -496,16 +495,6 @@ html{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!i
           <li>Escolha o modelo. O painel preenche o nome, a vaga e a data sozinho.</li>
           <li>Copie a mensagem e cole no WhatsApp ou no e-mail.</li>
         </ol>
-      </div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Link</th><th>Quem usa</th><th>O que acontece</th></tr></thead>
-          <tbody>
-            <tr><td>Confirmação de presença</td><td>Candidato</td><td>Vai na mensagem pela variável <code>{link_confirmacao}</code>. O candidato toca em “Confirmo presença” e a entrevista vira Confirmada; se tocar em “Preciso remarcar”, chega um aviso no sino.</td></tr>
-            <tr><td>Link para a empresa</td><td>Empresa cliente</td><td>Gerado no Kanban. A empresa vê os candidatos enviados e dá parecer, que aparece como selo no cartão.</td></tr>
-            <tr><td>Cadastro pelo site</td><td>Novos estudantes</td><td>Página pública com as vagas abertas e formulário. Os cadastros entram em Estudantes com a etiqueta “Site”. Só funciona se a administração ligar.</td></tr>
-          </tbody>
-        </table>
       </div>
     </section>
 
@@ -517,9 +506,9 @@ html{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!i
         <p>Algumas abas são para todos; outras, só para quem administra o painel.</p>
       </div>
       <div class="grid2">
-        <div class="card"><h4>Geral <span class="badge-admin">altera: admin</span></h4><p>Meta mensal de contratações e o cadastro pelo site (liga ou desliga, e se mostra o nome da empresa nas vagas públicas).</p></div>
-        <div class="card"><h4>Modelos de mensagem</h4><p>Crie textos prontos com variáveis como <code>{primeiro_nome}</code>, <code>{vaga}</code>, <code>{data_entrevista}</code> e <code>{link_confirmacao}</code>. Clique numa variável para inseri-la no texto.</p></div>
-        <div class="card"><h4>Celular</h4><p>Conecte o seu Telegram para receber os avisos do sino no celular. Passo a passo no <a href="telegram.html">guia do Telegram</a>.</p></div>
+        <div class="card"><h4>Geral <span class="badge-admin">altera: admin</span></h4><p>Meta mensal de contratações.</p></div>
+        <div class="card"><h4>Modelos de mensagem</h4><p>Crie textos prontos com variáveis como <code>{primeiro_nome}</code>, <code>{vaga}</code> e <code>{data_entrevista}</code>. Clique numa variável para inseri-la no texto.</p></div>
+        <div class="card"><h4>Celular</h4><p>Conecte o seu Telegram para receber os avisos e resumos no celular e, pelo bot, consultar agenda, pendências, vagas e estudantes, registrar contatos e mover candidatos. Passo a passo no <a href="telegram.html">guia do Telegram</a> e <a href="/tutorial-ia">demonstração da IA</a> dentro do painel.</p></div>
         <div class="card"><h4>Usuários e Atividades <span class="badge-admin">só admin</span></h4><p>Criar, editar e desativar usuários, trocar senhas e ver o registro de quem alterou o quê, e quando.</p></div>
       </div>
     </section>
@@ -536,7 +525,6 @@ html{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!i
         <details><summary>Dispensei alguém por engano. Dá para desfazer?</summary><div><p>Sim. Arraste o cartão de volta para a etapa certa, ou use <span class="ui">Mover para…</span>.</p></div></details>
         <details><summary>Não consigo excluir uma vaga ou uma empresa.</summary><div><p>Para não perder o histórico, uma vaga com candidatos e uma empresa com vagas não podem ser excluídas. Feche a vaga, ou use <span class="ui">Arquivar</span> para tirar o item das listas. O botão “Mostrar arquivados” traz de volta.</p></div></details>
         <details><summary>O botão do WhatsApp não abre.</summary><div><p>O telefone do estudante está sem DDD. Edite o cadastro, coloque o DDD e tente de novo.</p></div></details>
-        <details><summary>O candidato pediu para remarcar pelo link. O que eu faço?</summary><div><p>Chega um aviso no sino e um selo no cartão, com o recado dele, se houver. Combine a nova data e use <span class="ui">Reagendar</span>; o pedido some sozinho.</p></div></details>
         <details><summary>Preciso dos dados numa planilha.</summary><div><p>Use <span class="ui">Exportar CSV</span> nas listas. O arquivo abre no Excel e traz só o que está filtrado na tela.</p></div></details>
         <details><summary>Esqueci minha senha.</summary><div><p>Na tela de entrada, digite o seu e-mail e clique em “Esqueci minha senha” para receber um link de troca (vale 1 hora). Se a opção não aparecer, peça a troca para a administração.</p></div></details>
       </div>

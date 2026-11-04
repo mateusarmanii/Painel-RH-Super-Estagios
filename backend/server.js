@@ -13,7 +13,6 @@ const authRoutes = require("./src/routes/auth");
 const { aparaTextos } = require("./src/utils");
 const { montarDashboard } = require("./src/dashboard");
 const arquivosRoutes = require("./src/routes/arquivos");
-const publicoRoutes = require("./src/routes/publico");
 const estagiosRoutes = require("./src/routes/estagios");
 const contatosRoutes = require("./src/routes/contatos");
 const modelosRoutes = require("./src/routes/modelos");
@@ -61,8 +60,6 @@ app.get("/", (_req, res) => {
 
 // Login é público; daqui para baixo, toda rota exige o token (401 sem token ou com token inválido).
 app.use("/auth", authRoutes);
-// Links públicos (formulário, confirmação de presença, portal da empresa), com limite de requisições.
-app.use("/publico", publicoRoutes);
 app.use(exigirLogin);
 // Registro de atividades: toda alteração feita por um usuário logado (automático).
 app.use(registrarAtividades);

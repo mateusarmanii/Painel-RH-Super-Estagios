@@ -12,13 +12,10 @@ export const TEMPLATE_VARIABLES = [
   { key: "data_entrevista", label: "Data da entrevista (ex.: terça-feira, 4 de novembro)" },
   { key: "hora_entrevista", label: "Hora da entrevista" },
   { key: "local_entrevista", label: "Formato e local/link da entrevista" },
-  { key: "link_confirmacao", label: "Link para o candidato confirmar presença ou pedir para remarcar" },
 ];
 
 const dateFormat = new Intl.DateTimeFormat("pt-BR", { weekday: "long", day: "numeric", month: "long" });
 const timeFormat = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" });
-
-export const confirmationLink = (token) => (token ? `${window.location.origin}/confirmar/${token}` : "");
 
 export function templateValues(context) {
   const name = (context.estudante.nome_completo ?? "").replace(/^\s*\[[^\]]*\]\s*/, "").trim();
@@ -34,7 +31,8 @@ export function templateValues(context) {
     data_entrevista: interview ? dateFormat.format(interview) : "",
     hora_entrevista: interview ? timeFormat.format(interview) : "",
     local_entrevista: [format, context.entrevista_local].filter(Boolean).join(" · "),
-    link_confirmacao: confirmationLink(context.token_confirmacao),
+    // O link externo não existe mais: modelos antigos que citam a variável ficam sem o texto, em vez de mostrar as chaves.
+    link_confirmacao: "",
   };
 }
 

@@ -14,7 +14,7 @@ export default function Modal({ isOpen, title, onClose, children }) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
-        className="my-auto flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-lg bg-white shadow-xl"
+        className="vidro my-auto flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-lg bg-white shadow-xl"
       >
         <header className="flex shrink-0 items-center justify-between gap-4 bg-ambar-400 px-5 py-3 text-marinho-900">
           <h2 id="modal-title" className="text-sm font-extrabold uppercase tracking-wide">

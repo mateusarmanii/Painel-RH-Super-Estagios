@@ -17,15 +17,14 @@ const EstudantesPage = lazy(() => import("./pages/Estudantes.jsx"));
 const EstudantePerfilPage = lazy(() => import("./pages/EstudantePerfil.jsx"));
 const ConfiguracoesPage = lazy(() => import("./pages/Configuracoes.jsx"));
 const RelatorioEmpresaPage = lazy(() => import("./pages/RelatorioEmpresa.jsx"));
-// Páginas públicas (sem login): confirmação de presença, portal da empresa, cadastro pelo site e nova senha.
-const ConfirmarPresencaPage = lazy(() => import("./pages/publico/ConfirmarPresenca.jsx"));
-const PortalEmpresaPage = lazy(() => import("./pages/publico/PortalEmpresa.jsx"));
-const CadastroPublicoPage = lazy(() => import("./pages/publico/CadastroPublico.jsx"));
+const TutorialIaPage = lazy(() => import("./pages/TutorialIa.jsx"));
+const TreinamentoPage = lazy(() => import("./pages/Treinamento.jsx"));
+// O painel é só da equipe. Única página sem login: nova senha, aberta pelo link enviado ao e-mail do próprio usuário.
 const RedefinirSenhaPage = lazy(() => import("./pages/publico/RedefinirSenha.jsx"));
 
 const pageFallback = (
   <div className="px-4 py-8 sm:px-6 lg:px-8" aria-busy="true" aria-label="Carregando">
-    <div className="mx-auto h-64 max-w-7xl animate-pulse rounded-lg border border-slate-200 bg-white" />
+    <div className="mx-auto h-64 max-w-7xl animate-pulse superficie rounded-lg border border-slate-200 bg-white" />
   </div>
 );
 
@@ -51,9 +50,6 @@ export default function App() {
     <BrowserRouter>
       <Suspense fallback={pageFallback}>
         <Routes>
-          <Route path="/confirmar/:token" element={<ConfirmarPresencaPage />} />
-          <Route path="/portal/:token" element={<PortalEmpresaPage />} />
-          <Route path="/cadastro" element={<CadastroPublicoPage />} />
           <Route path="/redefinir-senha/:token" element={<RedefinirSenhaPage />} />
           <Route path="*" element={user ? <AppRoutes user={user} onLogout={logout} /> : <LoginPage onLogin={setUser} />} />
         </Routes>
@@ -95,6 +91,8 @@ function AppRoutes({ user, onLogout }) {
           <Route path="/contratacoes" element={<ContratacoesPage />} />
           <Route path="/configuracoes" element={<ConfiguracoesPage user={user} />} />
           <Route path="/relatorios/empresa/:id" element={<RelatorioEmpresaPage />} />
+          <Route path="/tutorial-ia" element={<TutorialIaPage />} />
+          <Route path="/treinamento" element={<TreinamentoPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>

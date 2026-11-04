@@ -8,6 +8,18 @@
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>Super Estágios — Painel de RH</title>
+    <script>
+      // Aplica o visual salvo antes de a página aparecer (padrão: Clássico). Ver src/visual.js.
+      (function () {
+        var visual = "classico", variacao = "claro";
+        try {
+          if (localStorage.getItem("visual") === "glass") visual = "glass";
+          if (localStorage.getItem("visualVariacao") === "escuro") variacao = "escuro";
+        } catch (e) {}
+        document.documentElement.setAttribute("data-visual", visual);
+        document.documentElement.setAttribute("data-glass", variacao);
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

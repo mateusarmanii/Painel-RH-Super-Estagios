@@ -100,7 +100,7 @@ function Pendencias({ items }) {
             <ChevronRight size={18} className="shrink-0 text-slate-300 transition-colors group-hover:text-marinho-700" />
           </>
         );
-        const className = `group flex items-center gap-3 rounded-xl border bg-white px-4 py-3 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ambar-400 ${
+        const className = `group flex items-center gap-3 superficie rounded-xl border bg-white px-4 py-3 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ambar-400 ${
           highlight ? "border-rose-200" : "border-slate-200"
         }`;
         return (
@@ -121,7 +121,7 @@ function GoalBar({ goal, done }) {
   const expected = (today.getDate() / daysInMonth) * goal;
   const onTrack = done >= expected;
   return (
-    <section className="flex flex-wrap items-center gap-4 rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm" aria-label="Meta do mês">
+    <section className="flex flex-wrap items-center gap-4 superficie rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm" aria-label="Meta do mês">
       <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-marinho-900 text-ambar-400"><Target size={18} /></span>
       <div className="min-w-0 flex-1 basis-60">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -331,7 +331,7 @@ export default function DashboardPage() {
   ].filter(Boolean);
 
   return (
-    <section className="min-h-[calc(100vh-4rem)] px-4 py-6 sm:px-6 lg:px-8">
+    <section className="tela-glass min-h-[calc(100vh-4rem)] px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl space-y-5">
         <div className="flex flex-wrap items-end justify-between gap-2">
           <div>

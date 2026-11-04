@@ -347,7 +347,7 @@ function EmpresaHeader({ empresaId, empresaNome, items, isLoading }) {
   const open = items.filter((vaga) => vaga.status === "ABERTA").length;
   const logoId = items.find((vaga) => vaga.empresa?.logo_arquivo_id)?.empresa?.logo_arquivo_id;
   return (
-    <div className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+    <div className="mb-6 flex flex-wrap items-center justify-between gap-4 superficie rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
       <div className="flex min-w-0 items-center gap-4">
         <CompanyAvatar id={empresaId} name={empresaNome ?? ""} logoId={logoId} size="lg" />
         <div className="min-w-0">

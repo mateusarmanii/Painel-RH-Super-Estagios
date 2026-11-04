@@ -309,7 +309,7 @@ export default function ContratacoesPage() {
         {isLoading ? (
           <div className="space-y-3" aria-busy="true">
             {Array.from({ length: 3 }, (_, index) => (
-              <div key={index} className="h-20 animate-pulse rounded-md border border-slate-200 bg-white" />
+              <div key={index} className="h-20 animate-pulse superficie rounded-md border border-slate-200 bg-white" />
             ))}
           </div>
         ) : listed.length === 0 ? (
